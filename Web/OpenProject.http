@@ -1,0 +1,184 @@
+﻿# ─────────────────────────────────────────────────────────────
+# OpenProject API — Colección de peticiones
+# ─────────────────────────────────────────────────────────────
+# Requisitos:
+#   VS Code → extensión "REST Client" (humao.rest-client)
+#   IntelliJ / Rider → soportado de forma nativa
+#
+# Uso: haz clic en "Send Request" que aparece encima de cada petición
+# ─────────────────────────────────────────────────────────────
+
+@auth = {{auth}}
+
+# ══════════════════════════════════════════════════════════════
+# 1. LISTAR TODAS LAS TAREAS (todos los proyectos)
+# ══════════════════════════════════════════════════════════════
+
+### Todas las tareas — primera página
+GET {{baseUrl}}/api/v3/work_packages?pageSize=50&offset=1
+Authorization: {{auth}}
+Accept: application/json
+
+
+### ──────────────────────────────────────────────────────────
+### Todas las tareas — con paginación (página 2)
+GET {{baseUrl}}/api/v3/work_packages?pageSize=50&offset=51
+Authorization: {{auth}}
+Accept: application/json
+
+
+# ══════════════════════════════════════════════════════════════
+# 2. LISTAR TAREAS DE UN PROYECTO ESPECÍFICO
+# ══════════════════════════════════════════════════════════════
+
+@projectId = eproduction
+
+### Tareas del proyecto eproduction
+GET {{baseUrl}}/api/v3/projects/{{projectId}}/work_packages?pageSize=50&offset=1
+Authorization: {{auth}}
+Accept: application/json
+
+
+# ══════════════════════════════════════════════════════════════
+# 3. FILTROS COMUNES
+# ══════════════════════════════════════════════════════════════
+
+### Solo tareas abiertas (no cerradas)
+GET {{baseUrl}}/api/v3/work_packages?filters=[{"status":{"operator":"o","values":[]}}]
+Authorization: {{auth}}
+Accept: application/json
+
+
+### Solo tareas cerradas
+GET {{baseUrl}}/api/v3/work_packages?filters=[{"status":{"operator":"c","values":[]}}]
+Authorization: {{auth}}
+Accept: application/json
+
+
+### Tareas asignadas a mí
+GET {{baseUrl}}/api/v3/work_packages?filters=[{"assignee":{"operator":"=","values":["me"]}}]
+Authorization: {{auth}}
+Accept: application/json
+
+
+### Solo tipo "Task" (ajusta el ID según tu instancia)
+GET {{baseUrl}}/api/v3/work_packages?filters=[{"type":{"operator":"=","values":["1"]}}]
+Authorization: {{auth}}
+Accept: application/json
+
+
+### Ordenar por fecha de creación descendente
+GET {{baseUrl}}/api/v3/work_packages?sortBy=[["createdAt","desc"]]
+Authorization: {{auth}}
+Accept: application/json
+
+
+# ══════════════════════════════════════════════════════════════
+# 4. OBTENER UNA TAREA POR ID
+# ══════════════════════════════════════════════════════════════
+
+@workPackageId = 1
+
+### Detalle de una tarea
+GET {{baseUrl}}/api/v3/work_packages/{{workPackageId}}
+Authorization: {{auth}}
+Accept: application/json
+
+
+# ══════════════════════════════════════════════════════════════
+# 5. ACTIVIDADES DE UNA TAREA
+# ══════════════════════════════════════════════════════════════
+
+### Listar actividades (comentarios y cambios) de una tarea
+GET {{baseUrl}}/api/v3/work_packages/{{workPackageId}}/activities
+Authorization: {{auth}}
+Accept: application/json
+
+
+### Obtener una actividad por su ID
+@activityId = 1
+
+GET {{baseUrl}}/api/v3/activities/{{activityId}}
+Authorization: {{auth}}
+Accept: application/json
+
+
+### Actualizar el comentario de una actividad
+PATCH {{baseUrl}}/api/v3/activities/{{activityId}}
+Authorization: {{auth}}
+Content-Type: application/json
+
+{
+  "comment": {
+    "raw": "Comentario actualizado desde REST Client"
+  }
+}
+
+
+# ══════════════════════════════════════════════════════════════
+# 6. CREAR UNA TAREA
+# ══════════════════════════════════════════════════════════════
+
+### Crear nueva tarea en el proyecto
+POST {{baseUrl}}/api/v3/projects/{{projectId}}/work_packages
+Authorization: {{auth}}
+Content-Type: application/json
+
+{
+  "subject": "Nueva tarea desde API",
+  "description": {
+    "raw": "Descripción de la tarea creada desde el archivo .http"
+  },
+  "_links": {
+    "type":     { "href": "/api/v3/types/1" },
+    "status":   { "href": "/api/v3/statuses/1" },
+    "priority": { "href": "/api/v3/priorities/2" }
+  }
+}
+
+
+# ══════════════════════════════════════════════════════════════
+# 7. ACTUALIZAR UNA TAREA
+# ══════════════════════════════════════════════════════════════
+
+### Cambiar el asunto y el porcentaje completado
+PATCH {{baseUrl}}/api/v3/work_packages/{{workPackageId}}
+Authorization: {{auth}}
+Content-Type: application/json
+
+{
+  "subject": "Tarea actualizada desde API",
+  "percentageDone": 75
+}
+
+
+# ══════════════════════════════════════════════════════════════
+# 8. PROYECTOS
+# ══════════════════════════════════════════════════════════════
+
+### Listar todos los proyectos
+GET {{baseUrl}}/api/v3/projects
+Authorization: {{auth}}
+Accept: application/json
+
+
+### Detalle de un proyecto
+GET {{baseUrl}}/api/v3/projects/{{projectId}}
+Authorization: {{auth}}
+Accept: application/json
+
+
+# ══════════════════════════════════════════════════════════════
+# 9. USUARIOS
+# ══════════════════════════════════════════════════════════════
+
+### Listar todos los usuarios
+GET {{baseUrl}}/api/v3/users
+Authorization: {{auth}}
+Accept: application/json
+
+
+### Mi usuario actual
+GET {{baseUrl}}/api/v3/users/me
+Authorization: {{auth}}
+Accept: application/json
