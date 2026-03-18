@@ -6,6 +6,9 @@
 ##visual studio
 .vs/
 obj/
+
+## Rider
+.idea/
 # Salidas de compilación
 [Bb]in/
 [Ob]j/
