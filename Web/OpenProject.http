@@ -1,12 +1,6 @@
 ﻿# ─────────────────────────────────────────────────────────────
 # OpenProject API — Colección de peticiones
 # ─────────────────────────────────────────────────────────────
-# Requisitos:
-#   VS Code → extensión "REST Client" (humao.rest-client)
-#   IntelliJ / Rider → soportado de forma nativa
-#
-# Uso: haz clic en "Send Request" que aparece encima de cada petición
-# ─────────────────────────────────────────────────────────────
 
 @auth = {{auth}}
 
