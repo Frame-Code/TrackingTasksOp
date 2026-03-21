@@ -176,3 +176,13 @@ Accept: application/json
 GET {{baseUrl}}/api/v3/users/me
 Authorization: {{auth}}
 Accept: application/json
+
+
+# =============================================================
+# 10. Status
+# =============================================================
+
+### Listar todos los status posibles
+GET {{baseUrl}}/api/v3/statuses
+Authorization: {{auth}}
+Accept: application/json

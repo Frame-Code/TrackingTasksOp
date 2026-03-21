@@ -9,6 +9,7 @@ public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> opt
     public DbSet<Project>  Projects { get; set; } = null!;
     public DbSet<Task> Tasks { get; set; } = null!;
     public DbSet<TaskTimeDetail>  TasksTimeDetails { get; set; } = null!;
+    public DbSet<StatusTask>  StatusTasks { get; set; } = null!;
       protected override void OnModelCreating(ModelBuilder modelBuilder)
       {
           // ── Project ──────────────────────────────────────────────
@@ -47,6 +48,11 @@ public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> opt
                     .HasForeignKey(t => t.ProjectId)
                     .OnDelete(DeleteBehavior.Restrict);
               
+              entity.HasOne(t => t.StatusTask)
+                    .WithMany()
+                    .HasForeignKey(t => t.StatusTaskId)
+                    .OnDelete(DeleteBehavior.Restrict);
+              
               entity.Ignore(t => t.GetTotalHoursWorked());
           });
 
@@ -67,6 +73,21 @@ public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> opt
                     .OnDelete(DeleteBehavior.Cascade);
               
               entity.Ignore(t => t.GetHoursWorked());
+          });
+          
+          // ── StatusTasks ────────────────────────────────────────
+          modelBuilder.Entity<StatusTask>(entity =>
+          {
+                entity.ToTable("StatusTasks");
+                entity.HasKey(t => t.Id);
+                entity.Property(t => t.Id)
+                      .IsRequired()
+                      .ValueGeneratedNever();
+                entity.Property(t => t.Name)
+                      .IsRequired()
+                      .HasMaxLength(200);
+                entity.Property(t => t.IsClosed)
+                      .IsRequired();
           });
       }
 }

@@ -27,5 +27,10 @@ public class TaskRepositoryImpl(TrackingTasksDbContext context) : ITaskRepositor
         await context.SaveChangesAsync();
         return taskSaved.Entity;
     }
-    
+
+    public async System.Threading.Tasks.Task SaveAllAsync(IEnumerable<Task> tasks)
+    {
+        await context.AddRangeAsync(tasks);
+        await context.SaveChangesAsync();
+    }
 }
