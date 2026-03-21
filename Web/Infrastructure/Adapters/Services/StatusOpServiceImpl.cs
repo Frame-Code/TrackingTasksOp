@@ -21,7 +21,7 @@ public class StatusOpServiceImpl(
         logger.LogInformation("Executing Lists:StatusOpServiceImpl");
         string url = BuildUrl();
         HttpResponseMessage response = await _client.GetAsync(url);
-        if (response.StatusCode == HttpStatusCode.NotFound || response.StatusCode == HttpStatusCode.Unauthorized)
+        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized)
             return new List<Status>();
         
         if (!response.IsSuccessStatusCode)

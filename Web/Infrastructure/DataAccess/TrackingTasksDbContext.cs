@@ -53,7 +53,6 @@ public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> opt
                     .HasForeignKey(t => t.StatusTaskId)
                     .OnDelete(DeleteBehavior.Restrict);
               
-              entity.Ignore(t => t.GetTotalHoursWorked());
           });
 
           // ── TaskTimeDetail ────────────────────────────────────────
@@ -72,7 +71,6 @@ public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> opt
                     .HasForeignKey(t => t.IdTask)
                     .OnDelete(DeleteBehavior.Cascade);
               
-              entity.Ignore(t => t.GetHoursWorked());
           });
           
           // ── StatusTasks ────────────────────────────────────────
