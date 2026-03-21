@@ -7,6 +7,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClients(builder.Configuration);
 builder.Services.AddServices(builder.Configuration);
+builder.Services.AddDbContext(builder.Configuration);
 
 var app = builder.Build();
 
