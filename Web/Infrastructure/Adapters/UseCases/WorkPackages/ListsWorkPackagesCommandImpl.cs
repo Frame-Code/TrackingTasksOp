@@ -6,7 +6,7 @@ using Domain.Entities.OpenProjectEntities;
 using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.Config.Settings;
 
-namespace Web.Infrastructure.Services.UseCases.WorkPackages;
+namespace Web.Infrastructure.Adapters.UseCases.WorkPackages;
 public class ListsWorkPackagesCommandImpl(
     IHttpClientFactory httpClientFactory,
     ILogger<ListsWorkPackagesCommandImpl> logger,

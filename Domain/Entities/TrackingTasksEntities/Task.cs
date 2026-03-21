@@ -8,6 +8,8 @@ public class Task
     public DateTime? CreatedAt { get; init; } = DateTime.Now;
     public int ProjectId { get; set; }
     public Project Project { get; set; } = null!;
+    public int StatusTaskId { get; set; }
+    public StatusTask StatusTask { get; set; } = null!;
     public IEnumerable<TaskTimeDetail> TasksTimeDetails { get; set; } = new List<TaskTimeDetail>();
 
     public double GetTotalHoursWorked()

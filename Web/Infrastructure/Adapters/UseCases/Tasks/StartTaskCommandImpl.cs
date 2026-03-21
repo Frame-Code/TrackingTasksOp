@@ -9,7 +9,7 @@ namespace Web.Infrastructure.Adapters.UseCases.Tasks;
 
 public class StartTaskCommandImpl(ITaskRepository repository) : IStartTaskCommand
 {
-    public async Task<Task> Execute(StarTaskRequest request)
+    public async Task<TaskEntity> Execute(StarTaskRequest request)
     {
         var task = await repository.GetByIdAsync(request.OpenProjectId)
             ?? new TaskEntity()
@@ -35,6 +35,6 @@ public class StartTaskCommandImpl(ITaskRepository repository) : IStartTaskComman
         
         details.Add(detail);
         task.TasksTimeDetails = details;
-        return repository.SaveAsync(task);
+        return await repository.SaveAsync(task);
     }
 }
