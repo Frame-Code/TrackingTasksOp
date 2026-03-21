@@ -18,7 +18,7 @@ public class TaskRepositoryImpl(TrackingTasksDbContext context) : ITaskRepositor
     public async Task<Task?> GetByIdAsync(int id, bool tracking = false)
     {
         var query = tracking? context.Tasks.AsQueryable() : context.Tasks.AsNoTracking().AsQueryable();
-        return await query.FirstOrDefaultAsync(x => x.Id == id);
+        return await query.FirstOrDefaultAsync(x => x.OpenProjectId == id);
     }
 
     public async Task<Task> SaveAsync(Task task)
@@ -27,10 +27,5 @@ public class TaskRepositoryImpl(TrackingTasksDbContext context) : ITaskRepositor
         await context.SaveChangesAsync();
         return taskSaved.Entity;
     }
-
-    public async Task<Task?> GetByOpenProjectIdAsync(int id, bool tracking = false)
-    {
-        var query = tracking? context.Tasks.AsQueryable() : context.Tasks.AsNoTracking().AsQueryable();
-        return await query.FirstOrDefaultAsync(x => x.OpenProjectId == id);
-    }
+    
 }

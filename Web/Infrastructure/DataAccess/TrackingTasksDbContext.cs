@@ -30,7 +30,10 @@ public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> opt
           modelBuilder.Entity<Task>(entity =>
           {
               entity.ToTable("Tasks");
-              entity.HasKey(t => t.Id);
+              entity.HasKey(t => t.OpenProjectId);
+              entity.Property(t => t.OpenProjectId)
+                    .IsRequired()
+                    .ValueGeneratedNever();
               entity.Property(t => t.Name)
                     .IsRequired()
                     .HasMaxLength(200);
@@ -38,8 +41,6 @@ public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> opt
                     .HasMaxLength(500);
               entity.Property(t => t.CreatedAt)
                     .HasColumnType("datetime");
-              entity.Property(t => t.OpenProjectId)
-                    .IsRequired();
               
               entity.HasOne(t => t.Project)
                     .WithMany()
