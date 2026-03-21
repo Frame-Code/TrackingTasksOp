@@ -60,6 +60,7 @@ public class ListsWorkPackagesCommandImpl(
             ? $"{settings.GetUri()}/api/v3/projects/{projectId}/work_packages"
             : $"{settings.GetUri()}/api/v3/work_packages";
 
-        return $"{baseEndpoint}?offset={offset}&pageSize={pageSize}";
+        string assigneeFilter = Uri.EscapeDataString("[{\"assignee\":{\"operator\":\"=\",\"values\":[\"me\"]}}]");
+        return $"{baseEndpoint}?filters={assigneeFilter}&offset={offset}&pageSize={pageSize}";
     }
 }
