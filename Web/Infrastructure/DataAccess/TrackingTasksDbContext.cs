@@ -9,7 +9,6 @@ public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> opt
     public DbSet<Project>  Projects { get; set; } = null!;
     public DbSet<Task> Tasks { get; set; } = null!;
     public DbSet<TaskTimeDetail>  TasksTimeDetails { get; set; } = null!;
-
       protected override void OnModelCreating(ModelBuilder modelBuilder)
       {
           // ── Project ──────────────────────────────────────────────
