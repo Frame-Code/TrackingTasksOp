@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
 using Application.Dto.ListWorkPackages;
-using Application.Services.UseCases.WorkPackages;
+using Application.Ports.UseCases.WorkPackages;
 using Domain.Entities.OpenProjectEntities;
 using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.Config.Settings;
