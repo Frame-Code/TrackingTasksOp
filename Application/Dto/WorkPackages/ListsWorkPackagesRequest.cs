@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 namespace Application.Dto.ListWorkPackages
 {
-    public record ListWorkPackagesRequest (
-        int? ProjectId
+    public record ListsWorkPackagesRequest (
+        int? ProjectId,
+        int offset,
+        int pageSize
     ){}
 }

@@ -10,5 +10,5 @@ namespace Application.Services.UseCases.WorkPackages;
 
 public interface IListsWorkPackagesCommand
 {
-    Task<List<WorkPackage>> Execute(ListWorkPackagesRequest request);
+    Task<List<WorkPackage>> Execute(ListsWorkPackagesRequest request);
 }

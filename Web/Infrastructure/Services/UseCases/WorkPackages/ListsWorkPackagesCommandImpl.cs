@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 using Application.Dto.ListWorkPackages;
 using Application.Services.UseCases.WorkPackages;
 using Domain.Entities.OpenProjectEntities;
@@ -7,23 +8,31 @@ using Web.Infrastructure.Config.Settings;
 
 namespace Web.Infrastructure.Services.UseCases.WorkPackages;
 public class ListsWorkPackagesCommandImpl(
-    IHttpClientFactory httpClientFactory, 
+    IHttpClientFactory httpClientFactory,
+    ILogger<ListsWorkPackagesCommandImpl> logger,
     [FromKeyedServices(nameof(KeyService.OpenProjectSettings))]
-    IApiSettings settings) : IListsWorkPackagesCommand
+    IApiSettings settings
+    ) : IListsWorkPackagesCommand
 {
-    private readonly int _pageSize = 50;
     private readonly HttpClient _client = httpClientFactory.CreateClient(settings.GetHttpClientName());
-
-    public async Task<List<WorkPackage>> Execute(ListWorkPackagesRequest resquest)
+    
+    //Listar de manera paginada todos los work packages
+    public async Task<List<WorkPackage>> Execute(ListsWorkPackagesRequest request)
     {
+        int pageSize = request.pageSize > 50 ? 50 : request.pageSize;
+        int offset = request.offset is < 0 or > 50 ? 0 : request.offset;
         var allItems = new List<WorkPackage>();
-        var offset = 1;
         int total;
-
+        
+        logger.LogInformation("Executing ListsWorkPackagesCommand, offset={Offset}, pageSize={PageSize}", offset, pageSize);   
         do
         {
-            string url = BuildUrl(resquest.ProjectId, offset, _pageSize);
+            string url = BuildUrl(request.ProjectId, offset, pageSize);
             HttpResponseMessage  response = await _client.GetAsync(url);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return allItems;
+            
             if (!response.IsSuccessStatusCode)
             {
                 string error = await response.Content.ReadAsStringAsync();
@@ -34,13 +43,13 @@ public class ListsWorkPackagesCommandImpl(
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var collection = JsonSerializer.Deserialize<WorkPackageCollection>(json, options);
 
-            if (collection?.Embedded?.Elements == null)
+            if (collection?.Embedded?.Elements == null || collection?.Embedded?.Elements.Count == 0)
                 break;
             
-            allItems.AddRange(collection.Embedded.Elements);
+            allItems.AddRange(collection!.Embedded!.Elements); 
             total = collection.Total;
-            offset += _pageSize;
-        } while (allItems.Count < total);
+            offset += collection.Count + 1; 
+        } while (allItems.Count <= total);
 
         return allItems;
     }
@@ -51,6 +60,7 @@ public class ListsWorkPackagesCommandImpl(
             ? $"{settings.GetUri()}/api/v3/projects/{projectId}/work_packages"
             : $"{settings.GetUri()}/api/v3/work_packages";
 
-        return $"{baseEndpoint}?offset={offset}&pageSize={pageSize}";
+        string assigneeFilter = Uri.EscapeDataString("[{\"assignee\":{\"operator\":\"=\",\"values\":[\"me\"]}}]");
+        return $"{baseEndpoint}?filters={assigneeFilter}&offset={offset}&pageSize={pageSize}";
     }
 }
