@@ -1,29 +1,37 @@
 ﻿using System.Linq.Expressions;
 using Application.Ports.Repositories;
 using Domain.Entities.TrackingTasksEntities;
+using Microsoft.EntityFrameworkCore;
+using Web.Infrastructure.DataAccess;
 using Task = System.Threading.Tasks.Task;
 
 namespace Web.Infrastructure.Adapters.Repositories;
 
-public class StatusTaskRepositoryImpl : IStatusTaskRepository
+public class StatusTaskRepositoryImpl(TrackingTasksDbContext context) : IStatusTaskRepository
 {
-    public Task<IEnumerable<StatusTask>> GetAllAsync(Expression<Func<StatusTask, bool>>? filter, bool tracking = false)
+    public async  Task<IEnumerable<StatusTask>> GetAllAsync(Expression<Func<StatusTask, bool>>? filter, bool tracking = false)
     {
-        throw new NotImplementedException();
+        var query = tracking ? context.StatusTasks.AsQueryable() : context.StatusTasks.AsNoTracking().AsQueryable();
+        return filter is null? await query.ToListAsync() 
+            : await query.Where(filter).ToListAsync();
     }
 
-    public Task<StatusTask?> GetByIdAsync(int id, bool tracking = false)
+    public async Task<StatusTask?> GetByIdAsync(int id, bool tracking = false)
     {
-        throw new NotImplementedException();
+        var query = tracking? context.StatusTasks.AsQueryable() : context.StatusTasks.AsNoTracking().AsQueryable();
+        return await query.FirstOrDefaultAsync(x => x.Id == id);
     }
 
-    public Task<StatusTask> SaveAsync(StatusTask task)
+    public async Task<StatusTask> SaveAsync(StatusTask entity)
     {
-        throw new NotImplementedException();
+        var statusSaved = await context.StatusTasks.AddAsync(entity);
+        await context.SaveChangesAsync();
+        return statusSaved.Entity;
     }
 
-    public Task SaveAllAsync(IEnumerable<StatusTask> tasks)
+    public async Task SaveAllAsync(IEnumerable<StatusTask> entities)
     {
-        throw new NotImplementedException();
+        await context.AddRangeAsync(entities);
+        await context.SaveChangesAsync();
     }
 }
