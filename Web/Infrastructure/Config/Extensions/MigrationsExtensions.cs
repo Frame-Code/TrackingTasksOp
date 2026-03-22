@@ -12,7 +12,9 @@ public static class MigrationsExtensions
         //--------------------------------Migrate Schema
         await using var scope = app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<TrackingTasksDbContext>();
-        await db.Database.MigrateAsync();
+        
+        if (app.Environment.IsDevelopment()) 
+            await db.Database.MigrateAsync();
         
         //--------------------------------Migrate Data
         var any = db.MigrationsData.Any();

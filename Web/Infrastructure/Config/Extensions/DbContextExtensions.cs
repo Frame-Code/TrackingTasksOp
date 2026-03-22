@@ -44,4 +44,17 @@ public static class DbContextExtensions
         return schema != null ? $"{schema}.{table}" : table
             ?? throw new InvalidOperationException($"{typeof(T).Name} no está registrada en el modelo.");
     }
+    
+    public static async Task<T> AddOrUpdateAsync<T>(this DbContext context, T entity, int id) where T : class
+    {
+        var existing = await context.Set<T>().FindAsync(id);
+
+        if (existing is null)
+            await context.Set<T>().AddAsync(entity);
+        else
+            context.Update(entity);
+
+        await context.SaveChangesAsync();
+        return entity;
+    }
 }

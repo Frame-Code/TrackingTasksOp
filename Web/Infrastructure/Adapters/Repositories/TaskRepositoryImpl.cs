@@ -1,6 +1,7 @@
 ﻿using System.Linq.Expressions;
 using Application.Ports.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.DataAccess;
 using Task = Domain.Entities.TrackingTasksEntities.Task;
 
@@ -10,22 +11,34 @@ public class TaskRepositoryImpl(TrackingTasksDbContext context) : ITaskRepositor
 {
     public async Task<IEnumerable<Task>> GetAllAsync(Expression<Func<Task, bool>>? filter, bool tracking = false)
     {
-        var query = tracking ? context.Tasks.AsQueryable() : context.Tasks.AsNoTracking().AsQueryable();
-        return filter is null? await query.ToListAsync() 
-            : await query.Where(filter).ToListAsync();
+        var query = tracking 
+            ? context.Tasks.AsQueryable() 
+            : context.Tasks.AsNoTracking().AsQueryable();
+        
+        if (filter is not null)
+            query = query.Where(filter);
+
+        return await query
+            .Include(x => x.TasksTimeDetails)
+            .ToListAsync();
     }
 
     public async Task<Task?> GetByIdAsync(int id, bool tracking = false)
     {
-        var query = tracking? context.Tasks.AsQueryable() : context.Tasks.AsNoTracking().AsQueryable();
-        return await query.FirstOrDefaultAsync(x => x.OpenProjectId == id);
+        var query = tracking
+            ? context.Tasks.AsQueryable() 
+            : context.Tasks.AsNoTracking().AsQueryable();
+        var a =await query
+            .Include(x => x.TasksTimeDetails)
+            .FirstOrDefaultAsync(x => x.OpenProjectId == id); 
+        return await query
+            .Include(x => x.TasksTimeDetails)
+            .FirstOrDefaultAsync(x => x.OpenProjectId == id);
     }
 
-    public async Task<Task> SaveAsync(Task task)
+    public async Task<Task> SaveAsync(Task entity)
     {
-        var taskSaved = await context.Tasks.AddAsync(task);
-        await context.SaveChangesAsync();
-        return taskSaved.Entity;
+        return await context.AddOrUpdateAsync(entity, entity.OpenProjectId);
     }
 
     public async System.Threading.Tasks.Task SaveAllAsync(IEnumerable<Task> tasks)

@@ -6,4 +6,5 @@ public class StarTaskRequest
     public string Name { get; init; } = null!;
     public string? Description { get; set; }
     public int ProjectId { get; set; }
+    public int StatusId { get; set; }
 }
