@@ -19,7 +19,7 @@ public static class ServicesExtensions
         //Use cases
         collection.AddScoped<IListsWorkPackagesCommand, ListsWorkPackagesCommandImpl>();
         collection.AddScoped<IStartTaskCommand, StartTaskCommandImpl>();
-        collection.AddScoped<IEndTaskCommand, EndTaskCommandImpl>();
+        collection.AddScoped<IEndTaskSessionCommand, EndTaskSessionCommandImpl>();
         
         //Services
         collection.AddScoped<IStatusOpService, StatusOpServiceImpl>();

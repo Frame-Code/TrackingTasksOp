@@ -1,11 +1,14 @@
 using System.Text.Json.Serialization;
 using Web.Infrastructure.Config.Extensions;
+using Web.Infrastructure.Config.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClients(builder.Configuration);
 builder.Services.AddServices(builder.Configuration);
@@ -20,6 +23,7 @@ if (app.Environment.IsDevelopment())
 }
 
 await app.ConfigurateDbAsync();
+app.UseExceptionHandler();
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
