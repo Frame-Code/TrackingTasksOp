@@ -28,9 +28,7 @@ public class TaskRepositoryImpl(TrackingTasksDbContext context) : ITaskRepositor
         var query = tracking
             ? context.Tasks.AsQueryable() 
             : context.Tasks.AsNoTracking().AsQueryable();
-        var a =await query
-            .Include(x => x.TasksTimeDetails)
-            .FirstOrDefaultAsync(x => x.OpenProjectId == id); 
+        
         return await query
             .Include(x => x.TasksTimeDetails)
             .FirstOrDefaultAsync(x => x.OpenProjectId == id);
