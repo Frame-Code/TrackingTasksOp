@@ -10,6 +10,7 @@ public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> opt
     public DbSet<Task> Tasks { get; set; } = null!;
     public DbSet<TaskTimeDetail>  TasksTimeDetails { get; set; } = null!;
     public DbSet<StatusTask>  StatusTasks { get; set; } = null!;
+    public DbSet<MigrationData>  MigrationsData { get; set; } = null!;
       protected override void OnModelCreating(ModelBuilder modelBuilder)
       {
           // ── Project ──────────────────────────────────────────────
@@ -17,14 +18,31 @@ public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> opt
           {
               entity.ToTable("Projects");
               entity.HasKey(p => p.Id);
+              entity.Property(p => p.Id)
+                    .IsRequired()
+                    .ValueGeneratedNever();
               entity.Property(p => p.Name)
                     .IsRequired()
                     .HasMaxLength(200);
-              entity.Property(p => p.Code)
+              entity.Property(p => p.Identifier)
                     .IsRequired()
-                    .HasMaxLength(50);
-              entity.Property(p => p.Description)
-                    .HasMaxLength(500);
+                    .HasMaxLength(100);
+              entity.Property(p => p.IsActive);
+          });
+          
+          // ── MigrationData──────────────────────────────────────────────
+          modelBuilder.Entity<MigrationData>(entity =>
+          {
+                entity.ToTable("MigrationsData");
+                entity.HasKey(p => p.Id);
+                entity.Property(p => p.Name)
+                      .IsRequired()
+                      .HasMaxLength(200);
+                entity.Property(p => p.CreatedAt)
+                      .IsRequired();
+                entity.Property(p => p.Description)
+                      .IsRequired()
+                      .HasMaxLength(1000);
           });
 
           // ── Task ─────────────────────────────────────────────────

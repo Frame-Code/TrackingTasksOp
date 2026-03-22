@@ -3,7 +3,7 @@ using Web.Infrastructure.DataAccess;
 
 namespace Web.Infrastructure.Config.Extensions;
 
-public static class DbContextExtensions
+public static class InitDbContextExtensions
 {
     public static IServiceCollection AddDbContext(this IServiceCollection services, IConfiguration configuration)
     {
@@ -23,5 +23,25 @@ public static class DbContextExtensions
         });
         
         return services;
+    }
+}
+
+public static class DbContextExtensions
+{
+    public static string GetTableName<T>(this DbContext context) where T : class
+    {
+        var entityType = context.Model.FindEntityType(typeof(T));
+        return entityType?.GetTableName() 
+            ?? throw new InvalidOperationException($"{typeof(T).Name} no está registrada en el modelo.");
+    }
+
+    public static string GetFullTableName<T>(this DbContext context) where T : class
+    {
+        var entityType = context.Model.FindEntityType(typeof(T));
+        var table = entityType?.GetTableName();
+        var schema = entityType?.GetSchema();
+        
+        return schema != null ? $"{schema}.{table}" : table
+            ?? throw new InvalidOperationException($"{typeof(T).Name} no está registrada en el modelo.");
     }
 }

@@ -23,10 +23,12 @@ public static class ServicesExtensions
         
         //Services
         collection.AddScoped<IStatusOpService, StatusOpServiceImpl>();
+        collection.AddScoped<IProjectOpService, ProjectOpServiceImpl>();
         
         //Repositories
         collection.AddScoped<IStatusTaskRepository, StatusTaskRepositoryImpl>();
         collection.AddScoped<ITaskRepository, TaskRepositoryImpl>();
+        collection.AddScoped<IProjectRepository, ProjectRepositoryImpl>();
         
         return collection;
     }
