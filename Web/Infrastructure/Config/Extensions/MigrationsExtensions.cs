@@ -1,5 +1,4 @@
-﻿using Application.Ports.Repositories;
-using Application.Ports.Services;
+﻿using Application.Ports.Services;
 using Domain.Entities.TrackingTasksEntities;
 using Microsoft.EntityFrameworkCore;
 using Web.Infrastructure.DataAccess;
@@ -16,12 +15,16 @@ public static class MigrationsExtensions
         await db.Database.MigrateAsync();
         
         //--------------------------------Migrate Data
-        var statusOpService = scope.ServiceProvider.GetRequiredService<IStatusOpService>();
-        var statusTaskRepository = scope.ServiceProvider.GetRequiredService<IStatusTaskRepository>();
+        var any = db.MigrationsData.Any();
+        if(any)
+            return app;
         
+        var statusOpService = scope.ServiceProvider.GetRequiredService<IStatusOpService>();
+        var projectOpService = scope.ServiceProvider.GetRequiredService<IProjectOpService>();
+
         //Migrate StatusTask
         var statuses = await statusOpService.Lists();
-        if(statuses.Count == 0) 
+        if (statuses.Count == 0)
             throw new Exception("No statuses found");
 
         var statusTasks = statuses
@@ -32,9 +35,32 @@ public static class MigrationsExtensions
                 Name = x.Name
             })
             .ToList();
-        await statusTaskRepository.SaveAllAsync(statusTasks);
-            
+
         //Migrate Projects
+        var projects = await projectOpService.Lists();
+        if (projects.Count == 0)
+            throw new Exception("No projects found");
+
+        var projectsTask = projects
+            .Select(x => new Project
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Identifier = x.Identifier,
+                IsActive = x.IsActive
+            })
+            .ToList();
+
+        //Create Migration
+        var migration = new MigrationData
+        {
+            Description = $"Tables migrated: {db.GetTableName<StatusTask>()}, {db.GetTableName<Project>()}",
+            Name = "TrackingTasksOp Migration Data"
+        };
+        await db.StatusTasks.AddRangeAsync(statusTasks);
+        await db.Projects.AddRangeAsync(projectsTask);
+        await db.MigrationsData.AddAsync(migration);
+        await db.SaveChangesAsync();
         
         return app;
     } 
