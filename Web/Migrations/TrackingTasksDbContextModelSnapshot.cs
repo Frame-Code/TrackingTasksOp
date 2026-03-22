@@ -169,7 +169,7 @@ namespace Web.Migrations
                     b.HasOne("Domain.Entities.TrackingTasksEntities.Task", "Task")
                         .WithMany("TasksTimeDetails")
                         .HasForeignKey("IdTask")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Task");

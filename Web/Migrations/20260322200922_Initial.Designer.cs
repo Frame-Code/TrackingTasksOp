@@ -12,7 +12,7 @@ using Web.Infrastructure.DataAccess;
 namespace Web.Migrations
 {
     [DbContext(typeof(TrackingTasksDbContext))]
-    [Migration("20260322170233_Initial")]
+    [Migration("20260322200922_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -172,7 +172,7 @@ namespace Web.Migrations
                     b.HasOne("Domain.Entities.TrackingTasksEntities.Task", "Task")
                         .WithMany("TasksTimeDetails")
                         .HasForeignKey("IdTask")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Task");

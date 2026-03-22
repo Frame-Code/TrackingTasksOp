@@ -71,6 +71,12 @@ public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> opt
                     .HasForeignKey(t => t.StatusTaskId)
                     .OnDelete(DeleteBehavior.Restrict);
               
+              entity.HasMany(t => t.TasksTimeDetails)
+                    .WithOne(t => t.Task)
+                    .HasForeignKey(t => t.IdTask)
+                    .HasPrincipalKey(t => t.OpenProjectId)
+                    .OnDelete(DeleteBehavior.Restrict);
+              
           });
 
           // ── TaskTimeDetail ────────────────────────────────────────
@@ -83,11 +89,6 @@ public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> opt
                     .HasColumnType("datetime");
               entity.Property(t => t.EndTime)
                     .HasColumnType("datetime");
-              
-              entity.HasOne(t => t.Task)
-                    .WithMany(t => t.TasksTimeDetails)
-                    .HasForeignKey(t => t.IdTask)
-                    .OnDelete(DeleteBehavior.Cascade);
               
           });
           

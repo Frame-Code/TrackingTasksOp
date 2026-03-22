@@ -11,13 +11,14 @@ public class StartTaskCommandImpl(ITaskRepository repository) : IStartTaskComman
 {
     public async Task<TaskEntity> Execute(StarTaskRequest request)
     {
-        var task = await repository.GetByIdAsync(request.OpenProjectId)
-            ?? new TaskEntity()
+        var task = await repository.GetByIdAsync(request.OpenProjectId) 
+            ?? new TaskEntity
             {
                 OpenProjectId = request.OpenProjectId,
                 Name = request.Name,
                 Description = request.Description,
-                ProjectId = request.ProjectId
+                ProjectId = request.ProjectId,
+                StatusTaskId = request.StatusId
             };
 
         var details = task.TasksTimeDetails.ToList();

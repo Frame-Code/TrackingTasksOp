@@ -2,6 +2,7 @@
 using Application.Ports.Repositories;
 using Domain.Entities.TrackingTasksEntities;
 using Microsoft.EntityFrameworkCore;
+using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.DataAccess;
 using Task = System.Threading.Tasks.Task;
 
@@ -24,9 +25,7 @@ public class ProjectRepositoryImpl(TrackingTasksDbContext context) : IProjectRep
 
     public async Task<Project> SaveAsync(Project entity)
     {
-        var statusSaved = await context.Projects.AddAsync(entity);
-        await context.SaveChangesAsync();
-        return statusSaved.Entity;
+        return await context.AddOrUpdateAsync(entity, entity.Id);
     }
 
     public async Task SaveAllAsync(IEnumerable<Project> entities)

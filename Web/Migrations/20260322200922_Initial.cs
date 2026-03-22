@@ -99,7 +99,7 @@ namespace Web.Migrations
                         column: x => x.IdTask,
                         principalTable: "Tasks",
                         principalColumn: "OpenProjectId",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
