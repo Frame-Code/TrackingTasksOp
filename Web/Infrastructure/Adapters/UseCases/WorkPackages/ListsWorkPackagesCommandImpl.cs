@@ -3,6 +3,7 @@ using System.Text.Json;
 using Application.Dto.ListWorkPackages;
 using Application.Ports.UseCases.WorkPackages;
 using Domain.Entities.OpenProjectEntities;
+using Domain.Entities.OpenProjectEntities.WorkPackage;
 using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.Config.Settings;
 

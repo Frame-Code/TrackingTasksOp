@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Domain.Entities.OpenProjectEntities;
+namespace Domain.Entities.OpenProjectEntities.Status;
 
 public class StatusEmbedded
 {

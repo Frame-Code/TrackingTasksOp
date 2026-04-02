@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Domain.Entities.OpenProjectEntities;
+namespace Domain.Entities.OpenProjectEntities.WorkPackage;
 
 //Representa los campos adicionales de cada tarea
 public class WorkPackageLinks

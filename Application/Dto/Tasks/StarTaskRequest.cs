@@ -2,9 +2,11 @@
 
 public class StarTaskRequest
 {
-    public int OpenProjectId { get; set; }
+    public int WorkPackageId { get; init; }
+    public int? ActivityId { get; init; }
+    public string? Comment { get; init; }
     public string Name { get; init; } = null!;
-    public string? Description { get; set; }
-    public int ProjectId { get; set; }
-    public int StatusId { get; set; }
+    public string? Description { get; init; }
+    public int ProjectId { get; init; }
+    public int StatusId { get; init; }
 }

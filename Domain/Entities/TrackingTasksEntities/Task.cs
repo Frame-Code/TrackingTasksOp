@@ -2,7 +2,7 @@
 
 public class Task
 {
-    public int OpenProjectId { get; set; }
+    public int WorkPackageId { get; set; }
     public string  Name { get; set; } = null!;
     public string? Description { get; set; } = null!;
     public DateTime? CreatedAt { get; init; } = DateTime.Now;

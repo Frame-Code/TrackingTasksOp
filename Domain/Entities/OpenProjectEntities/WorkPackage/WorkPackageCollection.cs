@@ -1,9 +1,9 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Domain.Entities.OpenProjectEntities;
+namespace Domain.Entities.OpenProjectEntities.WorkPackage;
 
 //Representa un sobre paginado de la respuesta, siendo la raíz del json
-public class WorkPackageCollection
+public class WorkPackageCollection : CollectionBase
 {
     [JsonPropertyName("total")]
     public int Total { get; set; }
@@ -18,5 +18,5 @@ public class WorkPackageCollection
     public int Offset { get; set; }
     
     [JsonPropertyName("_embedded")]
-    public EmbeddedElements Embedded  { get; set; } = new EmbeddedElements();
+    public EmbeddedWokPackage Embedded  { get; set; } = new EmbeddedWokPackage();
 }

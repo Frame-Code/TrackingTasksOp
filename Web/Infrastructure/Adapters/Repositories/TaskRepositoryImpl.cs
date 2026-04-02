@@ -31,12 +31,12 @@ public class TaskRepositoryImpl(TrackingTasksDbContext context) : ITaskRepositor
         
         return await query
             .Include(x => x.TasksTimeDetails)
-            .FirstOrDefaultAsync(x => x.OpenProjectId == id);
+            .FirstOrDefaultAsync(x => x.WorkPackageId == id);
     }
 
     public async Task<Task> SaveAsync(Task entity)
     {
-        return await context.AddOrUpdateAsync(entity, entity.OpenProjectId);
+        return await context.AddOrUpdateAsync(entity, entity.WorkPackageId);
     }
 
     public async System.Threading.Tasks.Task SaveAllAsync(IEnumerable<Task> tasks)
