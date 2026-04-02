@@ -1,10 +1,12 @@
 ﻿using Application.Ports.Repositories;
 using Application.Ports.Services;
 using Application.Ports.UseCases.Tasks;
+using Application.Ports.UseCases.TimeEntry;
 using Application.Ports.UseCases.WorkPackages;
 using Web.Infrastructure.Adapters.Repositories;
 using Web.Infrastructure.Adapters.Services;
 using Web.Infrastructure.Adapters.UseCases.Tasks;
+using Web.Infrastructure.Adapters.UseCases.TimeEntry;
 using Web.Infrastructure.Adapters.UseCases.WorkPackages;
 using Web.Infrastructure.Config.Settings;
 
@@ -20,10 +22,12 @@ public static class ServicesExtensions
         collection.AddScoped<IListsWorkPackagesCommand, ListsWorkPackagesCommandImpl>();
         collection.AddScoped<IStartTaskCommand, StartTaskCommandImpl>();
         collection.AddScoped<IEndTaskSessionCommand, EndTaskSessionCommandImpl>();
+        collection.AddScoped<IAddTimeEntry, AddTimeEntryImpl>();
         
         //Services
         collection.AddScoped<IStatusOpService, StatusOpServiceImpl>();
         collection.AddScoped<IProjectOpService, ProjectOpServiceImpl>();
+        collection.AddScoped<IActivityOpService, ActivityOpServiceImpl>();
         
         //Repositories
         collection.AddScoped<IStatusTaskRepository, StatusTaskRepositoryImpl>();

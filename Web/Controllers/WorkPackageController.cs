@@ -1,6 +1,7 @@
 ﻿using Application.Dto.ListWorkPackages;
 using Application.Ports.UseCases.WorkPackages;
 using Domain.Entities.OpenProjectEntities;
+using Domain.Entities.OpenProjectEntities.WorkPackage;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Web.Controllers;

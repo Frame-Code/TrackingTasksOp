@@ -186,3 +186,27 @@ Accept: application/json
 GET {{baseUrl}}/api/v3/statuses
 Authorization: {{auth}}
 Accept: application/json
+
+# =============================================================
+# 11. Tiempo invertido
+# =============================================================
+
+### Listar todos las entradas de tiempo de un Workpackage especifico (tarea)
+GET {{baseUrl}}/api/v3/time_entries?filters=[{"work_package":{"operator":"=","values":["861"]}}]
+Authorization: {{auth}}
+Accept: application/json
+
+### Listar todas las actividades disponibles para una entrada especifica
+POST {{baseUrl}}/api/v3/time_entries/form
+Authorization: {{auth}}
+Accept: application/json
+Content-Type: application/json
+
+{
+  "_links": {
+    "workPackage": {
+      "href": "/api/v3/work_packages/1"
+    }
+  }
+}
+

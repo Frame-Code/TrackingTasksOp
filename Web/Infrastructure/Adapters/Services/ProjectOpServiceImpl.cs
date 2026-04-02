@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Application.Ports.Services;
 using Domain.Entities.OpenProjectEntities;
+using Domain.Entities.OpenProjectEntities.Project;
 using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.Config.Settings;
 

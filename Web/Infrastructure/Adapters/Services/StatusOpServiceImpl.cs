@@ -2,6 +2,8 @@
 using System.Text.Json;
 using Application.Ports.Services;
 using Domain.Entities.OpenProjectEntities;
+using Domain.Entities.OpenProjectEntities.Activity;
+using Domain.Entities.OpenProjectEntities.Status;
 using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.Config.Settings;
 

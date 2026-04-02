@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Domain.Entities.OpenProjectEntities;
+namespace Domain.Entities.OpenProjectEntities.Project;
 
-public class StatusCollection
+public class ProjectCollection
 {
     [JsonPropertyName("_type")] 
     public string Type { get; set; } = string.Empty;
@@ -13,6 +13,6 @@ public class StatusCollection
     [JsonPropertyName("count")]
     public int Count { get; set; }
 
-    [JsonPropertyName("_embedded")]
-    public StatusEmbedded Embedded { get; set; }
+    [JsonPropertyName("_embedded")] 
+    public ProjectEmbedded Embedded { get; set; } = new ProjectEmbedded();
 }

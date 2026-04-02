@@ -1,37 +1,50 @@
 ﻿using Application.Dto.Tasks;
+using Application.Dto.TimeEntry;
 using Application.Ports.Repositories;
 using Application.Ports.UseCases.Tasks;
+using Application.Ports.UseCases.TimeEntry;
 using Domain.Entities.TrackingTasksEntities;
-using Task = System.Threading.Tasks.Task;
 using TaskEntity = Domain.Entities.TrackingTasksEntities.Task;
 
 namespace Web.Infrastructure.Adapters.UseCases.Tasks;
 
-public class StartTaskCommandImpl(ITaskRepository repository) : IStartTaskCommand
+public class StartTaskCommandImpl(ITaskRepository repository, IAddTimeEntry addTimeEntry) : IStartTaskCommand
 {
     public async Task<TaskEntity> Execute(StarTaskRequest request)
     {
-        var task = await repository.GetByIdAsync(request.OpenProjectId) 
+        var task = await repository.GetByIdAsync(request.WorkPackageId) 
             ?? new TaskEntity
             {
-                OpenProjectId = request.OpenProjectId,
+                WorkPackageId = request.WorkPackageId,
                 Name = request.Name,
                 Description = request.Description,
                 ProjectId = request.ProjectId,
                 StatusTaskId = request.StatusId
             };
 
+        //Cerrar la última entrada si es una nueva tarea
         var details = task.TasksTimeDetails.ToList();
         var lastDetail = details
             .OrderBy(x => x.StartTime)
             .LastOrDefault();
 
         if (lastDetail is not null)
+        {
+            if (request.ActivityId is null)
+                throw new ArgumentNullException($"No se puede cerrar entrada de tiempo sin una actividad asignada");
+            
+            var timeEntryRequest = new AddTimeEntryRequest(request.WorkPackageId, request.ActivityId ?? -1,
+                lastDetail.GetHoursWorked()!.Value.TotalHours, request.Comment ?? string.Empty);
+            
+            await addTimeEntry.Execute(timeEntryRequest);
             lastDetail.EndTime = DateTime.Now;
+            lastDetail.Uploaded = true;
+        }
         
+        //Crear la nueva entrada de tiempo
         var detail = new TaskTimeDetail
         {
-            IdTask = request.OpenProjectId
+            IdTask = request.WorkPackageId
         };
         
         details.Add(detail);

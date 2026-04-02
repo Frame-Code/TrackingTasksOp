@@ -15,6 +15,7 @@ public class GlobalExceptionHandler(
         {
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized"),
             ValidationException => (StatusCodes.Status400BadRequest, "Bad Request"),
+            ArgumentNullException => (StatusCodes.Status400BadRequest, "Bad Request"),
             _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
         };
 
