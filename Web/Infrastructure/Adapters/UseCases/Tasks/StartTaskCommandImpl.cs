@@ -33,11 +33,11 @@ public class StartTaskCommandImpl(ITaskRepository repository, IAddTimeEntry addT
             if (request.ActivityId is null)
                 throw new ArgumentNullException($"No se puede cerrar entrada de tiempo sin una actividad asignada");
             
+            lastDetail.EndTime = DateTime.Now;
             var timeEntryRequest = new AddTimeEntryRequest(request.WorkPackageId, request.ActivityId ?? -1,
                 lastDetail.GetHoursWorked()!.Value.TotalHours, request.Comment ?? string.Empty);
             
             await addTimeEntry.Execute(timeEntryRequest);
-            lastDetail.EndTime = DateTime.Now;
             lastDetail.Uploaded = true;
         }
         

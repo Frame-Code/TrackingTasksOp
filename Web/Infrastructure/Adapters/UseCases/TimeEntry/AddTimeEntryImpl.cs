@@ -50,7 +50,7 @@ public class AddTimeEntryImpl(
                 },
                 ["activity"] = new JsonObject
                 {
-                    ["href"] = $"/api/v3/time_entries/activities{request.IdActivity}"
+                    ["href"] = $"/api/v3/time_entries/activities/{request.IdActivity}"
                 }
             }
         };
