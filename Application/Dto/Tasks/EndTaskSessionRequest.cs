@@ -1,5 +1,7 @@
 ﻿namespace Application.Dto.Tasks;
 
 public record EndTaskSessionRequest(
-    int OpenProjectId
+    int WorkPackageId,
+    int ActivityId,
+    string Comment
     );
