@@ -4,6 +4,6 @@ namespace Domain.Entities.OpenProjectEntities.Activity;
 
 public class ActivitySchema
 {
-    [JsonPropertyName("activity|")]
+    [JsonPropertyName("activity")]
     public ActivityType Type { get; set; } = null!;
 }

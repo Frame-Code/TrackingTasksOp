@@ -1,0 +1,94 @@
+/* ── Navbar ────────────────────────────────────────────────────── */
+#mainNav {
+    background: rgba(13, 17, 23, 0.92);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* ── Active session pulse dot ───────────────────────────────────── */
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fff;
+    flex-shrink: 0;
+    animation: pulse-anim 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse-anim {
+    0%, 100% { opacity: 1;   transform: scale(1); }
+    50%       { opacity: 0.3; transform: scale(0.6); }
+}
+
+/* ── Work package cards ─────────────────────────────────────────── */
+.wp-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.wp-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Active session card */
+.wp-card--active {
+    border-color: rgba(25, 135, 84, 0.55) !important;
+    box-shadow:
+        0 0 0 1px rgba(25, 135, 84, 0.25),
+        0 4px 24px rgba(25, 135, 84, 0.12) !important;
+}
+
+/* Other cards when a session is active */
+.wp-card--disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+/* ── Timer ──────────────────────────────────────────────────────── */
+.card-timer {
+    font-size: 2.1rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 3px;
+    color: #20c997;
+    line-height: 1;
+}
+
+/* ── Status badges ──────────────────────────────────────────────── */
+.status-new          { background-color: #0d6efd !important; }
+.status-inprogress   { background-color: #0dcaf0 !important; color: #000 !important; }
+.status-done         { background-color: #198754 !important; }
+.status-closed       { background-color: #6c757d !important; }
+.status-hold         { background-color: #ffc107 !important; color: #000 !important; }
+.status-default      { background-color: #495057 !important; }
+
+/* ── Progress bar ───────────────────────────────────────────────── */
+.progress-thin {
+    height: 5px;
+}
+
+/* ── Status filter pills ────────────────────────────────────────── */
+.status-filter-pill {
+    opacity: 0.35;
+    border: none;
+    transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.status-filter-pill.is-active {
+    opacity: 1;
+}
+
+.status-filter-pill:hover {
+    opacity: 0.75;
+    transform: translateY(-1px);
+}
+
+.status-filter-pill.is-active:hover {
+    opacity: 0.85;
+}
+
+/* ── History table ──────────────────────────────────────────────── */
+.session-active-row {
+    --bs-table-accent-bg: rgba(25, 135, 84, 0.12);
+}

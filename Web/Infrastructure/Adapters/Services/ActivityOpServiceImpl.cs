@@ -37,7 +37,7 @@ public class ActivityOpServiceImpl(
         var collection = JsonSerializer.Deserialize<ActivityCollection>(jsonResponse, options)
             ?? throw new SerializationException("Can't deserialize response to ActivityCollection");
         
-        return collection.Embedded.Schema.Type.AllowedValues;
+        return collection.Embedded.Schema.Type.Embedded.AllowedValues;
     }
     
     private string BuildUrl()
