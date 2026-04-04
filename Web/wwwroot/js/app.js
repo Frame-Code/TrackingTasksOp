@@ -3,12 +3,12 @@
 import { store, getActiveSession, saveSession, clearSession } from './state.js';
 import { fetchProjects, fetchWorkPackages, fetchActivities, fetchTask,
          postStartSession, postEndSession } from './api.js';
-import { updateNavbar, renderProjectSelect, renderCards,
+import { updateNavbar, renderProjectSelect, renderCards, renderStatusFilters,
          renderHistoryLoading, renderHistoryContent, renderHistoryError,
          renderActivitiesSelect } from './render.js';
 import { startTimer, stopTimer } from './timer.js';
 import { showToast, setLoading, showError, hideError } from './ui.js';
-import { escHtml, formatDuration } from './helpers.js';
+import { escHtml, formatDuration, statusClass } from './helpers.js';
 
 // ── Carga de datos ────────────────────────────────────────────────────────────
 
@@ -23,17 +23,31 @@ async function loadProjects() {
     }
 }
 
+const DEFAULT_STATUSES = ['new', 'nuevo', 'in progress', 'en progreso'];
+
 async function loadWorkPackages(projectId) {
     setLoading(true);
     hideError();
     try {
         store.workPackages = await fetchWorkPackages(projectId);
+        initDefaultStatusFilters();
+        renderStatusFilters();
         renderCards();
     } catch (e) {
         showError(`No se pudieron cargar las tareas: ${e.message}`);
     } finally {
         setLoading(false);
     }
+}
+
+function initDefaultStatusFilters() {
+    store.activeStatusFilters.clear();
+    store.workPackages.forEach(wp => {
+        const title = wp._links?.status?.title || 'Sin estado';
+        if (DEFAULT_STATUSES.some(d => title.toLowerCase().includes(d))) {
+            store.activeStatusFilters.add(title);
+        }
+    });
 }
 
 // ── Acciones de sesión ────────────────────────────────────────────────────────
@@ -130,6 +144,23 @@ async function populateActivities(session) {
 
 // ── Event delegation ──────────────────────────────────────────────────────────
 
+function bindStatusFilterEvents() {
+    document.getElementById('statusFilterPills').addEventListener('click', (e) => {
+        const pill = e.target.closest('.status-filter-pill');
+        if (!pill) return;
+
+        const status = pill.dataset.status;
+        if (store.activeStatusFilters.has(status)) {
+            store.activeStatusFilters.delete(status);
+            pill.classList.remove('is-active');
+        } else {
+            store.activeStatusFilters.add(status);
+            pill.classList.add('is-active');
+        }
+        renderCards();
+    });
+}
+
 function bindGridEvents() {
     document.getElementById('wpGrid').addEventListener('click', async (e) => {
         const startBtn   = e.target.closest('.btn-start');
@@ -177,6 +208,7 @@ function bindConfirmEndButton() {
 bindGridEvents();
 bindLoadButton();
 bindConfirmEndButton();
+bindStatusFilterEvents();
 
 loadProjects();
 

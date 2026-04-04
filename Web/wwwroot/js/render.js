@@ -28,11 +28,40 @@ export function renderProjectSelect() {
             .join('');
 }
 
+// ── Status filters ────────────────────────────────────────────────────────────
+
+export function renderStatusFilters() {
+    const section = document.getElementById('statusFilterSection');
+    const pillsEl = document.getElementById('statusFilterPills');
+
+    const uniqueStatuses = [...new Map(
+        store.workPackages.map(wp => {
+            const title = wp._links?.status?.title || 'Sin estado';
+            return [title, title];
+        })
+    ).values()].sort();
+
+    if (!uniqueStatuses.length) {
+        section.classList.add('d-none');
+        return;
+    }
+
+    section.classList.remove('d-none');
+    pillsEl.innerHTML = uniqueStatuses.map(title => {
+        const isActive = store.activeStatusFilters.has(title);
+        return `
+            <button class="btn btn-sm status-filter-pill ${statusClass(title)}${isActive ? ' is-active' : ''}"
+                    data-status="${escHtml(title)}">
+                ${escHtml(title)}
+            </button>`;
+    }).join('');
+}
+
 // ── Work package cards ────────────────────────────────────────────────────────
 
 export function renderCards() {
-    const grid      = document.getElementById('wpGrid');
-    const empty     = document.getElementById('emptyState');
+    const grid       = document.getElementById('wpGrid');
+    const empty      = document.getElementById('emptyState');
     const countBadge = document.getElementById('wpCount');
 
     if (!store.workPackages.length) {
@@ -42,13 +71,30 @@ export function renderCards() {
         return;
     }
 
+    // Aplicar filtro de estado (vacío = mostrar todos)
+    const visible = store.activeStatusFilters.size === 0
+        ? store.workPackages
+        : store.workPackages.filter(wp => {
+            const title = wp._links?.status?.title || 'Sin estado';
+            return store.activeStatusFilters.has(title);
+        });
+
     const session = getActiveSession();
     empty.classList.add('d-none');
     countBadge.textContent =
-        `${store.workPackages.length} tarea${store.workPackages.length !== 1 ? 's' : ''}`;
+        `${visible.length} de ${store.workPackages.length} tarea${store.workPackages.length !== 1 ? 's' : ''}`;
     countBadge.classList.remove('d-none');
 
-    grid.innerHTML = store.workPackages.map(wp => buildCard(wp, session)).join('');
+    if (!visible.length) {
+        grid.innerHTML = `
+            <div class="col-12 text-center py-4 text-muted">
+                <i class="bi bi-funnel display-6 d-block mb-2 opacity-25"></i>
+                <p class="mb-0">Ninguna tarea coincide con los filtros seleccionados.</p>
+            </div>`;
+        return;
+    }
+
+    grid.innerHTML = visible.map(wp => buildCard(wp, session)).join('');
 }
 
 function buildCard(wp, session) {

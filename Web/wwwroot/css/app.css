@@ -68,6 +68,26 @@
     height: 5px;
 }
 
+/* ── Status filter pills ────────────────────────────────────────── */
+.status-filter-pill {
+    opacity: 0.35;
+    border: none;
+    transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.status-filter-pill.is-active {
+    opacity: 1;
+}
+
+.status-filter-pill:hover {
+    opacity: 0.75;
+    transform: translateY(-1px);
+}
+
+.status-filter-pill.is-active:hover {
+    opacity: 0.85;
+}
+
 /* ── History table ──────────────────────────────────────────────── */
 .session-active-row {
     --bs-table-accent-bg: rgba(25, 135, 84, 0.12);
