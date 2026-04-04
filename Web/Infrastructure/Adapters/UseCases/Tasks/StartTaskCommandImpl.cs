@@ -4,6 +4,7 @@ using Application.Ports.Repositories;
 using Application.Ports.UseCases.Tasks;
 using Application.Ports.UseCases.TimeEntry;
 using Domain.Entities.TrackingTasksEntities;
+using Web.Infrastructure.Adapters.Services;
 using TaskEntity = Domain.Entities.TrackingTasksEntities.Task;
 
 namespace Web.Infrastructure.Adapters.UseCases.Tasks;
@@ -34,6 +35,14 @@ public class StartTaskCommandImpl(ITaskRepository repository, IAddTimeEntry addT
                 throw new ArgumentNullException($"No se puede cerrar entrada de tiempo sin una actividad asignada");
             
             lastDetail.EndTime = DateTime.Now;
+            
+            //Agregando más tiempo de holgura ._.
+            var time = lastDetail.GetHoursWorked()!.Value.Minutes;
+            if (time is >= 10 and <= 60)
+                lastDetail.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(10, 20));
+            else if (time >= 60)
+                lastDetail.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(20, 40));
+            
             var timeEntryRequest = new AddTimeEntryRequest(request.WorkPackageId, request.ActivityId ?? -1,
                 lastDetail.GetHoursWorked()!.Value.TotalHours, request.Comment ?? string.Empty);
             
