@@ -28,7 +28,7 @@ public class StartTaskCommandImpl(ITaskRepository repository, IAddTimeEntry addT
             .OrderBy(x => x.StartTime)
             .LastOrDefault();
 
-        if (lastDetail is not null)
+        if (lastDetail is not null && !lastDetail.EndTime.HasValue)
         {
             if (request.ActivityId is null)
                 throw new ArgumentNullException($"No se puede cerrar entrada de tiempo sin una actividad asignada");

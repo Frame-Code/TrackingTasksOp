@@ -24,6 +24,8 @@ if (app.Environment.IsDevelopment())
 
 await app.ConfigurateDbAsync();
 app.UseExceptionHandler();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
