@@ -9,7 +9,7 @@ public static class HttpClientExtensions
     {
         var uri = configuration.GetSection("OpenProjectConfig:Uri").Value
             ?? throw new ArgumentException("OpenProjectConfig:Uri is not set");
-        
+
         var apiKey = configuration.GetSection("OpenProjectConfig:apiKey").Value
             ?? throw new ArgumentException("OpenProjectConfig:apiKey is not set");
 
@@ -17,6 +17,7 @@ public static class HttpClientExtensions
             ?? throw new ArgumentException("OpenProjectConfig:HttpClientName is not set");
 
         var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"apikey:{apiKey}"));
+
         services.AddHttpClient(clientName, (client) =>
         {
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);

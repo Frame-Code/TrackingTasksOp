@@ -14,6 +14,14 @@ builder.Services.AddHttpClients(builder.Configuration);
 builder.Services.AddServices(builder.Configuration);
 builder.Services.AddDbContext(builder.Configuration);
 
+builder.Services.AddCors(options => {
+    options.AddDefaultPolicy(policy => {
+        policy.WithOrigins("http://localhost:4200")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -24,6 +32,7 @@ if (app.Environment.IsDevelopment())
 
 await app.ConfigurateDbAsync();
 app.UseExceptionHandler();
+app.UseCors();
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
