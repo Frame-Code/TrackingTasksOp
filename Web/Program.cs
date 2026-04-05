@@ -20,11 +20,10 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseCors("AllowAll");
-} else 
-    app.UseCors();
+}
 
 await app.ConfigurateDbAsync();
+app.UseCors();
 app.UseExceptionHandler();
 app.UseDefaultFiles();
 app.UseStaticFiles();
