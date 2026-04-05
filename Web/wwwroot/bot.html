@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Tracking Tasks</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        :root {
+            /* Colores oficiales de Gemini Dark Mode */
+            --bg-page: #131314;
+            --bg-container: #1e1f20;
+            --bg-input: #131314;
+            --text-main: #e3e3e3;
+            --text-secondary: #c4c7c5;
+            --accent-blue: #4d90fe;
+            --user-msg-bg: #2b2c2f;
+            --bot-msg-bg: transparent;
+            --border-color: #444746;
+            --hover-bg: #333537;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Google Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .chat-layout {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Header */
+        .header {
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 500;
+            background: linear-gradient(90deg, #4285f4, #9b72cb, #d96570);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-back {
+            color: var(--accent-blue);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .nav-back:hover {
+            background-color: var(--hover-bg);
+        }
+
+        /* Chat Area */
+        #chat-messages {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+            scroll-behavior: smooth;
+        }
+
+        .message-row {
+            display: flex;
+            gap: 16px;
+            max-width: 100%;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .avatar.bot {
+            background: linear-gradient(135deg, #4285f4, #9b72cb);
+            color: white;
+        }
+
+        .avatar.user {
+            background-color: #5f6368;
+            color: white;
+        }
+
+        .message-content {
+            flex: 1;
+            line-height: 1.6;
+            font-size: 1rem;
+            word-wrap: break-word;
+        }
+
+        .message-row.user-row {
+            flex-direction: row-reverse;
+        }
+
+        .message-row.user-row .message-content {
+            background-color: var(--user-msg-bg);
+            padding: 12px 20px;
+            border-radius: 18px;
+            max-width: 80%;
+            flex: none;
+        }
+
+        /* Action Card Styling */
+        .action-card {
+            background-color: var(--bg-container);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 400px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--accent-blue);
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .card-body {
+            font-size: 0.95rem;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .btn-action {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--accent-blue);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-action:hover {
+            background-color: rgba(77, 144, 254, 0.1);
+            border-color: var(--accent-blue);
+        }
+
+        /* Typing Indicator */
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+            padding: 8px 0;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            background-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+
+        /* Input Area */
+        .input-container {
+            padding: 0 24px 32px 24px;
+            background: linear-gradient(transparent, var(--bg-page) 20%);
+        }
+
+        .input-wrapper {
+            background-color: var(--bg-container);
+            border-radius: 28px;
+            padding: 8px 16px 8px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--border-color);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        #user-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 1rem;
+            padding: 12px 0;
+            outline: none;
+        }
+
+        #send-btn {
+            background: transparent;
+            border: none;
+            color: var(--accent-blue);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        #send-btn:hover:not(:disabled) {
+            background-color: var(--hover-bg);
+        }
+
+        #send-btn:disabled {
+            color: #5f6368;
+            cursor: not-allowed;
+        }
+
+        /* Quick Suggestions */
+        .suggestions {
+            display: flex;
+            gap: 8px;
+            padding: 12px 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .suggestions::-webkit-scrollbar { display: none; }
+
+        .suggestion-chip {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 18px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .suggestion-chip:hover {
+            background-color: var(--hover-bg);
+            border-color: var(--text-secondary);
+        }
+
+        .footer-copyright {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #80868b;
+            margin-top: 12px;
+            padding-bottom: 4px;
+        }
+
+        /* Scrollbar */
+        #chat-messages::-webkit-scrollbar { width: 8px; }
+        #chat-messages::-webkit-scrollbar-thumb {
+            background-color: var(--border-color);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-layout">
+        <div class="header">
+            <h1>Gemini</h1>
+            <a href="/" class="nav-back">
+                <i class="bi bi-grid-1x2"></i> Volver al Dashboard
+            </a>
+        </div>
+
+        <div id="chat-messages">
+            <div class="message-row">
+                <div class="avatar bot"><i class="bi bi-stars"></i></div>
+                <div class="message-content">
+                    ¡Hola! Soy tu asistente de TrackingTasks. Puedo ayudarte a gestionar tus tareas en OpenProject, iniciar cronómetros o asignar responsables. ¿Qué deseas hacer hoy?
+                </div>
+            </div>
+        </div>
+
+        <div class="input-container">
+            <div class="suggestions">
+                <div class="suggestion-chip">¿Qué tengo pendiente hoy?</div>
+                <div class="suggestion-chip">Lista mis proyectos</div>
+                <div class="suggestion-chip">Crea una tarea rápida</div>
+                <div class="suggestion-chip">Detén el trackeo actual</div>
+            </div>
+            <div class="input-wrapper">
+                <input type="text" id="user-input" placeholder="Escribe aquí para chatear..." autocomplete="off">
+                <button id="send-btn">
+                    <i class="bi bi-send-fill fs-5"></i>
+                </button>
+            </div>
+            <div class="footer-copyright">
+                Desarrollado por Daniel, Stin y Ronald &copy; 2026. Todos los derechos reservados.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const suggestionChips = document.querySelectorAll('.suggestion-chip');
+
+        let sessionId = localStorage.getItem('chat_session_id') || ('sess_' + Math.random().toString(36).substr(2, 9));
+        localStorage.setItem('chat_session_id', sessionId);
+
+        function formatMarkdown(text) {
+            // Simplificación de markdown para negritas y listas
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/^\* (.*)/gm, '• $1')
+                .replace(/\n/g, '<br>');
+        }
+
+        function createActionCard(data) {
+            if (!data.workPackageId) return '';
+            return `
+                <div class="action-card">
+                    <div class="card-header">
+                        <i class="bi bi-check2-circle"></i> Acción Ejecutada
+                    </div>
+                    <div class="card-body">
+                        <strong>Tarea:</strong> ${data.name || 'Sin nombre'}<br>
+                        <strong>ID:</strong> #${data.workPackageId}<br>
+                        <span style="color: var(--text-secondary); font-size: 0.8rem;">${data.status || ''}</span>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn-action" onclick="window.open('http://localhost:8080/work_packages/${data.workPackageId}', '_blank')">
+                            Ver en OpenProject <i class="bi bi-box-arrow-up-right"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function addMessage(content, isUser = false, isRawData = false) {
+            const row = document.createElement('div');
+            row.className = `message-row ${isUser ? 'user-row' : ''}`;
+            
+            const avatarHtml = isUser 
+                ? '<div class="avatar user"><i class="bi bi-person-fill"></i></div>'
+                : '<div class="avatar bot"><i class="bi bi-stars"></i></div>';
+            
+            let contentHtml = isUser ? content : formatMarkdown(content);
+            
+            row.innerHTML = `
+                ${avatarHtml}
+                <div class="message-content">
+                    ${contentHtml}
+                </div>
+            `;
+            
+            chatMessages.appendChild(row);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return row;
+        }
+
+        async function sendMessage(text = null) {
+            const prompt = text || userInput.value.trim();
+            if (!prompt) return;
+
+            if (!text) userInput.value = '';
+            userInput.disabled = true;
+            sendBtn.disabled = true;
+
+            addMessage(prompt, true);
+
+            // Indicador de escritura animado
+            const typingRow = document.createElement('div');
+            typingRow.className = 'message-row';
+            typingRow.innerHTML = `
+                <div class="avatar bot"><i class="bi bi-stars"></i></div>
+                <div class="message-content">
+                    <div class="typing-dots">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(typingRow);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const response = await fetch(`/api/v1/Boot/chat/${sessionId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ Prompt: prompt })
+                });
+
+                const data = await response.json();
+                chatMessages.removeChild(typingRow);
+
+                // Si la respuesta contiene datos de una tarea creada/iniciada, mostramos la tarjeta
+                const botRow = addMessage(data.response || 'Operación completada.');
+                
+                // Intento detectar si hay IDs de tareas en el mensaje o data estructurada
+                // (En una versión futura el backend podría enviar un objeto 'metadata')
+                if(data.metadata) {
+                    botRow.querySelector('.message-content').innerHTML += createActionCard(data.metadata);
+                }
+
+            } catch (error) {
+                chatMessages.removeChild(typingRow);
+                addMessage('Lo siento, no pude conectar con el servidor de Gemini. Verifica que el backend esté corriendo.');
+            } finally {
+                userInput.disabled = false;
+                sendBtn.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        sendBtn.addEventListener('click', () => sendMessage());
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        suggestionChips.forEach(chip => {
+            chip.addEventListener('click', () => sendMessage(chip.innerText));
+        });
+    </script>
+</body>
+</html>

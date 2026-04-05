@@ -1,4 +1,4 @@
-﻿using Application.Dto.Tasks;
+using Application.Dto.Tasks;
 using Application.Dto.TimeEntry;
 using Application.Dto.WorkPackages;
 using Application.Ports.Repositories;
@@ -97,18 +97,20 @@ namespace Web.Infrastructure.Adapters.UseCases.Tasks;
             .OrderBy(x => x.StartTime)
             .LastOrDefault();
 
-<<<<<<< HEAD
         if (lastDetail is not null && lastDetail.EndTime == null)
-=======
-        if (lastDetail is not null && !lastDetail.EndTime.HasValue)
->>>>>>> 43a2f6a7702ea35cec6982dd843371d7f6bf2b9b
         {
             lastDetail.EndTime = DateTime.Now;
-<<<<<<< HEAD
 
             // Solo intentamos subir a OpenProject si tenemos el ID de actividad
             if (request.ActivityId.HasValue && request.ActivityId.Value > 0)
             {
+                //Agregando más tiempo de holgura ._. (Lógica de main)
+                var time = lastDetail.GetHoursWorked()!.Value.Minutes;
+                if (time is >= 10 and <= 60)
+                    lastDetail.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(10, 20));
+                else if (time >= 60)
+                    lastDetail.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(20, 40));
+
                 var timeEntryRequest = new AddTimeEntryRequest(task.WorkPackageId, request.ActivityId.Value,
                     lastDetail.GetHoursWorked()!.Value.TotalHours, request.Comment ?? string.Empty);
 
@@ -120,21 +122,6 @@ namespace Web.Infrastructure.Adapters.UseCases.Tasks;
                 // Se queda como guardado localmente pero no subido a OP
                 lastDetail.Uploaded = false;
             }
-=======
-            
-            //Agregando más tiempo de holgura ._.
-            var time = lastDetail.GetHoursWorked()!.Value.Minutes;
-            if (time is >= 10 and <= 60)
-                lastDetail.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(10, 20));
-            else if (time >= 60)
-                lastDetail.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(20, 40));
-            
-            var timeEntryRequest = new AddTimeEntryRequest(request.WorkPackageId, request.ActivityId ?? -1,
-                lastDetail.GetHoursWorked()!.Value.TotalHours, request.Comment ?? string.Empty);
-            
-            await addTimeEntry.Execute(timeEntryRequest);
-            lastDetail.Uploaded = true;
->>>>>>> 43a2f6a7702ea35cec6982dd843371d7f6bf2b9b
         }
 
         //Crear la nueva entrada de tiempo

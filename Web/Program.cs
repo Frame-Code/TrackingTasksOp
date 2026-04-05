@@ -3,7 +3,7 @@ using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.Config.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Host.UseWindowsService();
+
 builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 
@@ -27,6 +27,7 @@ builder.Services.AddServices(builder.Configuration);
 builder.Services.AddDbContext(builder.Configuration);
 
 var app = builder.Build();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -38,10 +39,10 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 await app.ConfigurateDbAsync();
+
 app.UseExceptionHandler();
-app.UseDefaultFiles();
-app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
+
 app.Run();
