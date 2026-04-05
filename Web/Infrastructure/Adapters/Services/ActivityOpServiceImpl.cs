@@ -21,7 +21,6 @@ public class ActivityOpServiceImpl(
     
     public async Task<List<ActivityAllowedValue>> Lists(int idWorkPackage)
     {
-<<<<<<< HEAD
         try 
         {
             logger.LogInformation("Executing function Lists from ActivityServiceImpl for WP {Id}", idWorkPackage);
@@ -53,25 +52,6 @@ public class ActivityOpServiceImpl(
             logger.LogError(ex, "Error unexpected in ActivityOpService");
             return new List<ActivityAllowedValue>(); 
         }
-=======
-        logger.LogInformation("Executing function Lists from ActivityServiceImpl");
-        var url = BuildUrl();
-        var payload = BuildPayload(idWorkPackage);
-        var response = await _client.PostAsync(url, payload);
-        
-        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized)
-            return new List<ActivityAllowedValue>();
-        
-        var jsonResponse = await response.Content.ReadAsStringAsync();
-        if (!response.IsSuccessStatusCode)
-            throw new Exception($"Error HTTP {(int)response.StatusCode}: {jsonResponse}");
-        
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var collection = JsonSerializer.Deserialize<ActivityCollection>(jsonResponse, options)
-            ?? throw new SerializationException("Can't deserialize response to ActivityCollection");
-        
-        return collection.Embedded.Schema.Type.Embedded.AllowedValues;
->>>>>>> 43a2f6a7702ea35cec6982dd843371d7f6bf2b9b
     }
     
     private string BuildUrl()
