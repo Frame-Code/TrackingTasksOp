@@ -13,6 +13,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClients(builder.Configuration);
 builder.Services.AddServices(builder.Configuration);
 builder.Services.AddDbContext(builder.Configuration);
+builder.Services.ConfigureCors(builder.Configuration);
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
@@ -22,6 +23,7 @@ if (app.Environment.IsDevelopment())
 }
 
 await app.ConfigurateDbAsync();
+app.UseCors();
 app.UseExceptionHandler();
 app.UseDefaultFiles();
 app.UseStaticFiles();
