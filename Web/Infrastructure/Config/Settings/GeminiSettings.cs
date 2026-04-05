@@ -9,4 +9,5 @@ public class GeminiSettings
     public required string Location { get; set; }
     public required string Publisher { get; set; }
     public required string Model { get; set; }
+    public string? ApiKey { get; set; }
 }

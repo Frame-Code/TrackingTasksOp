@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Tracking Tasks</title>
+    <title>TrackingTasksOp Bot</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
         :root {
-            /* Colores oficiales de Gemini Dark Mode */
+            /* Colores oficiales Dark Mode */
             --bg-page: #131314;
             --bg-container: #1e1f20;
             --bg-input: #131314;
@@ -242,10 +242,9 @@
             outline: none;
         }
 
-        #send-btn {
+        #send-btn, #cancel-btn {
             background: transparent;
             border: none;
-            color: var(--accent-blue);
             width: 44px;
             height: 44px;
             border-radius: 50%;
@@ -256,7 +255,16 @@
             transition: background 0.2s;
         }
 
-        #send-btn:hover:not(:disabled) {
+        #send-btn {
+            color: var(--accent-blue);
+        }
+
+        #cancel-btn {
+            color: #d96570;
+            display: none;
+        }
+
+        #send-btn:hover:not(:disabled), #cancel-btn:hover {
             background-color: var(--hover-bg);
         }
 
@@ -313,7 +321,7 @@
 
     <div class="chat-layout">
         <div class="header">
-            <h1>Gemini</h1>
+            <h1>TrackingTasksOp</h1>
             <a href="/" class="nav-back">
                 <i class="bi bi-grid-1x2"></i> Volver al Dashboard
             </a>
@@ -323,7 +331,7 @@
             <div class="message-row">
                 <div class="avatar bot"><i class="bi bi-stars"></i></div>
                 <div class="message-content">
-                    ¡Hola! Soy tu asistente de TrackingTasks. Puedo ayudarte a gestionar tus tareas en OpenProject, iniciar cronómetros o asignar responsables. ¿Qué deseas hacer hoy?
+                    ¡Hola! Soy tu asistente de TrackingTasksOp. Puedo ayudarte a gestionar tus tareas en OpenProject, iniciar cronómetros o asignar responsables. ¿Qué deseas hacer hoy?
                 </div>
             </div>
         </div>
@@ -331,13 +339,16 @@
         <div class="input-container">
             <div class="suggestions">
                 <div class="suggestion-chip">¿Qué tengo pendiente hoy?</div>
-                <div class="suggestion-chip">Lista mis proyectos</div>
-                <div class="suggestion-chip">Crea una tarea rápida</div>
-                <div class="suggestion-chip">Detén el trackeo actual</div>
+                <div class="suggestion-chip">Listar proyectos</div>
+                <div class="suggestion-chip">Mostrar usuarios del sistema</div>
+                <div class="suggestion-chip">Ver estados disponibles</div>
             </div>
             <div class="input-wrapper">
                 <input type="text" id="user-input" placeholder="Escribe aquí para chatear..." autocomplete="off">
-                <button id="send-btn">
+                <button id="cancel-btn" title="Cancelar petición">
+                    <i class="bi bi-stop-circle-fill fs-5"></i>
+                </button>
+                <button id="send-btn" title="Enviar mensaje">
                     <i class="bi bi-send-fill fs-5"></i>
                 </button>
             </div>
@@ -351,10 +362,13 @@
         const chatMessages = document.getElementById('chat-messages');
         const userInput = document.getElementById('user-input');
         const sendBtn = document.getElementById('send-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
         const suggestionChips = document.querySelectorAll('.suggestion-chip');
 
         let sessionId = localStorage.getItem('chat_session_id') || ('sess_' + Math.random().toString(36).substr(2, 9));
         localStorage.setItem('chat_session_id', sessionId);
+        
+        let currentAbortController = null;
 
         function formatMarkdown(text) {
             // Simplificación de markdown para negritas y listas
@@ -413,7 +427,8 @@
 
             if (!text) userInput.value = '';
             userInput.disabled = true;
-            sendBtn.disabled = true;
+            sendBtn.style.display = 'none';
+            cancelBtn.style.display = 'flex';
 
             addMessage(prompt, true);
 
@@ -433,11 +448,14 @@
             chatMessages.appendChild(typingRow);
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
+            currentAbortController = new AbortController();
+
             try {
                 const response = await fetch(`/api/v1/Boot/chat/${sessionId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ Prompt: prompt })
+                    body: JSON.stringify({ Prompt: prompt }),
+                    signal: currentAbortController.signal
                 });
 
                 const data = await response.json();
@@ -446,21 +464,31 @@
                 // Si la respuesta contiene datos de una tarea creada/iniciada, mostramos la tarjeta
                 const botRow = addMessage(data.response || 'Operación completada.');
                 
-                // Intento detectar si hay IDs de tareas en el mensaje o data estructurada
-                // (En una versión futura el backend podría enviar un objeto 'metadata')
                 if(data.metadata) {
                     botRow.querySelector('.message-content').innerHTML += createActionCard(data.metadata);
                 }
 
             } catch (error) {
                 chatMessages.removeChild(typingRow);
-                addMessage('Lo siento, no pude conectar con el servidor de Gemini. Verifica que el backend esté corriendo.');
+                if (error.name === 'AbortError') {
+                    addMessage('🛑 <i>Petición cancelada por el usuario.</i>');
+                } else {
+                    addMessage('Lo siento, no pude conectar con el servidor. Verifica que el backend esté corriendo.');
+                }
             } finally {
+                currentAbortController = null;
                 userInput.disabled = false;
-                sendBtn.disabled = false;
+                sendBtn.style.display = 'flex';
+                cancelBtn.style.display = 'none';
                 userInput.focus();
             }
         }
+
+        cancelBtn.addEventListener('click', () => {
+            if (currentAbortController) {
+                currentAbortController.abort();
+            }
+        });
 
         sendBtn.addEventListener('click', () => sendMessage());
         userInput.addEventListener('keypress', (e) => {

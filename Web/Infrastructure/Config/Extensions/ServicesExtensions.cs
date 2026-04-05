@@ -41,7 +41,7 @@ public static class ServicesExtensions
         collection.AddScoped<IProjectRepository, ProjectRepositoryImpl>();
 
         // AI Services
-        collection.AddScoped<IGeminiIntentService, GeminiIntentService>();
+        collection.AddScoped<IGeminiIntentService, GoogleAIStudioIntentService>();
         collection.AddScoped<IConversationContextService, RedisConversationService>();
         
         // Infrastructure Clients
