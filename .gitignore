@@ -6,6 +6,9 @@
 ## Private files
 http-client.private.env.json
 
+##Config files
+appsettings.json
+
 ##visual studio
 .vs/
 obj/
