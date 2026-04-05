@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Text.Json;
@@ -21,23 +21,37 @@ public class ActivityOpServiceImpl(
     
     public async Task<List<ActivityAllowedValue>> Lists(int idWorkPackage)
     {
-        logger.LogInformation("Executing function Lists from ActivityServiceImpl");
-        var url = BuildUrl();
-        var payload = BuildPayload(idWorkPackage);
-        var response = await _client.PostAsync(url, payload);
-        
-        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized)
-            return new List<ActivityAllowedValue>();
-        
-        var jsonResponse = await response.Content.ReadAsStringAsync();
-        if (!response.IsSuccessStatusCode)
-            throw new Exception($"Error HTTP {(int)response.StatusCode}: {jsonResponse}");
-        
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var collection = JsonSerializer.Deserialize<ActivityCollection>(jsonResponse, options)
-            ?? throw new SerializationException("Can't deserialize response to ActivityCollection");
-        
-        return collection.Embedded.Schema.Type.AllowedValues;
+        try 
+        {
+            logger.LogInformation("Executing function Lists from ActivityServiceImpl for WP {Id}", idWorkPackage);
+            var url = BuildUrl();
+            var payload = BuildPayload(idWorkPackage);
+            var response = await _client.PostAsync(url, payload);
+            
+            if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            {
+                logger.LogWarning("Access denied or not found when listing activities for WP {Id}. Status: {Status}", idWorkPackage, response.StatusCode);
+                return new List<ActivityAllowedValue>();
+            }
+            
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("Error calling time_entries/form: {Response}", jsonResponse);
+                return new List<ActivityAllowedValue>();
+            }
+            
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var collection = JsonSerializer.Deserialize<ActivityCollection>(jsonResponse, options)
+                ?? throw new SerializationException("Can't deserialize response to ActivityCollection");
+            
+            return collection.Embedded.Schema.Type.Embedded.AllowedValues;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error unexpected in ActivityOpService");
+            return new List<ActivityAllowedValue>(); 
+        }
     }
     
     private string BuildUrl()
