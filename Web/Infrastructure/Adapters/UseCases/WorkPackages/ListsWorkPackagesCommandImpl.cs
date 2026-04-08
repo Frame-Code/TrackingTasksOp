@@ -23,34 +23,29 @@ public class ListsWorkPackagesCommandImpl(
         int pageSize = request.pageSize > 50 ? 50 : request.pageSize;
         int offset = request.offset is < 0 or > 50 ? 0 : request.offset;
         var allItems = new List<WorkPackage>();
-        int total;
         
         logger.LogInformation("Executing ListsWorkPackagesCommand, offset={Offset}, pageSize={PageSize}", offset, pageSize);   
-        do
+        
+        string url = BuildUrl(request.ProjectId, offset, pageSize);
+        HttpResponseMessage  response = await _client.GetAsync(url);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return allItems;
+        
+        if (!response.IsSuccessStatusCode)
         {
-            string url = BuildUrl(request.ProjectId, offset, pageSize);
-            HttpResponseMessage  response = await _client.GetAsync(url);
+            string error = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Error HTTP {(int)response.StatusCode}: {error}");
+        }
+        
+        string json = await response.Content.ReadAsStringAsync();
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var collection = JsonSerializer.Deserialize<WorkPackageCollection>(json, options);
 
-            if (response.StatusCode == HttpStatusCode.NotFound)
-                return allItems;
-            
-            if (!response.IsSuccessStatusCode)
-            {
-                string error = await response.Content.ReadAsStringAsync();
-                throw new Exception($"Error HTTP {(int)response.StatusCode}: {error}");
-            }
-            
-            string json = await response.Content.ReadAsStringAsync();
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var collection = JsonSerializer.Deserialize<WorkPackageCollection>(json, options);
-
-            if (collection?.Embedded?.Elements == null || collection?.Embedded?.Elements.Count == 0)
-                break;
-            
-            allItems.AddRange(collection!.Embedded!.Elements); 
-            total = collection.Total;
-            offset += collection.Count + 1; 
-        } while (allItems.Count <= total);
+        if (collection?.Embedded?.Elements != null && collection.Embedded.Elements.Count > 0)
+        {
+            allItems.AddRange(collection.Embedded.Elements); 
+        }
 
         return allItems;
     }
