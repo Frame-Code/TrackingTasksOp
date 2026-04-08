@@ -20,6 +20,8 @@ public static class ServicesExtensions
         collection.AddKeyedSingleton<IApiSettings, OpenProjectSettings>(nameof(KeyService.OpenProjectSettings));
         collection.Configure<RedisSettings>(configuration.GetSection("RedisSettings"));
         collection.Configure<GeminiSettings>(configuration.GetSection("GeminiSettings"));
+        collection.Configure<OllamaSettings>(configuration.GetSection("OllamaSettings"));
+        collection.Configure<GroqSettings>(configuration.GetSection("Groq"));
 
         //Use cases
         collection.AddScoped<IListsWorkPackagesCommand, ListsWorkPackagesCommandImpl>();
@@ -41,7 +43,7 @@ public static class ServicesExtensions
         collection.AddScoped<IProjectRepository, ProjectRepositoryImpl>();
 
         // AI Services
-        collection.AddScoped<IGeminiIntentService, GoogleAIStudioIntentService>();
+        collection.AddScoped<IGeminiIntentService, GroqIntentService>();
         collection.AddScoped<IConversationContextService, RedisConversationService>();
         
         // Infrastructure Clients

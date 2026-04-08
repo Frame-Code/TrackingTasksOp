@@ -145,6 +145,119 @@ public class GoogleAIStudioIntentService : IGeminiIntentService
             // 2. CAPA DE INTELIGENCIA ARTIFICIAL (GEMINI - Operaciones Complejas)
             // ==============================================================================
             _logger.LogInformation("Enviando petición a Gemini para análisis complejo.");
+
+            var tools = new List<Tool>
+            {
+                new Tool
+                {
+                    FunctionDeclarations = new List<FunctionDeclaration>
+                    {
+                        new() {
+                            Name = "list_projects",
+                            Description = "Obtiene la lista de proyectos disponibles con sus IDs y nombres."
+                        },
+                        new() {
+                            Name = "list_users",
+                            Description = "Obtiene la lista de usuarios registrados en el sistema para poder asignar tareas."
+                        },
+                        new() {
+                            Name = "list_work_packages",
+                            Description = "Lista los paquetes de trabajo (tareas) de un proyecto específico.",
+                            Parameters = new Schema
+                            {
+                                Type = Google.GenAI.Types.Type.Object,
+                                Properties = new Dictionary<string, Schema>
+                                {
+                                    ["projectId"] = new() { Type = Google.GenAI.Types.Type.Integer, Description = "ID del proyecto" }
+                                },
+                                Required = new List<string> { "projectId" }
+                            }
+                        },
+                        new() {
+                            Name = "list_statuses",
+                            Description = "Obtiene los estados posibles para asignar a una tarea."
+                        },
+                        new() {
+                            Name = "list_activities",
+                            Description = "Lista las actividades permitidas para registrar tiempo en una tarea.",
+                            Parameters = new Schema
+                            {
+                                Type = Google.GenAI.Types.Type.Object,
+                                Properties = new Dictionary<string, Schema>
+                                {
+                                    ["workPackageId"] = new() { Type = Google.GenAI.Types.Type.Integer, Description = "ID de la tarea" }
+                                },
+                                Required = new List<string> { "workPackageId" }
+                            }
+                        },
+                        new() {
+                            Name = "start_task",
+                            Description = "Inicia el seguimiento de tiempo para una tarea.",
+                            Parameters = new Schema
+                            {
+                                Type = Google.GenAI.Types.Type.Object,
+                                Properties = new Dictionary<string, Schema>
+                                {
+                                    ["workPackageId"] = new() { Type = Google.GenAI.Types.Type.Integer, Description = "ID de la tarea (opcional)" },
+                                    ["projectId"] = new() { Type = Google.GenAI.Types.Type.Integer, Description = "ID del proyecto" },
+                                    ["statusId"] = new() { Type = Google.GenAI.Types.Type.Integer, Description = "ID del estado" },
+                                    ["name"] = new() { Type = Google.GenAI.Types.Type.String, Description = "Nombre de la tarea" },
+                                    ["description"] = new() { Type = Google.GenAI.Types.Type.String, Description = "Descripción opcional" },
+                                    ["activityId"] = new() { Type = Google.GenAI.Types.Type.Integer, Description = "ID numérico de la actividad (opcional)" },
+                                    ["assigneeName"] = new() { Type = Google.GenAI.Types.Type.String, Description = "Nombre del usuario asignado (opcional)" },
+                                    ["responsibleName"] = new() { Type = Google.GenAI.Types.Type.String, Description = "Nombre del responsable (opcional)" },
+                                    ["comment"] = new() { Type = Google.GenAI.Types.Type.String, Description = "Comentario opcional" }
+                                },
+                                Required = new List<string> { "projectId", "statusId", "name" }
+                            }
+                        },
+                        new() {
+                            Name = "assign_user_to_task",
+                            Description = "Asigna un usuario a una tarea existente.",
+                            Parameters = new Schema
+                            {
+                                Type = Google.GenAI.Types.Type.Object,
+                                Properties = new Dictionary<string, Schema>
+                                {
+                                    ["workPackageId"] = new() { Type = Google.GenAI.Types.Type.Integer, Description = "ID de la tarea" },
+                                    ["assigneeName"] = new() { Type = Google.GenAI.Types.Type.String, Description = "Nombre del usuario asignado (opcional)" },
+                                    ["responsibleName"] = new() { Type = Google.GenAI.Types.Type.String, Description = "Nombre del responsable (opcional)" }
+                                },
+                                Required = new List<string> { "workPackageId" }
+                            }
+                        },
+                        new() {
+                            Name = "end_task_session",
+                            Description = "Finaliza la sesión actual de seguimiento de tiempo.",
+                            Parameters = new Schema
+                            {
+                                Type = Google.GenAI.Types.Type.Object,
+                                Properties = new Dictionary<string, Schema>
+                                {
+                                    ["workPackageId"] = new() { Type = Google.GenAI.Types.Type.Integer, Description = "ID de la tarea" },
+                                    ["activityId"] = new() { Type = Google.GenAI.Types.Type.Integer, Description = "ID de la actividad realizada" },
+                                    ["comment"] = new() { Type = Google.GenAI.Types.Type.String, Description = "Comentario sobre el trabajo realizado" },
+                                    ["newStatusId"] = new() { Type = Google.GenAI.Types.Type.Integer, Description = "ID del nuevo estado (ej. ID de 'Closed')" }
+                                },
+                                Required = new List<string> { "workPackageId", "activityId", "comment" }
+                            }
+                        }
+                    }
+                }
+            };
+
+            var config = new GenerateContentConfig
+            {
+                Temperature = 0.1f,
+                Tools = tools,
+                SystemInstruction = new Content
+                {
+                    Parts = new List<Part>
+                    {
+                        new Part { Text = "Eres un asistente experto en gestión de tareas para OpenProject. Tu objetivo es ser lo más proactivo y eficiente posible. REGLAS CRÍTICAS: 1. NUNCA pidas permiso para usar una herramienta si tienes los datos necesarios. 2. Si el usuario menciona una actividad o un usuario por nombre, llama AUTOMÁTICAMENTE a las funciones de listado para buscar sus IDs. 3. Si necesitas el ID de una tarea o proyecto que no tienes en el mensaje actual pero crees que está en el historial, búscalo tú mismo. 4. Si una operación requiere varios pasos, ejecútalos todos en secuencia sin preguntar. 5. MUY IMPORTANTE: Después de ejecutar con éxito una herramienta de escritura (como crear tareas, iniciar timer, asignar usuarios), SIEMPRE debes generar una respuesta de texto amigable resumiendo lo que hiciste (ej. 'He creado la tarea X y asignado a Y'). NUNCA respondas con texto vacío." }
+                    }
+                }
+            };
             
             // Preparamos el historial (solo si vamos a usar la IA)
             var contents = conversationContext.History
@@ -174,7 +287,7 @@ public class GoogleAIStudioIntentService : IGeminiIntentService
                     response = await _generativeAIClient.Models.GenerateContentAsync(
                         model: _geminiSettings.Model ?? "gemini-2.5-flash",
                         contents: contents,
-                        // El Config y SysInst ya no van aquí en Google.GenAI, se pasan si se usan, pero en Client se asumen
+                        config: config,
                         cancellationToken: ct);
                 }
                 catch (ClientError ex)
@@ -191,6 +304,11 @@ public class GoogleAIStudioIntentService : IGeminiIntentService
                     if (errorMsg.Contains("API key expired") || errorMsg.Contains("API_KEY_INVALID"))
                     {
                         finalResult = "🔑 Error de Autenticación: La API Key configurada ha expirado o es inválida. Por favor, genera una nueva en Google AI Studio e ingrésala en appsettings.json.";
+                        break;
+                    }
+                    if (errorMsg.Contains("leaked") || errorMsg.Contains("reported as leaked"))
+                    {
+                        finalResult = "🚨 ALERTA DE SEGURIDAD: Google ha detectado que tu API Key se ha filtrado públicamente (por ejemplo, en GitHub) y la ha desactivado para proteger tu cuenta. Por favor, genera una nueva en Google AI Studio y asegúrate de no subir tu appsettings.json al repositorio.";
                         break;
                     }
 
@@ -258,7 +376,14 @@ public class GoogleAIStudioIntentService : IGeminiIntentService
                 }
                 else
                 {
-                    finalResult = response.Text ?? "Operación completada.";
+                    finalResult = response.Text;
+                    if (string.IsNullOrWhiteSpace(finalResult) && response.Candidates?.Count > 0)
+                    {
+                        finalResult = response.Candidates[0].Content?.Parts?.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p.Text))?.Text;
+                    }
+                    
+                    if (string.IsNullOrWhiteSpace(finalResult)) finalResult = "Operación completada.";
+                    
                     finalResponseReached = true;
                 }
             }
