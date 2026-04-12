@@ -8,7 +8,7 @@
 http-client.private.env.json
 
 ##Config files
-appsettings.Development.json
+.\Web\appsettings.Development.json
 
 ##visual studio
 .vs/
