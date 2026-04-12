@@ -19,7 +19,6 @@
         private readonly GroqSettings _groqSettings;
         private readonly IConversationContextService _conversationContextService;
         private readonly HttpClient _httpClient;
-
         private readonly IStartTaskCommand _startTaskCommand;
         private readonly IEndTaskSessionCommand _endTaskSessionCommand;
         private readonly IListsWorkPackagesCommand _listsWorkPackagesCommand;
@@ -28,8 +27,6 @@
         private readonly IUserOpService _userOpService;
         private readonly IActivityOpService _activityOpService;
         private readonly IUpdateWorkPackageCommand _updateWorkPackageCommand;
-
-        private const string GroqApiUrl = "https://api.groq.com/openai/v1/chat/completions";
 
         public GroqIntentService(
             ILogger<GroqIntentService> logger,
@@ -56,10 +53,7 @@
             _userOpService = userOpService;
             _activityOpService = activityOpService;
             _updateWorkPackageCommand = updateWorkPackageCommand;
-
-            _httpClient = httpClientFactory.CreateClient("GroqClient");
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _groqSettings.ApiKey);
+            _httpClient = httpClientFactory.CreateClient(_groqSettings.HttpClientName);
         }
 
         public async Task<string> GetIntentAsync(string prompt, string sessionId, CancellationToken ct = default)
@@ -188,7 +182,7 @@
                     Encoding.UTF8,
                     "application/json");
 
-                var httpResponse = await _httpClient.PostAsync(GroqApiUrl, jsonContent, ct);
+                var httpResponse = await _httpClient.PostAsync(_groqSettings.BaseUrl, jsonContent, ct);
                 httpResponse.EnsureSuccessStatusCode();
 
                 var responseJson = await httpResponse.Content.ReadAsStringAsync(ct);

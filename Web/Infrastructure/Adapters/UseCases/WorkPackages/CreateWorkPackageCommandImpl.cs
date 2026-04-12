@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Application.Dto.WorkPackages;
 using Application.Ports.UseCases.WorkPackages;
 using Domain.Entities.OpenProjectEntities.WorkPackage;
+using Microsoft.Extensions.Options;
 using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.Config.Settings;
 
@@ -13,17 +14,17 @@ namespace Web.Infrastructure.Adapters.UseCases.WorkPackages;
 public class CreateWorkPackageCommandImpl(
     IHttpClientFactory httpClientFactory,
     ILogger<CreateWorkPackageCommandImpl> logger,
-    [FromKeyedServices(nameof(KeyService.OpenProjectSettings))]
-    IApiSettings settings
+    IOptions<OpenProjectSettings> settings
     ) : ICreateWorkPackageCommand
 {
-    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.GetHttpClientName());
+    private readonly OpenProjectSettings _settings = settings.Value;
+    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.Value.HttpClientName);
 
     public async Task<WorkPackage> Execute(CreateWorkPackageRequest request)
     {
         logger.LogInformation("Executing CreateWorkPackageCommand for subject: {Subject}", request.Subject);
         
-        string url = $"{settings.GetUri()}/api/v3/projects/{request.ProjectId}/work_packages";
+        string url = $"{_settings.BaseUrl}/api/v3/projects/{request.ProjectId}/work_packages";
         
         var payload = new JsonObject
         {

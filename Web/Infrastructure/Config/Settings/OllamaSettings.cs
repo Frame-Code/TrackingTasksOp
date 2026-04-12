@@ -5,7 +5,7 @@ namespace Web.Infrastructure.Config.Settings;
 /// </summary>
 public class OllamaSettings
 {
-    public string BaseUrl { get; set; } = "http://localhost:11434";
-    public string Model { get; set; } = "phi3:mini";
-    public float Temperature { get; set; } = 0.1f;
+    public string BaseUrl { get; set; } = null!;
+    public string Model { get; set; } = null!;
+    public float Temperature { get; set; } 
 }

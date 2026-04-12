@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Application.Ports.UseCases.WorkPackages;
+using Microsoft.Extensions.Options;
 using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.Config.Settings;
 
@@ -11,11 +12,11 @@ namespace Web.Infrastructure.Adapters.UseCases.WorkPackages;
 public class UpdateWorkPackageCommandImpl(
     IHttpClientFactory httpClientFactory,
     ILogger<UpdateWorkPackageCommandImpl> logger,
-    [FromKeyedServices(nameof(KeyService.OpenProjectSettings))]
-    IApiSettings settings
+    IOptions<OpenProjectSettings> settings
     ) : IUpdateWorkPackageCommand
 {
-    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.GetHttpClientName());
+    private readonly OpenProjectSettings _settings = settings.Value;
+    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.Value.HttpClientName);
 
     public async Task Execute(int workPackageId, int? statusId = null, int? assigneeId = null, int? responsibleId = null)
     {
@@ -24,7 +25,7 @@ public class UpdateWorkPackageCommandImpl(
         
         int lockVersion = await GetLockVersion(workPackageId);
 
-        string url = $"{settings.GetUri()}/api/v3/work_packages/{workPackageId}";
+        string url = $"{_settings.BaseUrl}/api/v3/work_packages/{workPackageId}";
         
         var links = new JsonObject();
         
@@ -68,7 +69,7 @@ public class UpdateWorkPackageCommandImpl(
 
     private async Task<int> GetLockVersion(int workPackageId)
     {
-        string url = $"{settings.GetUri()}/api/v3/work_packages/{workPackageId}";
+        string url = $"{_settings.BaseUrl}/api/v3/work_packages/{workPackageId}";
         var response = await _client.GetAsync(url);
         if (!response.IsSuccessStatusCode) throw new Exception($"Could not fetch work package {workPackageId}");
         var json = await response.Content.ReadAsStringAsync();

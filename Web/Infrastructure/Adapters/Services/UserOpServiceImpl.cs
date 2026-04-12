@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using Application.Ports.Services;
 using Domain.Entities.OpenProjectEntities.User;
+using Microsoft.Extensions.Options;
 using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.Config.Settings;
 
@@ -10,16 +11,16 @@ namespace Web.Infrastructure.Adapters.Services;
 public class UserOpServiceImpl(
     IHttpClientFactory httpClientFactory,
     ILogger<UserOpServiceImpl> logger,
-    [FromKeyedServices(nameof(KeyService.OpenProjectSettings))]
-    IApiSettings settings
+    IOptions<OpenProjectSettings> settings
     ) : IUserOpService
 {
-    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.GetHttpClientName());
+    private readonly OpenProjectSettings _settings = settings.Value;
+    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.Value.HttpClientName);
     
     public async Task<List<User>> Lists()
     {
         logger.LogInformation("Executing Lists:UserOpServiceImpl");
-        string url = $"{settings.GetUri()}/api/v3/users";
+        string url = $"{_settings.BaseUrl}/api/v3/users";
         HttpResponseMessage response = await _client.GetAsync(url);
         
         if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized)

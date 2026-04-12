@@ -2,6 +2,7 @@
 using System.Text.Json.Nodes;
 using Application.Dto.TimeEntry;
 using Application.Ports.UseCases.TimeEntry;
+using Microsoft.Extensions.Options;
 using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.Config.Settings;
 
@@ -10,10 +11,10 @@ namespace Web.Infrastructure.Adapters.UseCases.TimeEntry;
 public class AddTimeEntryImpl(
     IHttpClientFactory httpClientFactory,
     ILogger<AddTimeEntryImpl> logger,
-    [FromKeyedServices(nameof(KeyService.OpenProjectSettings))]
-    IApiSettings settings) : IAddTimeEntry
+    IOptions<OpenProjectSettings> settings) : IAddTimeEntry
 {
-    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.GetHttpClientName());
+    private readonly OpenProjectSettings _settings = settings.Value;
+    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.Value.HttpClientName);
     
     public async Task Execute(AddTimeEntryRequest request)
     {
@@ -29,7 +30,7 @@ public class AddTimeEntryImpl(
 
     private string BuildUrl()
     {
-        return $"{settings.GetUri()}/api/v3/time_entries";
+        return $"{_settings.BaseUrl}/api/v3/time_entries";
     }
 
     private StringContent BuildPayload(AddTimeEntryRequest request)

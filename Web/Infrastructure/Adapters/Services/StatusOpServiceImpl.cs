@@ -4,6 +4,7 @@ using Application.Ports.Services;
 using Domain.Entities.OpenProjectEntities;
 using Domain.Entities.OpenProjectEntities.Activity;
 using Domain.Entities.OpenProjectEntities.Status;
+using Microsoft.Extensions.Options;
 using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.Config.Settings;
 
@@ -12,11 +13,11 @@ namespace Web.Infrastructure.Adapters.Services;
 public class StatusOpServiceImpl(
     IHttpClientFactory httpClientFactory,
     ILogger<StatusOpServiceImpl> logger,
-    [FromKeyedServices(nameof(KeyService.OpenProjectSettings))]
-    IApiSettings settings
+    IOptions<OpenProjectSettings> settings
     ) : IStatusOpService
 {
-    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.GetHttpClientName());
+    private readonly OpenProjectSettings _settings = settings.Value;
+    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.Value.HttpClientName);
     
     public async Task<List<Status>> Lists()
     {
@@ -42,6 +43,6 @@ public class StatusOpServiceImpl(
 
     private string BuildUrl()
     {
-        return $"{settings.GetUri()}/api/v3/statuses";
+        return $"{_settings.BaseUrl}/api/v3/statuses";
     }
 }

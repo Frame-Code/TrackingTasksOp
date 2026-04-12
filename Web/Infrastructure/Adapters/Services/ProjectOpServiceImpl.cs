@@ -3,6 +3,7 @@ using System.Text.Json;
 using Application.Ports.Services;
 using Domain.Entities.OpenProjectEntities;
 using Domain.Entities.OpenProjectEntities.Project;
+using Microsoft.Extensions.Options;
 using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.Config.Settings;
 
@@ -11,11 +12,11 @@ namespace Web.Infrastructure.Adapters.Services;
 public class ProjectOpServiceImpl(
     IHttpClientFactory httpClientFactory,
     ILogger<StatusOpServiceImpl> logger,
-    [FromKeyedServices(nameof(KeyService.OpenProjectSettings))]
-    IApiSettings settings
+    IOptions<OpenProjectSettings> iSettings
     ) : IProjectOpService
 {
-    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.GetHttpClientName());
+    private readonly OpenProjectSettings _settings = iSettings.Value;
+    private readonly HttpClient _client = httpClientFactory.CreateClient(iSettings.Value.HttpClientName);
     
     public async Task<List<Project>> Lists()
     {
@@ -41,6 +42,6 @@ public class ProjectOpServiceImpl(
     
     private string BuildUrl()
     {
-        return $"{settings.GetUri()}/api/v3/projects";
+        return $"{_settings.BaseUrl}/api/v3/projects";
     }
 }

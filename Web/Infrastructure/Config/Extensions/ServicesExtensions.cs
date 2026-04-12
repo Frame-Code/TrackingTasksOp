@@ -17,7 +17,7 @@ public static class ServicesExtensions
     public static IServiceCollection AddServices(this IServiceCollection collection, IConfiguration configuration)
     {
         //Settings
-        collection.AddKeyedSingleton<IApiSettings, OpenProjectSettings>(nameof(KeyService.OpenProjectSettings));
+        collection.Configure<OpenProjectSettings>(configuration.GetSection("OpenProjectSettings"));
         collection.Configure<RedisSettings>(configuration.GetSection("RedisSettings"));
         collection.Configure<GeminiSettings>(configuration.GetSection("GeminiSettings"));
         collection.Configure<OllamaSettings>(configuration.GetSection("OllamaSettings"));

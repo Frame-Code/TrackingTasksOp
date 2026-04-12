@@ -5,9 +5,9 @@ namespace Web.Infrastructure.Config.Settings;
 /// </summary>
 public class GeminiSettings
 {
-    public required string ProjectId { get; set; }
-    public required string Location { get; set; }
-    public required string Publisher { get; set; }
-    public required string Model { get; set; }
-    public string? ApiKey { get; set; }
+    public string ProjectId { get; set; } = null!;
+    public string Location { get; set; } = null!;
+    public string Publisher { get; set; } = null!;
+    public string Model { get; set; } = null!;
+    public string ApiKey { get; set; } = null!;
 }

@@ -4,6 +4,7 @@ using Application.Dto.ListWorkPackages;
 using Application.Ports.UseCases.WorkPackages;
 using Domain.Entities.OpenProjectEntities;
 using Domain.Entities.OpenProjectEntities.WorkPackage;
+using Microsoft.Extensions.Options;
 using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.Config.Settings;
 
@@ -11,11 +12,11 @@ namespace Web.Infrastructure.Adapters.UseCases.WorkPackages;
 public class ListsWorkPackagesCommandImpl(
     IHttpClientFactory httpClientFactory,
     ILogger<ListsWorkPackagesCommandImpl> logger,
-    [FromKeyedServices(nameof(KeyService.OpenProjectSettings))]
-    IApiSettings settings
+    IOptions<OpenProjectSettings> settings
     ) : IListsWorkPackagesCommand
 {
-    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.GetHttpClientName());
+    private readonly OpenProjectSettings _settings = settings.Value;
+    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.Value.HttpClientName);
     
     //Listar de manera paginada todos los work packages
     public async Task<List<WorkPackage>> Execute(ListsWorkPackagesRequest request)
@@ -53,8 +54,8 @@ public class ListsWorkPackagesCommandImpl(
     private string BuildUrl(int? projectId, int offset, int pageSize)
     {
         string baseEndpoint = projectId.HasValue
-            ? $"{settings.GetUri()}/api/v3/projects/{projectId}/work_packages"
-            : $"{settings.GetUri()}/api/v3/work_packages";
+            ? $"{_settings.BaseUrl}/api/v3/projects/{projectId}/work_packages"
+            : $"{_settings.BaseUrl}/api/v3/work_packages";
 
         string filters = Uri.EscapeDataString("[{\"assignee\":{\"operator\":\"=\",\"values\":[\"me\"]}},{\"status\":{\"operator\":\"o\",\"values\":[]}}]");
         return $"{baseEndpoint}?filters={filters}&offset={offset}&pageSize={pageSize}";

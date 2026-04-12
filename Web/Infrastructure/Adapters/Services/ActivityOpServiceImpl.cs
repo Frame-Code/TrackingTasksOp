@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Application.Ports.Services;
 using Domain.Entities.OpenProjectEntities.Activity;
-using Web.Infrastructure.Config.Extensions;
+using Microsoft.Extensions.Options;
 using Web.Infrastructure.Config.Settings;
 
 namespace Web.Infrastructure.Adapters.Services;
@@ -13,11 +13,11 @@ namespace Web.Infrastructure.Adapters.Services;
 public class ActivityOpServiceImpl(
     IHttpClientFactory httpClientFactory,
     ILogger<ActivityOpServiceImpl> logger,
-    [FromKeyedServices(nameof(KeyService.OpenProjectSettings))]
-    IApiSettings settings
+    IOptions<OpenProjectSettings> iSettings
     ) : IActivityOpService
 {
-    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.GetHttpClientName());
+    private readonly OpenProjectSettings _settings = iSettings.Value;
+    private readonly HttpClient _client = httpClientFactory.CreateClient(iSettings.Value.HttpClientName);
     
     public async Task<List<ActivityAllowedValue>> Lists(int idWorkPackage)
     {
@@ -56,7 +56,7 @@ public class ActivityOpServiceImpl(
     
     private string BuildUrl()
     {
-        return $"{settings.GetUri()}/api/v3/time_entries/form";
+        return $"{_settings.BaseUrl}/api/v3/time_entries/form";
     }
 
     private StringContent BuildPayload(int idWorkPackage)
