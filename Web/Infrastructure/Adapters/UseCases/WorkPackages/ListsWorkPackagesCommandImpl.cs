@@ -21,7 +21,7 @@ public class ListsWorkPackagesCommandImpl(
     public async Task<List<WorkPackage>> Execute(ListsWorkPackagesRequest request)
     {
         int pageSize = request.pageSize > 50 ? 50 : request.pageSize;
-        int offset = request.offset is < 0 or > 50 ? 0 : request.offset;
+        int offset = request.offset <= 0 ? 1 : request.offset;
         var allItems = new List<WorkPackage>();
         int total;
         
@@ -47,10 +47,10 @@ public class ListsWorkPackagesCommandImpl(
             if (collection?.Embedded?.Elements == null || collection?.Embedded?.Elements.Count == 0)
                 break;
             
-            allItems.AddRange(collection!.Embedded!.Elements); 
+            allItems.AddRange(collection!.Embedded!.Elements);
             total = collection.Total;
-            offset += collection.Count + 1; 
-        } while (allItems.Count <= total);
+            offset += pageSize;
+        } while (allItems.Count < total);
 
         return allItems;
     }
@@ -62,6 +62,7 @@ public class ListsWorkPackagesCommandImpl(
             : $"{settings.GetUri()}/api/v3/work_packages";
 
         string filters = Uri.EscapeDataString("[{\"assignee\":{\"operator\":\"=\",\"values\":[\"me\"]}},{\"status\":{\"operator\":\"o\",\"values\":[]}}]");
-        return $"{baseEndpoint}?filters={filters}&offset={offset}&pageSize={pageSize}";
+        string sortBy = Uri.EscapeDataString("[[\"createdAt\",\"desc\"]]");
+        return $"{baseEndpoint}?filters={filters}&offset={offset}&pageSize={pageSize}&sortBy={sortBy}";
     }
 }
