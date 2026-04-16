@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Web.Infrastructure.Config.Extensions;
+﻿using Web.Infrastructure.Config.Extensions;
 
 namespace Tests.Infrastructure.Extensions;
 public class TimeExtensionsTests
