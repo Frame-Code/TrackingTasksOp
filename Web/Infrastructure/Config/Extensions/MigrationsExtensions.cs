@@ -1,4 +1,4 @@
-﻿using Application.Ports.Services;
+using Application.Ports.Services;
 using Domain.Entities.TrackingTasksEntities;
 using Microsoft.EntityFrameworkCore;
 using Web.Infrastructure.DataAccess;

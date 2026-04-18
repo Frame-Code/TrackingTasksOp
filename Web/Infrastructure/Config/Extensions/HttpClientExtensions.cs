@@ -24,6 +24,11 @@ public static class HttpClientExtensions
             client.BaseAddress = new Uri(uri);
         });
 
+        services.AddHttpClient("GroqClient", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
         return services;
     }
 }

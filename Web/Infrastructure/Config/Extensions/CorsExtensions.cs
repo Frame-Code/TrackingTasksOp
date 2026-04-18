@@ -6,14 +6,19 @@ public static class CorsExtensions
     {
         var origins = configuration.GetSection("CorsOrigins").Get<string[]>()
             ?? throw new Exception("CorsOrigins are not configured");
-
+        
         services.AddCors(options =>
         {
             options.AddDefaultPolicy(policy =>
             {
-                policy.WithOrigins(origins)
-                    .AllowAnyHeader()
-                    .AllowAnyMethod();
+                if(origins.Contains("*")) 
+                    policy.SetIsOriginAllowed(_ => true)
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                else
+                    policy.WithOrigins(origins)
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
             });
         });
         
