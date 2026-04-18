@@ -6,6 +6,9 @@
 ## Private files
 http-client.private.env.json
 
+# Ignorar configuraciones locales con secretos
+Web.appSettings.Development.json
+
 ##Config files
 appsettings.json
 
