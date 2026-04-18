@@ -32,7 +32,7 @@
         <div class="card mb-4 border-0 bg-body-secondary">
             <div class="card-body py-3">
                 <div class="row g-3 align-items-end">
-                    <div class="col-12 col-md-5">
+                    <div class="col-12 col-md-4">
                         <label class="form-label small text-muted mb-1">
                             <i class="bi bi-folder me-1"></i>Proyecto
                         </label>
@@ -40,12 +40,26 @@
                             <option value="">Cargando proyectos...</option>
                         </select>
                     </div>
+                    <div class="col-12 col-md">
+                        <label class="form-label small text-muted mb-1">
+                            <i class="bi bi-search me-1"></i>Buscar tarea
+                        </label>
+                        <div class="position-relative">
+                            <input type="text" id="searchInput" class="form-control pe-5"
+                                   placeholder="Nombre o ID..." autocomplete="off">
+                            <button id="clearSearchBtn" type="button"
+                                    class="btn btn-link btn-sm position-absolute top-50 end-0 translate-middle-y me-1 d-none p-1 text-muted"
+                                    title="Limpiar búsqueda">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
                     <div class="col-auto">
                         <button id="loadBtn" class="btn btn-primary px-4">
-                            <i class="bi bi-search me-2"></i>Cargar tareas
+                            <i class="bi bi-arrow-clockwise me-2"></i>Cargar tareas
                         </button>
                     </div>
-                    <div class="col-auto ms-auto d-flex align-items-center gap-2">
+                    <div class="col-auto d-flex align-items-center gap-2">
                         <div id="loadingSpinner" class="d-none text-muted small">
                             <div class="spinner-border spinner-border-sm text-primary me-1" role="status"></div>
                             Cargando...
@@ -81,6 +95,9 @@
 
         <!-- Work packages grid -->
         <div id="wpGrid" class="row g-3"></div>
+
+        <!-- Paginación -->
+        <div id="pagination" class="d-flex justify-content-center mt-4 d-none"></div>
 
     </main>
 
