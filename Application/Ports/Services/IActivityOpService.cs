@@ -4,5 +4,6 @@ namespace Application.Ports.Services;
 
 public interface IActivityOpService
 {
-    public Task<List<ActivityAllowedValue>> Lists(int idWorkPackage);
+    Task<List<ActivityAllowedValue>> Lists(int idWorkPackage);
+    Task<ActivityAllowedValue?> FindByNameAsync(string name, int workPackageId);
 }

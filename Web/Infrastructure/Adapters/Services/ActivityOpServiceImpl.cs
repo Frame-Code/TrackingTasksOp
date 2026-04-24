@@ -54,6 +54,35 @@ public class ActivityOpServiceImpl(
         }
     }
     
+    public async Task<ActivityAllowedValue?> FindByNameAsync(string name, int workPackageId)
+    {
+        var activities = await Lists(workPackageId);
+        if (!activities.Any()) return null;
+
+        var normalizedName = name.Trim();
+
+        // 1. Búsqueda por coincidencia exacta (ignorando mayúsculas/minúsculas)
+        var exactMatch = activities.FirstOrDefault(a => 
+            a.Name.Equals(normalizedName, StringComparison.OrdinalIgnoreCase));
+
+        if (exactMatch != null)
+        {
+            logger.LogInformation("Found exact activity match for '{Name}' in WP {WpId}. ID: {Id}", name, workPackageId, exactMatch.Id);
+            return exactMatch;
+        }
+
+        // 2. Si no hay coincidencia exacta, búsqueda por contenido (más flexible)
+        var containsMatch = activities.FirstOrDefault(a => 
+            a.Name.Contains(normalizedName, StringComparison.OrdinalIgnoreCase));
+    
+        if (containsMatch != null)
+        {
+            logger.LogInformation("Found partial activity match for '{Name}' in WP {WpId}. Matched with '{MatchedName}'. ID: {Id}", name, workPackageId, containsMatch.Name, containsMatch.Id);
+        }
+
+        return containsMatch;
+    }
+
     private string BuildUrl()
     {
         return $"{_settings.BaseUrl}/api/v3/time_entries/form";
