@@ -1,11 +1,12 @@
-﻿using System.Net;
+﻿using System;
+using System.Collections.Generic;
+using System.Net;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Application.Ports.Services;
-using Domain.Entities.OpenProjectEntities;
-using Domain.Entities.OpenProjectEntities.Activity;
 using Domain.Entities.OpenProjectEntities.Status;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Web.Infrastructure.Config.Extensions;
 using Web.Infrastructure.Config.Settings;
 
 namespace Web.Infrastructure.Adapters.Services;
@@ -39,6 +40,35 @@ public class StatusOpServiceImpl(
 
         return collection?.Embedded?.Elements 
                ?? new List<Status>();
+    }
+
+    public async Task<Status?> FindByNameAsync(string name)
+    {
+        var statuses = await Lists();
+        if (!statuses.Any()) return null;
+
+        var normalizedName = name.Trim();
+
+        // 1. Búsqueda por coincidencia exacta (ignorando mayúsculas/minúsculas)
+        var exactMatch = statuses.FirstOrDefault(s => 
+            s.Name.Equals(normalizedName, StringComparison.OrdinalIgnoreCase));
+
+        if (exactMatch != null)
+        {
+            logger.LogInformation("Found exact status match for '{Name}'. ID: {Id}", name, exactMatch.Id);
+            return exactMatch;
+        }
+
+        // 2. Si no hay coincidencia exacta, búsqueda por contenido (más flexible)
+        var containsMatch = statuses.FirstOrDefault(s => 
+            s.Name.Contains(normalizedName, StringComparison.OrdinalIgnoreCase));
+        
+        if (containsMatch != null)
+        {
+            logger.LogInformation("Found partial status match for '{Name}'. Matched with '{MatchedName}'. ID: {Id}", name, containsMatch.Name, containsMatch.Id);
+        }
+
+        return containsMatch;
     }
 
     private string BuildUrl()
