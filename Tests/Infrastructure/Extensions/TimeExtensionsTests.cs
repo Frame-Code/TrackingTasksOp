@@ -1,4 +1,4 @@
-﻿using Web.Infrastructure.Config.Extensions;
+﻿using Infrastructure.Extensions;
 
 namespace Tests.Infrastructure.Extensions;
 public class TimeExtensionsTests
