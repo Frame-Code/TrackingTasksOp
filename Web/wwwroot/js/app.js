@@ -30,6 +30,12 @@ async function loadWorkPackages(projectId) {
     hideError();
     try {
         store.workPackages = await fetchWorkPackages(projectId);
+        store.currentPage  = 1;
+        store.searchQuery  = '';
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) { searchInput.value = ''; }
+        const clearBtn = document.getElementById('clearSearchBtn');
+        if (clearBtn) clearBtn.classList.add('d-none');
         initDefaultStatusFilters();
         renderStatusFilters();
         renderCards();
@@ -157,7 +163,46 @@ function bindStatusFilterEvents() {
             store.activeStatusFilters.add(status);
             pill.classList.add('is-active');
         }
+        store.currentPage = 1;
         renderCards();
+    });
+}
+
+function debounce(fn, delay) {
+    let timer;
+    return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); };
+}
+
+function bindSearchEvents() {
+    const input    = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('clearSearchBtn');
+
+    const onInput = debounce(() => {
+        store.searchQuery  = input.value;
+        store.currentPage  = 1;
+        clearBtn.classList.toggle('d-none', !input.value);
+        if (store.workPackages.length) renderCards();
+    }, 250);
+
+    input.addEventListener('input', onInput);
+
+    clearBtn.addEventListener('click', () => {
+        input.value        = '';
+        store.searchQuery  = '';
+        store.currentPage  = 1;
+        clearBtn.classList.add('d-none');
+        if (store.workPackages.length) renderCards();
+        input.focus();
+    });
+}
+
+function bindPaginationEvents() {
+    document.getElementById('pagination').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-page]');
+        if (!btn || btn.closest('.disabled')) return;
+        store.currentPage = parseInt(btn.dataset.page);
+        renderCards();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 }
 
@@ -209,6 +254,8 @@ bindGridEvents();
 bindLoadButton();
 bindConfirmEndButton();
 bindStatusFilterEvents();
+bindSearchEvents();
+bindPaginationEvents();
 
 loadProjects();
 
