@@ -6,7 +6,10 @@ const SESSION_KEY = 'trackingActiveSession';
 export const store = {
     projects: [],
     workPackages: [],
-    activeStatusFilters: new Set()  // vacío = mostrar todos
+    activeStatusFilters: new Set(),  // vacío = mostrar todos
+    searchQuery: '',
+    currentPage: 1,
+    pageSize: 12
 };
 
 export function getActiveSession() {

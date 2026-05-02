@@ -68,33 +68,114 @@ export function renderCards() {
         grid.innerHTML = '';
         empty.classList.remove('d-none');
         countBadge.classList.add('d-none');
+        renderPagination(0, 0);
         return;
     }
 
-    // Aplicar filtro de estado (vacío = mostrar todos)
-    const visible = store.activeStatusFilters.size === 0
-        ? store.workPackages
-        : store.workPackages.filter(wp => {
-            const title = wp._links?.status?.title || 'Sin estado';
-            return store.activeStatusFilters.has(title);
-        });
+    // Búsqueda global: ignora filtros de estado
+    // Sin búsqueda: aplica filtro de estado normalmente
+    const q = store.searchQuery.trim().toLowerCase();
+    let filtered;
+    if (q) {
+        filtered = store.workPackages.filter(wp =>
+            wp.subject?.toLowerCase().includes(q) ||
+            String(wp.id).includes(q)
+        );
+    } else {
+        filtered = store.activeStatusFilters.size === 0
+            ? store.workPackages
+            : store.workPackages.filter(wp => {
+                const title = wp._links?.status?.title || 'Sin estado';
+                return store.activeStatusFilters.has(title);
+            });
+    }
+
+    // Paginación
+    const total     = filtered.length;
+    const pageSize  = store.pageSize;
+    const pageCount = Math.max(1, Math.ceil(total / pageSize));
+    if (store.currentPage > pageCount) store.currentPage = pageCount;
+    const start   = (store.currentPage - 1) * pageSize;
+    const visible = filtered.slice(start, start + pageSize);
 
     const session = getActiveSession();
     empty.classList.add('d-none');
-    countBadge.textContent =
-        `${visible.length} de ${store.workPackages.length} tarea${store.workPackages.length !== 1 ? 's' : ''}`;
+
+    if (q) {
+        countBadge.textContent = total
+            ? `${total} resultado${total !== 1 ? 's' : ''}`
+            : 'Sin resultados';
+    } else {
+        countBadge.textContent =
+            `${filtered.length} de ${store.workPackages.length} tarea${store.workPackages.length !== 1 ? 's' : ''}`;
+    }
     countBadge.classList.remove('d-none');
 
     if (!visible.length) {
         grid.innerHTML = `
             <div class="col-12 text-center py-4 text-muted">
-                <i class="bi bi-funnel display-6 d-block mb-2 opacity-25"></i>
-                <p class="mb-0">Ninguna tarea coincide con los filtros seleccionados.</p>
+                <i class="bi bi-${q ? 'search' : 'funnel'} display-6 d-block mb-2 opacity-25"></i>
+                <p class="mb-0">${q
+                    ? `Sin resultados para <strong>"${escHtml(q)}"</strong>`
+                    : 'Ninguna tarea coincide con los filtros seleccionados.'}</p>
             </div>`;
+        renderPagination(0, 0);
         return;
     }
 
     grid.innerHTML = visible.map(wp => buildCard(wp, session)).join('');
+    renderPagination(total, pageCount);
+}
+
+export function renderPagination(total, pageCount) {
+    const el = document.getElementById('pagination');
+    if (!el) return;
+
+    if (pageCount <= 1) {
+        el.classList.add('d-none');
+        el.innerHTML = '';
+        return;
+    }
+
+    el.classList.remove('d-none');
+    const current    = store.currentPage;
+    const maxVisible = 7;
+    let rangeStart = Math.max(1, current - Math.floor(maxVisible / 2));
+    let rangeEnd   = Math.min(pageCount, rangeStart + maxVisible - 1);
+    if (rangeEnd - rangeStart < maxVisible - 1)
+        rangeStart = Math.max(1, rangeEnd - maxVisible + 1);
+
+    let html = '<nav aria-label="Paginación"><ul class="pagination mb-0">';
+
+    html += `<li class="page-item${current === 1 ? ' disabled' : ''}">
+        <button class="page-link" data-page="${current - 1}" aria-label="Anterior">
+            <i class="bi bi-chevron-left"></i>
+        </button></li>`;
+
+    if (rangeStart > 1) {
+        html += `<li class="page-item"><button class="page-link" data-page="1">1</button></li>`;
+        if (rangeStart > 2)
+            html += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+    }
+
+    for (let i = rangeStart; i <= rangeEnd; i++) {
+        html += `<li class="page-item${i === current ? ' active' : ''}">
+            <button class="page-link" data-page="${i}">${i}</button></li>`;
+    }
+
+    if (rangeEnd < pageCount) {
+        if (rangeEnd < pageCount - 1)
+            html += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+        html += `<li class="page-item"><button class="page-link" data-page="${pageCount}">${pageCount}</button></li>`;
+    }
+
+    html += `<li class="page-item${current === pageCount ? ' disabled' : ''}">
+        <button class="page-link" data-page="${current + 1}" aria-label="Siguiente">
+            <i class="bi bi-chevron-right"></i>
+        </button></li>`;
+
+    html += '</ul></nav>';
+    el.innerHTML = html;
 }
 
 function buildCard(wp, session) {

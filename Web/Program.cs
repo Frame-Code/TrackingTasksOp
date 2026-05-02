@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
-using Web.Infrastructure.Config.Extensions;
-using Web.Infrastructure.Config.Middleware;
+using Web.Extensions;
+using Web.Middleware;
+using Infrastructure.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseWindowsService();
@@ -22,12 +23,5 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-await app.ConfigurateDbAsync();
-app.UseCors();
-app.UseExceptionHandler();
-app.UseDefaultFiles();
-app.UseStaticFiles();
-app.UseHttpsRedirection();
-app.UseAuthorization();
-app.MapControllers();
-app.Run();
+await app.InitializeAsync();
+await app.RunAsync();

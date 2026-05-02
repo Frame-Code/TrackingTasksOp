@@ -451,7 +451,7 @@
             currentAbortController = new AbortController();
 
             try {
-                const response = await fetch(`/api/v1/Boot/chat/${sessionId}`, {
+                const response = await fetch(`/api/v1/Bot/chat/${sessionId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ Prompt: prompt }),

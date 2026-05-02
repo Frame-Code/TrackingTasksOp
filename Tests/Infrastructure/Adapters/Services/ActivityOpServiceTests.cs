@@ -1,11 +1,11 @@
 ﻿using System.Net;
 using System.Text;
+using Infrastructure.Adapters.Services;
+using Infrastructure.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
-using Web.Infrastructure.Adapters.Services;
-using Web.Infrastructure.Config.Settings;
 
 namespace Tests.Infrastructure.Adapters.Services;
 
