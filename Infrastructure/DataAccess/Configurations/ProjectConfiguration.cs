@@ -1,4 +1,4 @@
-﻿using Domain.Entities.TrackingTasksEntities;
+using Domain.Entities.TrackingTasksEntities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,16 +9,26 @@ public class ProjectConfiguration : IEntityTypeConfiguration<Project>
     public void Configure(EntityTypeBuilder<Project> builder)
     {
         builder.ToTable("Projects");
-        builder.HasKey(p => p.Id);
+
+        builder.HasKey(p => new {p.Id, p.OpenProjectInstanceId});
+
         builder.Property(p => p.Id)
             .IsRequired()
             .ValueGeneratedNever();
+
         builder.Property(p => p.Name)
             .IsRequired()
             .HasMaxLength(200);
+
         builder.Property(p => p.Identifier)
             .IsRequired()
             .HasMaxLength(100);
+
         builder.Property(p => p.IsActive);
+
+        builder.HasOne(p => p.OpenProjectInstance)
+            .WithMany()
+            .HasForeignKey(p => p.OpenProjectInstanceId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

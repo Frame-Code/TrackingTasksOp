@@ -5,4 +5,6 @@ public class StatusTask
     public int Id { get; set; }
     public string Name { get; set; } = null!;
     public bool IsClosed { get; set; }
+    public int OpenProjectInstanceId { get; set; }
+    public OpenProjectInstance  OpenProjectInstance { get; set; } = null!;
 }

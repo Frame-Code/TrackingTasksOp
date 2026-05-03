@@ -6,6 +6,7 @@ public class TaskTimeDetail
     public DateTime StartTime { get; init; } = DateTime.Now;
     public DateTime? EndTime { get; set; }
     public bool Uploaded { get; set; } = false;
+    public string UserId { get; set; } = null!;
     public int IdTask  { get; set; }
     public Task Task { get; set; } = null!;
 
