@@ -3,6 +3,5 @@
 public enum ApiKeyStatus
 {
     Valid,
-    Invalid,
-    NotApplicable
+    Invalid
 }

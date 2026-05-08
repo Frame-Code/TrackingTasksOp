@@ -2,6 +2,6 @@
 
 public enum AuthMethod
 {
-    LocalWithApiKey,
+    Local,
     OAuth
 }

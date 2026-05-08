@@ -5,6 +5,7 @@ using Domain.Entities.OpenProjectEntities.User;
 using Infrastructure.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using User = Domain.Entities.OpenProjectEntities.User.User;
 
 namespace Infrastructure.Adapters.Services;
 
