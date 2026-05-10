@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Infrastructure.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,6 +17,8 @@ public class GlobalExceptionHandler(
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized"),
             ValidationException => (StatusCodes.Status400BadRequest, "Bad Request"),
             ArgumentNullException => (StatusCodes.Status400BadRequest, "Bad Request"),
+            InvalidApiKeyException => (StatusCodes.Status400BadRequest, "Bad Request"),
+            OpenProjectRequestException => (StatusCodes.Status400BadRequest, "Bad Request"),
             _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
         };
 

@@ -25,7 +25,7 @@ public class AuthController(
     public async Task<IActionResult> LocalRegisterAsync(LocalRegisterHttpRequest request, CancellationToken ct)
     {
         var opUrlNormalized = urlService.NormalizeUrl(request.OpenProjectInstanceUrl);
-        var isUrlValid  = urlService.Validate(opUrlNormalized);
+        var isUrlValid  = urlService.Validate(opUrlNormalized, request.ValidateSemanticOpenProjectUrl);
         
         if (!isUrlValid)
         {

@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Application.Ports.Auth;
 using Domain.Entities.OpenProjectEntities.User;
+using Infrastructure.Exceptions;
 
 namespace Infrastructure.Adapters.Auth;
 
@@ -24,10 +25,10 @@ public class ApiKeyValidatorServiceImpl(IHttpClientFactory clientFactory) : IApi
             var response = await client.GetAsync("/api/v3/users/me", ct);
             
             if (response.StatusCode == HttpStatusCode.Unauthorized)
-                throw new InvalidOperationException("API key inválida o sin permisos");
+                throw new InvalidApiKeyException("API key inválida o sin permisos");
             
             if (!response.IsSuccessStatusCode)
-                throw new InvalidOperationException($"OpenProject respondió {(int)response.StatusCode}");
+                throw new OpenProjectRequestException($"OpenProject respondió {(int)response.StatusCode}");
             
             var body = await response.Content.ReadAsStringAsync(ct);
             var user = JsonSerializer.Deserialize<User>(body)
@@ -37,11 +38,11 @@ public class ApiKeyValidatorServiceImpl(IHttpClientFactory clientFactory) : IApi
         }
         catch (HttpRequestException ex)
         {
-            throw new InvalidOperationException($"No se pudo conectar a OpenProject en {instanceUrl}", ex);
+            throw new OpenProjectRequestException($"No se pudo conectar a OpenProject en {instanceUrl}");
         }
         catch (TaskCanceledException ex)
         {
-            throw new InvalidOperationException($"Timeout al conectar a OpenProject en {instanceUrl}", ex);
+            throw new OpenProjectRequestException($"Timeout al conectar a OpenProject en {instanceUrl}");
         }
     }
 }
