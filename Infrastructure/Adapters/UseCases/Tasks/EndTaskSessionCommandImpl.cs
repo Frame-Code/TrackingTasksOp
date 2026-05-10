@@ -10,7 +10,7 @@ using Task = Domain.Entities.TrackingTasksEntities.Task;
 namespace Infrastructure.Adapters.UseCases.Tasks;
 
 public class EndTaskSessionCommandImpl
-    (ITaskRepository repository, IAddTimeEntry addTimeEntry, IUpdateWorkPackageCommand updateWorkPackageCommand): IEndTaskSessionCommand
+    (ITaskRepository repository, IAddTimeEntryCommand addTimeEntryCommand, IUpdateWorkPackageCommand updateWorkPackageCommand): IEndTaskSessionCommand
 {
     public async Task<Task> Execute(EndTaskSessionRequest request)
     {
@@ -35,7 +35,7 @@ public class EndTaskSessionCommandImpl
         var timeEntryRequest = new AddTimeEntryRequest(request.WorkPackageId, request.ActivityId,
             lastTimeDetails.GetHoursWorked()!.Value.TotalHours, request.Comment);
         
-        await addTimeEntry.Execute(timeEntryRequest);
+        await addTimeEntryCommand.Execute(timeEntryRequest);
         lastTimeDetails.Uploaded = true;
 
         if (request.NewStatusId.HasValue && request.NewStatusId.Value > 0)

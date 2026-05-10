@@ -12,6 +12,7 @@ public static class InitializeExtensions
         app.UseDefaultFiles();
         app.UseStaticFiles();
         app.UseHttpsRedirection();
+        app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
         return app;

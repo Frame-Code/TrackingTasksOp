@@ -6,7 +6,7 @@ namespace Web.Controllers;
 [ApiController]
 [Route("api/v1/[controller]")]
 public class BotController(
-    IGeminiIntentService geminiIntentService,
+    IAiIntentService geminiIntentService,
     ILogger<BotController> logger) : ControllerBase
 {
     public record ChatRequest(string Prompt);

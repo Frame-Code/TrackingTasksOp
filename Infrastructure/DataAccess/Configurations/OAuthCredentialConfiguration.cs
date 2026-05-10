@@ -28,7 +28,7 @@ public class OAuthCredentialConfiguration : IEntityTypeConfiguration<OAuthCreden
 
         builder.HasOne(c => c.ApplicationUser)
             .WithOne()
-            .HasForeignKey<UserCredential>(c => c.UserId)
+            .HasForeignKey<OAuthCredential>(c => c.UserId)   // ← OAuthCredential, no UserCredential
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

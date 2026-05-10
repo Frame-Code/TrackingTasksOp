@@ -22,7 +22,7 @@ public class LocalCredentialConfiguration : IEntityTypeConfiguration<LocalCreden
         
         builder.HasOne(c => c.ApplicationUser)
             .WithOne()
-            .HasForeignKey<UserCredential>(c => c.UserId)
+            .HasForeignKey<LocalCredential>(c => c.UserId) 
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

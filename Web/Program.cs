@@ -11,6 +11,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddSwaggerGen();
+builder.Services.AddTrackingDataProtection(builder.Configuration);
 builder.Services.AddIdentityAndAuth(builder.Configuration);
 builder.Services.AddHttpClients(builder.Configuration);
 builder.Services.AddServices(builder.Configuration);

@@ -16,6 +16,8 @@ public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> opt
     public DbSet<MigrationData> MigrationsData { get; set; } = null!;
     public DbSet<OpenProjectInstance> OpenProjectInstances { get; set; } = null!;
     public DbSet<UserCredential> UserCredentials { get; set; } = null!;
+    public DbSet<LocalCredential> LocalCredentials { get; set; } = null!;
+    public DbSet<OAuthCredential> OAuthCredentials { get; set; } = null!;
     public DbSet<AuthAuditLog> AuthAuditLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

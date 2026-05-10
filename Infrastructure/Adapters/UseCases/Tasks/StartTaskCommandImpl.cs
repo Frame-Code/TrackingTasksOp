@@ -16,7 +16,7 @@ namespace Infrastructure.Adapters.UseCases.Tasks;
     public class StartTaskCommandImpl(
         ITaskRepository repository,
            IProjectRepository projectRepository, 
-          IAddTimeEntry addTimeEntry,
+          IAddTimeEntryCommand addTimeEntryCommand,
           ICreateWorkPackageCommand createWorkPackageCommand,
           IProjectOpService projectOpService
        ) : IStartTaskCommand
@@ -114,7 +114,7 @@ namespace Infrastructure.Adapters.UseCases.Tasks;
                 var timeEntryRequest = new AddTimeEntryRequest(task.WorkPackageId, request.ActivityId.Value,
                     lastDetail.GetHoursWorked()!.Value.TotalHours, request.Comment ?? string.Empty);
 
-                await addTimeEntry.Execute(timeEntryRequest);
+                await addTimeEntryCommand.Execute(timeEntryRequest);
                 lastDetail.Uploaded = true;
             }
             else

@@ -15,7 +15,7 @@ public class EndTaskSessionCommandTests
 {
     private static (EndTaskSessionCommandImpl useCase,
                     Mock<ITaskRepository> repositoryMock,
-                    Mock<IAddTimeEntry> addTimeEntryMock,
+                    Mock<IAddTimeEntryCommand> addTimeEntryMock,
                     Mock<IUpdateWorkPackageCommand> updateMock)
         BuildUseCase(TaskEntity? taskFromRepo)
     {
@@ -28,7 +28,7 @@ public class EndTaskSessionCommandTests
             .Setup(x => x.SaveAsync(It.IsAny<TaskEntity>()))
             .ReturnsAsync((TaskEntity t) => t);
 
-        var addTimeEntryMock = new Mock<IAddTimeEntry>();
+        var addTimeEntryMock = new Mock<IAddTimeEntryCommand>();
         addTimeEntryMock
             .Setup(x => x.Execute(It.IsAny<AddTimeEntryRequest>()))
             .Returns(Task.CompletedTask);

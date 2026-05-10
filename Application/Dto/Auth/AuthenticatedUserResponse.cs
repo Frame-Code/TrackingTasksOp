@@ -6,5 +6,5 @@ public class AuthenticatedUserResponse
     public string Email { get; init; } = null!;
     public string Name { get; init; } = null!;
     public string OpenProjectInstanceUrl { get; init; } = null!;
-    public int OpenProjectUserId { get; init; }
+    public int OpenProjectInstanceId { get; init; }
 }

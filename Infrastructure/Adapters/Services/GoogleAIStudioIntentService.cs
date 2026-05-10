@@ -15,7 +15,7 @@ namespace Infrastructure.Adapters.Services;
 /// <summary>
 /// Implementación que consume Google AI Studio (Gemini API gratuita) usando el SDK oficial de Google.GenAI.
 /// </summary>
-public class GoogleAIStudioIntentService : IGeminiIntentService
+public class GoogleAIStudioIntentService : IAiIntentService
 {
     private readonly ILogger<GoogleAIStudioIntentService> _logger;
     private readonly GeminiSettings _geminiSettings;

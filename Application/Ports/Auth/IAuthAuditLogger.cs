@@ -2,5 +2,5 @@
 
 public interface IAuthAuditLogger
 {
-    Task LogAsync();
+    Task LogAsync(AuditEventType eventType, string? userId, object? detail, CancellationToken ct);
 }

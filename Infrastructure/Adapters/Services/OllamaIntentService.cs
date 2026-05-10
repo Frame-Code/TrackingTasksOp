@@ -16,7 +16,7 @@ namespace Infrastructure.Adapters.Services;
 /// Implementación que utiliza un LLM local (Phi-3 Mini) via Ollama para procesar intenciones.
 /// Respeta el patrón de Adaptador y el Principio Abierto/Cerrado.
 /// </summary>
-public class OllamaIntentService : IGeminiIntentService
+public class OllamaIntentService : IAiIntentService
 {
     private readonly ILogger<OllamaIntentService> _logger;
     private readonly OllamaSettings _ollamaSettings;

@@ -1,4 +1,5 @@
-﻿using Infrastructure.DataAccess.Entities.Enums;
+﻿using Application.Ports.Auth;
+using Infrastructure.DataAccess.Entities.Enums;
 
 namespace Infrastructure.DataAccess.Entities;
 

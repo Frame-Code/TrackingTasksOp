@@ -9,10 +9,10 @@ using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Adapters.UseCases.TimeEntry;
 
-public class AddTimeEntryImpl(
+public class AddTimeEntryCommandImpl(
     IHttpClientFactory httpClientFactory,
-    ILogger<AddTimeEntryImpl> logger,
-    IOptions<OpenProjectSettings> settings) : IAddTimeEntry
+    ILogger<AddTimeEntryCommandImpl> logger,
+    IOptions<OpenProjectSettings> settings) : IAddTimeEntryCommand
 {
     private readonly OpenProjectSettings _settings = settings.Value;
     private readonly HttpClient _client = httpClientFactory.CreateClient(settings.Value.HttpClientName);

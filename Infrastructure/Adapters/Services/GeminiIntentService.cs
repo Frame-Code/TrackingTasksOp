@@ -16,7 +16,7 @@ namespace Infrastructure.Adapters.Services;
 /// Implementación del servicio de intención que utiliza el modelo Gemini de Google, 
 /// integrando Function Calling para ejecutar acciones en el sistema.
 /// </summary>
-public class GeminiIntentService : IGeminiIntentService
+public class GeminiIntentService : IAiIntentService
 {
     private readonly ILogger<GeminiIntentService> _logger;
     private readonly GeminiSettings _geminiSettings;

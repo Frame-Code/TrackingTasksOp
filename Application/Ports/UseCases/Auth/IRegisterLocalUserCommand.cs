@@ -1,8 +1,9 @@
-﻿using Application.Dto.Auth;
+﻿using Application.Dto;
+using Application.Dto.Auth;
 
 namespace Application.Ports.UseCases.Auth;
 
 public interface IRegisterLocalUserCommand
 {
-    Task<AuthenticatedUserResponse> ExecuteAsync(LocalRegisterRequest request, CancellationToken ct);
+    Task<ResponseDto<AuthenticatedUserResponse>> ExecuteAsync(LocalRegisterRequest request, CancellationToken ct);
 }

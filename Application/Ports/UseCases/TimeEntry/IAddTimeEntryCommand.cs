@@ -2,7 +2,7 @@
 
 namespace Application.Ports.UseCases.TimeEntry;
 
-public interface IAddTimeEntry
+public interface IAddTimeEntryCommand
 {
     Task Execute(AddTimeEntryRequest request);
 }

@@ -1,10 +1,11 @@
-﻿namespace Infrastructure.DataAccess.Entities.Enums;
+﻿namespace Application.Ports.Auth;
 
 public enum AuditEventType
 {
     Login,
     Logout,
     Register,
+    Exception,
     ApiKeyChanged,
     InvalidApiKey,
     OAuthGranted,

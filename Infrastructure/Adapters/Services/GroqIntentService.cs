@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Adapters.Services
 {
-    public class GroqIntentService : IGeminiIntentService
+    public class GroqIntentService : IAiIntentService
     {
         private readonly ILogger<GroqIntentService> _logger;
         private readonly GroqSettings _groqSettings;
