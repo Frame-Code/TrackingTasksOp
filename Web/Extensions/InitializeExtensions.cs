@@ -6,7 +6,7 @@ public static class InitializeExtensions
 {
     public static async Task<WebApplication> InitializeAsync(this WebApplication app)
     {
-        await app.Services.InitializeDatabaseAsync();
+        //await app.Services.InitializeDatabaseAsync();
         app.UseCors();
         app.UseExceptionHandler();
         app.UseDefaultFiles();

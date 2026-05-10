@@ -55,6 +55,11 @@ public class AuthController(
             ?? throw new ApplicationException($"User with email {response.Data.Email} not found");
         
         await signInManager.SignInAsync(appUser, isPersistent: true);
-        return Ok();
+        return Ok(new 
+        {
+            userId = appUser.Id,
+            email = appUser.Email,
+            openProjectInstanceUrl = response.Data!.OpenProjectInstanceUrl
+        });
     }
 }

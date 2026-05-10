@@ -17,7 +17,7 @@ public static class InitDbContextExtensions
             options.UseSqlServer(trackingTasksConnectionString, optionsBuilder =>
             {
                 optionsBuilder.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-                optionsBuilder.EnableRetryOnFailure();
+                //optionsBuilder.EnableRetryOnFailure();
             });
             options.EnableSensitiveDataLogging();
             options.EnableDetailedErrors();

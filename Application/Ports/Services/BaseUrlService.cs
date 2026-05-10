@@ -2,7 +2,7 @@
 
 public abstract class BaseUrlService
 {
-    public abstract bool Validate(string url);
+    public abstract bool Validate(string url, bool applyCustomValidations = false);
     public string NormalizeUrl(string url)
     {
         if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))

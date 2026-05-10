@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e40af"/>
+      <stop offset="100%" style="stop-color:#0f172a"/>
+    </linearGradient>
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#60a5fa"/>
+      <stop offset="100%" style="stop-color:#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#34d399"/>
+      <stop offset="100%" style="stop-color:#10b981"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Fondo circular principal -->
+  <circle cx="128" cy="128" r="124" fill="url(#bgGrad)" filter="url(#shadow)"/>
+
+  <!-- Borde exterior decorativo -->
+  <circle cx="128" cy="128" r="118" fill="none" stroke="#1e3a8a" stroke-width="2" opacity="0.6"/>
+
+  <!-- Anillo del reloj -->
+  <circle cx="128" cy="128" r="90" fill="none" stroke="url(#ringGrad)" stroke-width="8" opacity="0.9"/>
+
+  <!-- Marcas de hora (12, 3, 6, 9) -->
+  <rect x="124" y="46" width="8" height="16" rx="4" fill="#93c5fd"/>
+  <rect x="194" y="124" width="16" height="8" rx="4" fill="#93c5fd"/>
+  <rect x="124" y="194" width="8" height="16" rx="4" fill="#93c5fd"/>
+  <rect x="46" y="124" width="16" height="8" rx="4" fill="#93c5fd"/>
+
+  <!-- Marcas menores -->
+  <rect x="124" y="46" width="4" height="10" rx="2" fill="#60a5fa" opacity="0.4" transform="rotate(30 128 128)"/>
+  <rect x="124" y="46" width="4" height="10" rx="2" fill="#60a5fa" opacity="0.4" transform="rotate(60 128 128)"/>
+  <rect x="124" y="46" width="4" height="10" rx="2" fill="#60a5fa" opacity="0.4" transform="rotate(120 128 128)"/>
+  <rect x="124" y="46" width="4" height="10" rx="2" fill="#60a5fa" opacity="0.4" transform="rotate(150 128 128)"/>
+  <rect x="124" y="46" width="4" height="10" rx="2" fill="#60a5fa" opacity="0.4" transform="rotate(210 128 128)"/>
+  <rect x="124" y="46" width="4" height="10" rx="2" fill="#60a5fa" opacity="0.4" transform="rotate(240 128 128)"/>
+  <rect x="124" y="46" width="4" height="10" rx="2" fill="#60a5fa" opacity="0.4" transform="rotate(300 128 128)"/>
+  <rect x="124" y="46" width="4" height="10" rx="2" fill="#60a5fa" opacity="0.4" transform="rotate(330 128 128)"/>
+
+  <!-- Manecilla de hora (apuntando ~10 en punto) -->
+  <line x1="128" y1="128" x2="98" y2="90" stroke="#e2e8f0" stroke-width="7" stroke-linecap="round" filter="url(#glow)"/>
+
+  <!-- Manecilla de minutos (apuntando ~2 en punto) -->
+  <line x1="128" y1="128" x2="162" y2="80" stroke="#bfdbfe" stroke-width="5" stroke-linecap="round" filter="url(#glow)"/>
+
+  <!-- Pivote central -->
+  <circle cx="128" cy="128" r="8" fill="#60a5fa"/>
+  <circle cx="128" cy="128" r="4" fill="white"/>
+
+  <!-- Botón play (triángulo verde) - esquina inferior derecha del reloj -->
+  <circle cx="178" cy="178" r="30" fill="url(#accentGrad)" filter="url(#shadow)"/>
+  <polygon points="170,166 170,190 194,178" fill="white"/>
+</svg>

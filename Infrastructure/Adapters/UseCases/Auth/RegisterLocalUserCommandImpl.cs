@@ -42,6 +42,7 @@ public class RegisterLocalUserCommandImpl(
                     BaseUrl = request.OpenProjectInstanceUrl
                 }; 
                 context.OpenProjectInstances.Add(instance);
+                await context.SaveChangesAsync(ct);
             }
             
             var appUser = new ApplicationUser
@@ -76,8 +77,8 @@ public class RegisterLocalUserCommandImpl(
             {
                 request.Email,
                 OpInstanceUrl = request.OpenProjectInstanceUrl,
-                AuthMethod = AuthMethod.Local,
-                ApiKeyStatus = ApiKeyStatus.Valid
+                AuthMethod = nameof(AuthMethod.Local),
+                ApiKeyStatus = nameof(ApiKeyStatus.Valid)
             };
             
             context.Add(credentialUser);
