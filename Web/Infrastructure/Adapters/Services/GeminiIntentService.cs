@@ -19,7 +19,7 @@ namespace Web.Infrastructure.Adapters.Services;
 /// Implementación del servicio de intención que utiliza el modelo Gemini de Google, 
 /// integrando Function Calling para ejecutar acciones en el sistema.
 /// </summary>
-public class GeminiIntentService : IGeminiIntentService
+public class GeminiIntentService : IAIService
 {
     private readonly ILogger<GeminiIntentService> _logger;
     private readonly GeminiSettings _geminiSettings;
@@ -60,6 +60,12 @@ public class GeminiIntentService : IGeminiIntentService
         _statusOpService = statusOpService;
         _activityOpService = activityOpService;
         _userOpService = userOpService;
+
+        if (string.IsNullOrWhiteSpace(_geminiSettings.Model))
+        {
+            _logger.LogCritical("CRÍTICO: El Modelo de Gemini no se cargó desde la configuración.");
+            throw new System.ArgumentNullException(nameof(_geminiSettings.Model), "El Modelo de Gemini debe estar especificado en la configuración.");
+        }
 
         _generativeAIClient = new Client(
             project: _geminiSettings.ProjectId, 
@@ -136,7 +142,9 @@ public class GeminiIntentService : IGeminiIntentService
                                     ["activityId"] = new() { Type = Google.GenAI.Types.Type.Integer, Description = "ID numérico de la actividad (opcional)" },
                                     ["assigneeName"] = new() { Type = Google.GenAI.Types.Type.String, Description = "Nombre del usuario asignado (opcional)" },
                                     ["responsibleName"] = new() { Type = Google.GenAI.Types.Type.String, Description = "Nombre del responsable (opcional)" },
-                                    ["comment"] = new() { Type = Google.GenAI.Types.Type.String, Description = "Comentario opcional" }
+                                    ["comment"] = new() { Type = Google.GenAI.Types.Type.String, Description = "Comentario opcional" },
+                                    ["startDate"] = new() { Type = Google.GenAI.Types.Type.String, Description = "Fecha de inicio en formato YYYY-MM-DD (opcional)" },
+                                    ["dueDate"] = new() { Type = Google.GenAI.Types.Type.String, Description = "Fecha de fin en formato YYYY-MM-DD (opcional)" }
                                 },
                                 Required = new List<string> { "projectId", "statusId", "name" }
                             }
@@ -178,7 +186,7 @@ public class GeminiIntentService : IGeminiIntentService
 
             var config = new GenerateContentConfig
             {
-                Temperature = 0.1f,
+                Temperature = _geminiSettings.Temperature,
                 Tools = tools,
                 SystemInstruction = new Content
                 {
@@ -188,9 +196,11 @@ public class GeminiIntentService : IGeminiIntentService
                                          "Tu objetivo es ser lo más proactivo y eficiente posible. " +
                                          "REGLAS CRÍTICAS: " +
                                          "1. NUNCA pidas permiso para usar una herramienta si tienes los datos necesarios. " +
-                                         "2. Si el usuario menciona una actividad o un usuario por nombre, llama AUTOMÁTICAMENTE a las funciones de listado para buscar sus IDs. " +
-                                         "3. Si necesitas el ID de una tarea o proyecto que no tienes en el mensaje actual pero crees que está en el historial, búscalo tú mismo. " +
-                                         "4. Si una operación requiere varios pasos (ej. buscar usuario -> asignar -> empezar trackeo), ejecútalos todos en secuencia sin preguntar entre pasos." }
+                                         "2. Si el usuario menciona una actividad, proyecto, estado o usuario por nombre, busca SIEMPRE sus IDs correspondientes usando las herramientas de listado (list_projects, list_users, list_statuses, list_activities). " +
+                                         "3. NUNCA inventes IDs. Si no tienes el ID numérico, búscalo primero. " +
+                                         "4. Si necesitas el ID de una tarea o proyecto que no tienes en el mensaje actual pero crees que está en el historial, búscalo tú mismo. " +
+                                         "5. Si una operación requiere varios pasos (ej. buscar usuario -> buscar tarea -> asignar), ejecútalos todos en secuencia en un solo turno si es posible. " +
+                                         "6. FECHAS: Cuando el usuario mencione fechas (hoy, mañana, el lunes), conviértelas a formato ISO YYYY-MM-DD basándote en la fecha actual." }
                     }
                 }
             };
@@ -201,9 +211,19 @@ public class GeminiIntentService : IGeminiIntentService
             
             bool finalResponseReached = false;
             string finalResult = string.Empty;
+            int functionCallCount = 0;
+            const int MAX_FUNCTION_CALLS = 8;
 
             while (!finalResponseReached)
             {
+                if (functionCallCount >= MAX_FUNCTION_CALLS)
+                {
+                    _logger.LogWarning("Max function calls reached for session {SessionId}", sessionId);
+                    finalResult = "He realizado demasiadas operaciones internas. Por favor, intenta ser más específico o divide tu solicitud.";
+                    finalResponseReached = true;
+                    continue;
+                }
+
                 GenerateContentResponse response;
                 try 
                 {
@@ -216,7 +236,7 @@ public class GeminiIntentService : IGeminiIntentService
                 catch (ClientError ex)
                 {
                     _logger.LogError(ex, "Gemini ClientError during GenerateContent: {Message}", ex.Message);
-                    throw;
+                    return $"Error de comunicación con el servicio de IA: {ex.Message}";
                 }
 
                 if (response.Candidates == null || response.Candidates.Count == 0)
@@ -229,14 +249,14 @@ public class GeminiIntentService : IGeminiIntentService
                 var candidate = response.Candidates[0];
                 var candidateContent = candidate.Content;
                 
-                if (candidateContent?.Parts == null)
+                if (candidateContent?.Parts == null || !candidateContent.Parts.Any())
                 {
                     finalResult = "Respuesta vacía.";
                     finalResponseReached = true;
                     continue;
                 }
 
-                // Importante: Añadir el mensaje del modelo al historial antes de procesar llamadas
+                // Importante: Añadir el mensaje del modelo al historial
                 contents.Add(candidateContent);
 
                 // Filtrar solo las partes que son llamadas a funciones
@@ -247,16 +267,25 @@ public class GeminiIntentService : IGeminiIntentService
                 
                 if (toolCalls.Any())
                 {
-                    _logger.LogInformation("Processing {Count} function calls from Gemini", toolCalls.Count);
+                    functionCallCount++;
+                    _logger.LogInformation("Processing {Count} function calls (Total: {Total})", toolCalls.Count, functionCallCount);
 
                     var responseParts = new List<Part>();
                     foreach (var call in toolCalls)
                     {
                         _logger.LogInformation("Executing tool call: {FunctionName}", call.Name);
                         
-                        object result = await ExecuteFunctionAsync(call);
+                        object result;
+                        try 
+                        {
+                            result = await ExecuteFunctionAsync(call);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Fatal error executing function {Name}", call.Name);
+                            result = new { error = $"Error interno ejecutando {call.Name}: {ex.Message}" };
+                        }
                         
-                        // Normalizar el resultado a un Dictionary<string, object> compatible
                         Dictionary<string, object> normalizedResult = NormalizeResult(result);
                         
                         responseParts.Add(new Part
@@ -269,14 +298,10 @@ public class GeminiIntentService : IGeminiIntentService
                         });
                     }
 
-                    // Las respuestas DEBEN ir en un mensaje con el rol "function"
                     contents.Add(new Content { Role = "function", Parts = responseParts });
-                    
-                    // El bucle continuará para que el modelo procese los resultados de las funciones
                 }
                 else
                 {
-                    // Si no hay llamadas a funciones, es la respuesta final
                     finalResult = response.Text ?? "Operación completada.";
                     finalResponseReached = true;
                 }
@@ -298,28 +323,34 @@ public class GeminiIntentService : IGeminiIntentService
     /// Normaliza cualquier objeto a un diccionario compatible con la SDK de Gemini.
     /// Gemini requiere que la respuesta de una función sea un OBJETO JSON {}.
     /// </summary>
-    private Dictionary<string, object> NormalizeResult(object result)
+    private Dictionary<string, object> NormalizeResult(object? result)
     {
+        if (result == null) 
+            return new Dictionary<string, object> { ["result"] = "null" };
+
         try
         {
-            // Si el resultado es una lista, la envolvemos en un objeto porque Gemini no acepta arrays raíz
-            if (result is System.Collections.IEnumerable && result is not string && result is not IDictionary<string, object>)
+            // Siempre serializamos y deserializamos para:
+            // 1. Validar que no haya referencias circulares.
+            // 2. Asegurar que todos los tipos sean compatibles con JSON.
+            // 3. Normalizar nombres de propiedades a CamelCase si fuera necesario.
+            var json = JsonSerializer.Serialize(result);
+            using var document = JsonDocument.Parse(json);
+            
+            // Si es un array en la raíz, lo envolvemos
+            if (document.RootElement.ValueKind == JsonValueKind.Array)
             {
-                return new Dictionary<string, object> { ["elements"] = result };
+                var elements = JsonSerializer.Deserialize<List<object>>(json);
+                return new Dictionary<string, object> { ["elements"] = elements ?? new List<object>() };
             }
 
-            // Si ya es un diccionario, intentamos usarlo directamente
-            if (result is Dictionary<string, object> dict) return dict;
-
-            // Para otros objetos, serializamos y deserializamos para asegurar un formato de diccionario limpio
-            var json = JsonSerializer.Serialize(result);
             var decoded = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
-            
-            return decoded ?? new Dictionary<string, object> { ["result"] = result?.ToString() ?? "null" };
+            return decoded ?? new Dictionary<string, object> { ["result"] = "empty" };
         }
-        catch
+        catch (Exception ex)
         {
-            return new Dictionary<string, object> { ["result"] = result?.ToString() ?? "error" };
+            _logger.LogWarning(ex, "Failed to normalize function result. Possible circular reference or complex type.");
+            return new Dictionary<string, object> { ["error"] = "No se pudo procesar el resultado de la función por complejidad excesiva." };
         }
     }
 
@@ -355,21 +386,32 @@ public class GeminiIntentService : IGeminiIntentService
                     var responsibleName = GetStringArg(args, "responsibleName");
                     
                     int? assigneeId = null;
+                    string feedback = "Operación completada: ";
                     if (!string.IsNullOrEmpty(assigneeName))
                     {
                         var user = await _userOpService.FindByName(assigneeName);
-                        assigneeId = user?.Id;
+                        if (user != null) {
+                            assigneeId = user.Id;
+                            feedback += $"Asignado a {user.Name}. ";
+                        } else {
+                            return new { error = $"No se encontró al usuario '{assigneeName}' para asignar." };
+                        }
                     }
 
                     int? responsibleId = null;
                     if (!string.IsNullOrEmpty(responsibleName))
                     {
                         var user = await _userOpService.FindByName(responsibleName);
-                        responsibleId = user?.Id;
+                        if (user != null) {
+                            responsibleId = user.Id;
+                            feedback += $"Responsable: {user.Name}. ";
+                        } else {
+                            return new { error = $"No se encontró al usuario '{responsibleName}' como responsable." };
+                        }
                     }
 
                     await _updateWorkPackageCommand.Execute(wpToAssignId, assigneeId: assigneeId, responsibleId: responsibleId);
-                    return new { status = "Usuarios asignados correctamente" };
+                    return new { status = feedback.Trim() };
 
                 case "start_task":
                     var startAssigneeName = GetStringArg(args, "assigneeName");
@@ -399,7 +441,9 @@ public class GeminiIntentService : IGeminiIntentService
                         ActivityId = GetOptionalIntArg(args, "activityId"),
                         Comment = GetStringArg(args, "comment"),
                         AssigneeId = startAssigneeId,
-                        ResponsibleId = startResponsibleId
+                        ResponsibleId = startResponsibleId,
+                        StartDate = GetStringArg(args, "startDate"),
+                        DueDate = GetStringArg(args, "dueDate")
                     };
                     var task = await _startTaskCommand.Execute(startReq);
                     return new 

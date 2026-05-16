@@ -6,6 +6,7 @@ using Application.Ports.UseCases.WorkPackages;
 using StackExchange.Redis;
 using Web.Infrastructure.Adapters.Repositories;
 using Web.Infrastructure.Adapters.Services;
+using Web.Infrastructure.Adapters.Services.Heuristics;
 using Web.Infrastructure.Adapters.UseCases.Tasks;
 using Web.Infrastructure.Adapters.UseCases.TimeEntry;
 using Web.Infrastructure.Adapters.UseCases.WorkPackages;
@@ -25,6 +26,7 @@ public static class ServicesExtensions
 
         //Use cases
         collection.AddScoped<IListsWorkPackagesCommand, ListsWorkPackagesCommandImpl>();
+        collection.AddScoped<IGetWorkPackageCommand, GetWorkPackageCommandImpl>();
         collection.AddScoped<ICreateWorkPackageCommand, CreateWorkPackageCommandImpl>();
         collection.AddScoped<IUpdateWorkPackageCommand, UpdateWorkPackageCommandImpl>();
         collection.AddScoped<IStartTaskCommand, StartTaskCommandImpl>();
@@ -36,6 +38,16 @@ public static class ServicesExtensions
         collection.AddScoped<IProjectOpService, ProjectOpServiceImpl>();
         collection.AddScoped<IActivityOpService, ActivityOpServiceImpl>();
         collection.AddScoped<IUserOpService, UserOpServiceImpl>();
+        collection.AddScoped<IAttachmentService, AttachmentServiceImpl>();
+        collection.AddScoped<ICustomFieldService, CustomFieldServiceImpl>();
+
+        // Use Cases / Commands
+        collection.AddScoped<IHeuristicIntentHandler, TaskDetailHandler>();
+        collection.AddScoped<IHeuristicIntentHandler, ListProjectsHandler>();
+        collection.AddScoped<IHeuristicIntentHandler, ListUsersHandler>();
+        collection.AddScoped<IHeuristicIntentHandler, ListStatusesHandler>();
+        collection.AddScoped<IHeuristicIntentHandler, CustomFieldsHandler>();
+        collection.AddScoped<IHeuristicIntentHandler, TaskQueryHandler>();
         
         //Repositories
         collection.AddScoped<IStatusTaskRepository, StatusTaskRepositoryImpl>();
@@ -43,7 +55,7 @@ public static class ServicesExtensions
         collection.AddScoped<IProjectRepository, ProjectRepositoryImpl>();
 
         // AI Services
-        collection.AddScoped<IGeminiIntentService, GroqIntentService>();
+        collection.AddScoped<IAIService, GroqIntentService>();
         collection.AddScoped<IConversationContextService, RedisConversationService>();
         
         // Infrastructure Clients

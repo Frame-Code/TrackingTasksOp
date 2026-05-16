@@ -39,6 +39,12 @@ public class ProjectOpServiceImpl(
         return collection?.Embedded?.Projects
                ?? new List<Project>();
     }
+
+    public async Task<Project?> FindByName(string name)
+    {
+        var projects = await Lists();
+        return projects.FirstOrDefault(p => p.Name.Contains(name, StringComparison.OrdinalIgnoreCase) || p.Identifier.Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
     
     private string BuildUrl()
     {

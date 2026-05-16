@@ -8,5 +8,9 @@ public record CreateWorkPackageRequest(
     int? PriorityId = null,
     string? Description = null,
     int? AssigneeId = null,
-    int? ResponsibleId = null
+    int? ResponsibleId = null,
+    string? StartDate = null,
+    string? DueDate = null,
+    string? Area = null,
+    string? Module = null
 );

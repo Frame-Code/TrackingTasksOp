@@ -36,6 +36,26 @@ public class CreateWorkPackageCommandImpl(
             }
         };
 
+        if (!string.IsNullOrEmpty(request.StartDate))
+        {
+            payload["startDate"] = request.StartDate;
+        }
+
+        if (!string.IsNullOrEmpty(request.DueDate))
+        {
+            payload["dueDate"] = request.DueDate;
+        }
+
+        if (!string.IsNullOrEmpty(request.Area))
+        {
+            payload["customField3"] = request.Area;
+        }
+
+        if (!string.IsNullOrEmpty(request.Module))
+        {
+            payload["customField5"] = request.Module;
+        }
+
         var links = new JsonObject();
         
         if (request.StatusId.HasValue && request.StatusId.Value > 0)

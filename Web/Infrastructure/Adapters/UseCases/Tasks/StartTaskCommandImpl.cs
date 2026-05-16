@@ -75,7 +75,11 @@ namespace Web.Infrastructure.Adapters.UseCases.Tasks;
                     null, // PriorityId opcional
                     request.Description,
                     request.AssigneeId,
-                    request.ResponsibleId
+                    request.ResponsibleId,
+                    request.StartDate,
+                    request.DueDate,
+                    request.Area,
+                    request.Module
                 );
                 var opWorkPackage = await createWorkPackageCommand.Execute(createRequest);
                 workPackageId = opWorkPackage.Id;

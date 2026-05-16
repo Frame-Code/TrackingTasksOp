@@ -4,7 +4,7 @@ namespace Application.Ports.Services;
 /// Define el contrato para un servicio que interpreta la intención
 /// del usuario utilizando un modelo de IA generativa como Gemini.
 /// </summary>
-public interface IGeminiIntentService
+public interface IAIService
 {
     /// <summary>
     /// Procesa el prompt de un usuario para determinar su intención.

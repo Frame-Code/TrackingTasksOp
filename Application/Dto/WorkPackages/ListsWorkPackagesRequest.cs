@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace Application.Dto.ListWorkPackages
 {
-    public record ListsWorkPackagesRequest (
-        int? ProjectId,
-        int offset,
-        int pageSize
-    ){}
+    public record ListsWorkPackagesRequest(
+        int? ProjectId = null,
+        int offset = 0,
+        int pageSize = 50,
+        string? AssigneeId = null,
+        string? StatusOperator = null,
+        int? StatusId = null
+    );
 }

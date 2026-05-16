@@ -18,11 +18,12 @@ namespace Web.Infrastructure.Adapters.Services;
 /// Implementación que utiliza un LLM local (Phi-3 Mini) via Ollama para procesar intenciones.
 /// Respeta el patrón de Adaptador y el Principio Abierto/Cerrado.
 /// </summary>
-public class OllamaIntentService : IGeminiIntentService
+public class OllamaIntentService : IAIService
 {
     private readonly ILogger<OllamaIntentService> _logger;
     private readonly OllamaSettings _ollamaSettings;
     private readonly IConversationContextService _conversationContextService;
+    private readonly HttpClient _httpClient;
     private readonly OllamaApiClient _ollamaClient;
 
     // Servicios de Negocio (Commands/Services)
@@ -38,6 +39,7 @@ public class OllamaIntentService : IGeminiIntentService
     public OllamaIntentService(
         ILogger<OllamaIntentService> logger,
         IOptions<OllamaSettings> ollamaSettings,
+        IHttpClientFactory httpClientFactory,
         IConversationContextService conversationContextService,
         IStartTaskCommand startTaskCommand,
         IEndTaskSessionCommand endTaskSessionCommand,
@@ -60,13 +62,11 @@ public class OllamaIntentService : IGeminiIntentService
         _activityOpService = activityOpService;
         _updateWorkPackageCommand = updateWorkPackageCommand;
 
-        // Inicializar cliente local de Ollama con Timeout infinito
-        // Los LLMs locales pueden tardar más de los 100s por defecto de HttpClient
-        var httpClient = new System.Net.Http.HttpClient { 
-            BaseAddress = new Uri(_ollamaSettings.BaseUrl),
-            Timeout = Timeout.InfiniteTimeSpan 
-        };
-        _ollamaClient = new OllamaApiClient(httpClient);
+        _httpClient = httpClientFactory.CreateClient("OllamaClient");
+        _httpClient.BaseAddress = new Uri(_ollamaSettings.BaseUrl);
+        _httpClient.Timeout = Timeout.InfiniteTimeSpan;
+        
+        _ollamaClient = new OllamaApiClient(_httpClient);
         _ollamaClient.SelectedModel = _ollamaSettings.Model;
     }
 
@@ -98,7 +98,7 @@ public class OllamaIntentService : IGeminiIntentService
             foreach (var g in groups)
             {
                 builder.AppendLine($"📁 **{g.Key}**");
-                foreach (var t in g) builder.AppendLine($"- **#{t.Id}**: {t.Subject} *({t.Links?.Status?.Title})*");
+                foreach (var t in g) builder.AppendLine($"#{t.Id}: {t.Subject} ({t.Links?.Status?.Title})");
                 builder.AppendLine();
             }
             return await SaveContext(context, prompt, builder.ToString().TrimEnd(), ct);
@@ -107,9 +107,19 @@ public class OllamaIntentService : IGeminiIntentService
         // Listar Usuarios
         if (lowerPrompt.Contains("mostrar usuarios") || lowerPrompt.Contains("listar usuarios") || lowerPrompt == "usuarios")
         {
-            var users = await _userOpService.Lists();
-            string resp = "👥 **Usuarios:**\n\n" + string.Join("\n", users.Select(u => $"- {u.Name} (ID: {u.Id})"));
-            return await SaveContext(context, prompt, resp, ct);
+            try
+            {
+                var users = await _userOpService.Lists();
+                string resp = "👥 **Usuarios:**\n\n" + string.Join("\n", users.Select(u => $"- {u.Name} (ID: {u.Id})"));
+                return await SaveContext(context, prompt, resp, ct);
+            }
+            catch (Exception ex)
+            {
+                string errorResp = ex is UnauthorizedAccessException 
+                    ? "⚠️ No tienes permisos para listar usuarios en OpenProject." 
+                    : $"❌ Error al listar usuarios: {ex.Message}";
+                return await SaveContext(context, prompt, errorResp, ct);
+            }
         }
 
         // ==============================================================================
@@ -124,11 +134,12 @@ REGLAS ESTRICTAS:
 3. Formato de JSON: { ""action"": ""NAME"", ""params"": { ""KEY"": ""VALUE"" } }
 
 Acciones:
-- start_task: { ""projectId"": int, ""statusId"": int, ""name"": string } -> Crea e inicia trackeo.
+- start_task: { ""projectId"": int, ""statusId"": int, ""name"": string, ""startDate"": ""YYYY-MM-DD"", ""dueDate"": ""YYYY-MM-DD"" } -> Crea e inicia trackeo.
 - assign_user_to_task: { ""workPackageId"": int, ""assigneeName"": string, ""responsibleName"": string }
 - end_task_session: { ""workPackageId"": int, ""activityId"": int, ""comment"": string }
 
 Si el usuario pide varias cosas (ej. 'crea y asigna'), envía un JSON por cada acción.
+Si menciona fechas, conviértelas a YYYY-MM-DD.
 Si es una charla normal, responde en texto plano.";
 
         var messages = new List<Message> { new Message(ChatRole.System, systemPrompt) };
@@ -204,7 +215,9 @@ Si es una charla normal, responde en texto plano.";
                     ProjectId = GetInt(p, "projectId"),
                     StatusId = GetInt(p, "statusId"),
                     Name = GetStr(p, "name"),
-                    WorkPackageId = GetInt(p, "workPackageId")
+                    WorkPackageId = GetInt(p, "workPackageId"),
+                    StartDate = GetStr(p, "startDate"),
+                    DueDate = GetStr(p, "dueDate")
                 });
             case "assign_user_to_task":
                 int wpId = GetInt(p, "workPackageId");

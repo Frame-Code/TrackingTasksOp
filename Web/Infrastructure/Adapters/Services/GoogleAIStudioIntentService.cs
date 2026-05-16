@@ -18,7 +18,7 @@ namespace Web.Infrastructure.Adapters.Services;
 /// <summary>
 /// Implementación que consume Google AI Studio (Gemini API gratuita) usando el SDK oficial de Google.GenAI.
 /// </summary>
-public class GoogleAIStudioIntentService : IGeminiIntentService
+public class GoogleAIStudioIntentService : IAIService
 {
     private readonly ILogger<GoogleAIStudioIntentService> _logger;
     private readonly GeminiSettings _geminiSettings;
@@ -63,8 +63,14 @@ public class GoogleAIStudioIntentService : IGeminiIntentService
         // VALIDACIÓN DEFENSIVA (Fail-Fast)
         if (string.IsNullOrWhiteSpace(_geminiSettings.ApiKey))
         {
-            _logger.LogCritical("CRÍTICO: La API Key de Gemini no se cargó desde appsettings.json.");
-            throw new System.ArgumentNullException(nameof(_geminiSettings.ApiKey), "La API Key de Gemini no puede estar vacía. Configúrala en GeminiSettings:ApiKey");
+            _logger.LogCritical("CRÍTICO: La API Key de Gemini no se cargó desde la configuración.");
+            throw new System.ArgumentNullException(nameof(_geminiSettings.ApiKey), "La API Key de Gemini no puede estar vacía.");
+        }
+
+        if (string.IsNullOrWhiteSpace(_geminiSettings.Model))
+        {
+            _logger.LogCritical("CRÍTICO: El Modelo de Gemini no se cargó desde la configuración.");
+            throw new System.ArgumentNullException(nameof(_geminiSettings.Model), "El Modelo de Gemini debe estar especificado en la configuración.");
         }
 
         // Inicializamos el SDK oficial de Google GenAI usando SOLO la API Key para Nivel Gratuito (Google AI Studio)
@@ -92,7 +98,7 @@ public class GoogleAIStudioIntentService : IGeminiIntentService
                 string response = "📋 **Tus Proyectos Disponibles:**\n\n";
                 foreach(var p in projects) response += $"- **{p.Name}** (ID: {p.Id})\n";
                 
-                return SaveAndReturnContext(conversationContext, prompt, response, ct).Result;
+                return await SaveAndReturnContext(conversationContext, prompt, response, ct);
             }
 
             // Interceptar: Listar Tareas Pendientes (Generales)
@@ -101,7 +107,7 @@ public class GoogleAIStudioIntentService : IGeminiIntentService
                 // Pasamos projectId null para traer las tareas globales asignadas al usuario
                 var wps = await _listsWorkPackagesCommand.Execute(new ListsWorkPackagesRequest(null, 0, 50));
                 
-                if (!wps.Any()) return SaveAndReturnContext(conversationContext, prompt, "✅ ¡Felicidades! No tienes tareas pendientes asignadas en este momento.", ct).Result;
+                if (!wps.Any()) return await SaveAndReturnContext(conversationContext, prompt, "✅ ¡Felicidades! No tienes tareas pendientes asignadas en este momento.", ct);
 
                 var builder = new System.Text.StringBuilder();
                 builder.AppendLine("📝 **Tus Tareas Pendientes:**\n");
@@ -113,22 +119,32 @@ public class GoogleAIStudioIntentService : IGeminiIntentService
                     builder.AppendLine($"📁 **{group.Key}**");
                     foreach (var task in group)
                     {
-                        builder.AppendLine($"- **#{task.Id}**: {task.Subject} *(Estado: {task.Links?.Status?.Title})*");
+                        builder.AppendLine($"#{task.Id}: {task.Subject} ({task.Links?.Status?.Title})");
                     }
                     builder.AppendLine();
                 }
                 
-                return SaveAndReturnContext(conversationContext, prompt, builder.ToString().TrimEnd(), ct).Result;
+                return await SaveAndReturnContext(conversationContext, prompt, builder.ToString().TrimEnd(), ct);
             }
             
             // Interceptar: Listar Usuarios
             if (lowerPrompt == "usuarios" || lowerPrompt.Contains("listar usuarios") || lowerPrompt.Contains("mostrar usuarios") || lowerPrompt.Contains("quiénes están"))
             {
-                var users = await _userOpService.Lists();
-                string response = "👥 **Usuarios del Sistema:**\n\n";
-                foreach(var u in users) response += $"- {u.Name} (ID: {u.Id})\n";
-                
-                return SaveAndReturnContext(conversationContext, prompt, response, ct).Result;
+                try
+                {
+                    var users = await _userOpService.Lists();
+                    string response = "👥 **Usuarios del Sistema:**\n\n";
+                    foreach(var u in users) response += $"- {u.Name} (ID: {u.Id})\n";
+                    
+                    return await SaveAndReturnContext(conversationContext, prompt, response, ct);
+                }
+                catch (Exception ex)
+                {
+                    string errorResp = ex is UnauthorizedAccessException 
+                        ? "⚠️ No tienes permisos suficientes para listar los usuarios en OpenProject. Contacta a tu administrador." 
+                        : $"❌ Error al listar usuarios: {ex.Message}";
+                    return await SaveAndReturnContext(conversationContext, prompt, errorResp, ct);
+                }
             }
 
             // Interceptar: Listar Estados
@@ -138,7 +154,7 @@ public class GoogleAIStudioIntentService : IGeminiIntentService
                 string response = "🚦 **Estados Disponibles:**\n\n";
                 foreach(var s in statuses) response += $"- {s.Name} (ID: {s.Id})\n";
                 
-                return SaveAndReturnContext(conversationContext, prompt, response, ct).Result;
+                return await SaveAndReturnContext(conversationContext, prompt, response, ct);
             }
 
             // ==============================================================================
@@ -248,7 +264,7 @@ public class GoogleAIStudioIntentService : IGeminiIntentService
 
             var config = new GenerateContentConfig
             {
-                Temperature = 0.1f,
+                Temperature = _geminiSettings.Temperature,
                 Tools = tools,
                 SystemInstruction = new Content
                 {
@@ -285,7 +301,7 @@ public class GoogleAIStudioIntentService : IGeminiIntentService
                 try 
                 {
                     response = await _generativeAIClient.Models.GenerateContentAsync(
-                        model: _geminiSettings.Model ?? "gemini-2.5-flash",
+                        model: _geminiSettings.Model,
                         contents: contents,
                         config: config,
                         cancellationToken: ct);
@@ -376,10 +392,10 @@ public class GoogleAIStudioIntentService : IGeminiIntentService
                 }
                 else
                 {
-                    finalResult = response.Text;
+                    finalResult = response.Text ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(finalResult) && response.Candidates?.Count > 0)
                     {
-                        finalResult = response.Candidates[0].Content?.Parts?.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p.Text))?.Text;
+                        finalResult = response.Candidates[0].Content?.Parts?.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p.Text))?.Text ?? string.Empty;
                     }
                     
                     if (string.IsNullOrWhiteSpace(finalResult)) finalResult = "Operación completada.";
@@ -460,21 +476,32 @@ public class GoogleAIStudioIntentService : IGeminiIntentService
                     var responsibleName = GetStringArg(args, "responsibleName");
                     
                     int? assigneeId = null;
+                    string feedback = "Operación completada: ";
                     if (!string.IsNullOrEmpty(assigneeName))
                     {
                         var user = await _userOpService.FindByName(assigneeName);
-                        assigneeId = user?.Id;
+                        if (user != null) {
+                            assigneeId = user.Id;
+                            feedback += $"Asignado a {user.Name}. ";
+                        } else {
+                            return new { error = $"No se encontró al usuario '{assigneeName}' para asignar." };
+                        }
                     }
 
                     int? responsibleId = null;
                     if (!string.IsNullOrEmpty(responsibleName))
                     {
                         var user = await _userOpService.FindByName(responsibleName);
-                        responsibleId = user?.Id;
+                        if (user != null) {
+                            responsibleId = user.Id;
+                            feedback += $"Responsable: {user.Name}. ";
+                        } else {
+                            return new { error = $"No se encontró al usuario '{responsibleName}' como responsable." };
+                        }
                     }
 
                     await _updateWorkPackageCommand.Execute(wpToAssignId, assigneeId: assigneeId, responsibleId: responsibleId);
-                    return new { status = "Usuarios asignados correctamente" };
+                    return new { status = feedback.Trim() };
 
                 case "start_task":
                     var startAssigneeName = GetStringArg(args, "assigneeName");

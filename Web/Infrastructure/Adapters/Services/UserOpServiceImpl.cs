@@ -19,30 +19,74 @@ public class UserOpServiceImpl(
     
     public async Task<List<User>> Lists()
     {
-        logger.LogInformation("Executing Lists:UserOpServiceImpl");
-        string url = $"{_settings.BaseUrl}/api/v3/users";
-        HttpResponseMessage response = await _client.GetAsync(url);
-        
-        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized)
-            return new List<User>();
-        
-        if (!response.IsSuccessStatusCode)
-        {
-            string error = await response.Content.ReadAsStringAsync();
-            throw new Exception($"Error HTTP {(int)response.StatusCode}: {error}");
-        }
-        
-        string json = await response.Content.ReadAsStringAsync();
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var collection = JsonSerializer.Deserialize<UserCollection>(json, options);
+        logger.LogInformation("Executing function Lists from UserOpService");
+        string url = BuildUrl();
 
-        return collection?.Embedded?.Elements ?? new List<User>();
+        try 
+        {
+            HttpResponseMessage response = await _client.GetAsync(url);
+
+            if (response.StatusCode == HttpStatusCode.Forbidden)
+            {
+                logger.LogWarning("Access denied (403) to global user list. Falling back to 'me' user.");
+                var me = await GetMe();
+                return me != null ? new List<User> { me } : new List<User>();
+            }
+
+            if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized)
+            {
+                logger.LogWarning("Unauthorized or not found when listing users. Status: {Status}", response.StatusCode);
+                return new List<User>();
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                string error = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Error HTTP {(int)response.StatusCode}: {error}");
+            }
+
+            string json = await response.Content.ReadAsStringAsync();
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var collection = JsonSerializer.Deserialize<UserCollection>(json, options);
+
+            return collection?.Embedded?.Elements ?? new List<User>();
+        }
+        catch (Exception ex) when (ex is not UnauthorizedAccessException)
+        {
+            logger.LogError(ex, "Error fetching users. Attempting fallback to 'me'.");
+            var me = await GetMe();
+            return me != null ? new List<User> { me } : new List<User>();
+        }
+    }
+
+    private async Task<User?> GetMe()
+    {
+        try
+        {
+            string url = $"{_settings.BaseUrl.TrimEnd('/')}/api/v3/users/me";
+            var response = await _client.GetAsync(url);
+            if (!response.IsSuccessStatusCode) return null;
+
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<User>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch { return null; }
+    }
+    private string BuildUrl()
+    {
+        return $"{_settings.BaseUrl.TrimEnd('/')}/api/v3/users";
     }
 
     public async Task<User?> FindByName(string name)
     {
-        // En un entorno real, la API de OP permite buscar por filtros en el endpoint de users
-        // pero por simplicidad listamos y buscamos en memoria o podemos usar el endpoint /api/v3/users?filters=...
+        if (string.IsNullOrEmpty(name)) return null;
+        
+        // El usuario puede pedir asignarse algo a sí mismo usando "me"
+        if (name.Equals("me", StringComparison.OrdinalIgnoreCase) || name.Equals("yo", StringComparison.OrdinalIgnoreCase) || name.Equals("mí", StringComparison.OrdinalIgnoreCase))
+        {
+            return await GetMe();
+        }
+
         var users = await Lists();
         return users.FirstOrDefault(u => u.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
     }

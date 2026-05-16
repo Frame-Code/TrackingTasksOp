@@ -11,4 +11,8 @@ public class StarTaskRequest
     public int StatusId { get; init; }
     public int? AssigneeId { get; init; }
     public int? ResponsibleId { get; init; }
+    public string? StartDate { get; init; }
+    public string? DueDate { get; init; }
+    public string? Area { get; init; }
+    public string? Module { get; init; }
 }

@@ -10,4 +10,5 @@ public class GeminiSettings
     public string Publisher { get; set; } = null!;
     public string Model { get; set; } = null!;
     public string ApiKey { get; set; } = null!;
+    public float Temperature { get; set; } = 0.1f;
 }

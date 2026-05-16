@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Application.Dto.ListWorkPackages;
@@ -12,7 +12,7 @@ using Web.Infrastructure.Config.Settings;
 
 namespace Web.Infrastructure.Adapters.Services
 {
-    public class GroqIntentService : IGeminiIntentService
+    public class GroqIntentService : IAIService
     {
         private readonly ILogger<GroqIntentService> _logger;
         private readonly GroqSettings _groqSettings;
@@ -20,12 +20,13 @@ namespace Web.Infrastructure.Adapters.Services
         private readonly HttpClient _httpClient;
         private readonly IStartTaskCommand _startTaskCommand;
         private readonly IEndTaskSessionCommand _endTaskSessionCommand;
-        private readonly IListsWorkPackagesCommand _listsWorkPackagesCommand;
-        private readonly IProjectOpService _projectOpService;
         private readonly IStatusOpService _statusOpService;
         private readonly IUserOpService _userOpService;
         private readonly IActivityOpService _activityOpService;
         private readonly IUpdateWorkPackageCommand _updateWorkPackageCommand;
+        private readonly IProjectOpService _projectOpService;
+        private readonly ICustomFieldService _customFieldService;
+        private readonly IEnumerable<IHeuristicIntentHandler> _heuristicHandlers;
 
         public GroqIntentService(
             ILogger<GroqIntentService> logger,
@@ -34,60 +35,41 @@ namespace Web.Infrastructure.Adapters.Services
             IConversationContextService conversationContextService,
             IStartTaskCommand startTaskCommand,
             IEndTaskSessionCommand endTaskSessionCommand,
-            IListsWorkPackagesCommand listsWorkPackagesCommand,
-            IProjectOpService projectOpService,
             IStatusOpService statusOpService,
             IUserOpService userOpService,
             IActivityOpService activityOpService,
-            IUpdateWorkPackageCommand updateWorkPackageCommand)
+            IUpdateWorkPackageCommand updateWorkPackageCommand,
+            IProjectOpService projectOpService,
+            ICustomFieldService customFieldService,
+            IEnumerable<IHeuristicIntentHandler> heuristicHandlers)
         {
             _logger = logger;
             _groqSettings = groqSettings.Value;
             _conversationContextService = conversationContextService;
             _startTaskCommand = startTaskCommand;
             _endTaskSessionCommand = endTaskSessionCommand;
-            _listsWorkPackagesCommand = listsWorkPackagesCommand;
-            _projectOpService = projectOpService;
             _statusOpService = statusOpService;
             _userOpService = userOpService;
             _activityOpService = activityOpService;
             _updateWorkPackageCommand = updateWorkPackageCommand;
+            _projectOpService = projectOpService;
+            _customFieldService = customFieldService;
+            _heuristicHandlers = heuristicHandlers;
             _httpClient = httpClientFactory.CreateClient(_groqSettings.HttpClientName);
         }
 
         public async Task<string> GetIntentAsync(string prompt, string sessionId, CancellationToken ct = default)
         {
             var context = await _conversationContextService.GetOrCreateAsync(sessionId, ct);
-            string lowerPrompt = prompt.ToLowerInvariant().Trim();
 
-            // CAPA HEURÍSTICA
-            if (lowerPrompt == "proyectos" || lowerPrompt.Contains("listar proyectos"))
+            // CAPA HEURÍSTICA (Patrón Chain of Responsibility)
+            foreach (var handler in _heuristicHandlers)
             {
-                var projects = await _projectOpService.Lists();
-                return await SaveContext(context, prompt, "📋 **Tus Proyectos Disponibles:**\n\n" + string.Join("\n", projects.Select(p => $"- **{p.Name}** (ID: {p.Id})")), ct);
-            }
-            if (lowerPrompt == "tareas" || lowerPrompt.Contains("mis tareas") || lowerPrompt.Contains("qué tengo pendiente"))
-            {
-                var wps = await _listsWorkPackagesCommand.Execute(new ListsWorkPackagesRequest(null, 0, 50));
-                if (!wps.Any()) return await SaveContext(context, prompt, "✅ No tienes tareas pendientes.", ct);
-                var builder = new StringBuilder("📝 **Tus Tareas Pendientes:**\n\n");
-                foreach (var g in wps.GroupBy(w => w.Links?.Project?.Title ?? "Otros"))
+                var result = await handler.HandleAsync(prompt);
+                if (result != null)
                 {
-                    builder.AppendLine($"📁 **{g.Key}**");
-                    foreach (var t in g) builder.AppendLine($"- **#{t.Id}**: {t.Subject} *({t.Links?.Status?.Title})*");
-                    builder.AppendLine();
+                    return await SaveContext(context, prompt, result, ct);
                 }
-                return await SaveContext(context, prompt, builder.ToString().TrimEnd(), ct);
-            }
-            if (lowerPrompt.Contains("usuarios") || lowerPrompt.Contains("listar usuarios"))
-            {
-                var users = await _userOpService.Lists();
-                return await SaveContext(context, prompt, "👥 **Usuarios:**\n\n" + string.Join("\n", users.Select(u => $"- {u.Name} (ID: {u.Id})")), ct);
-            }
-            if (lowerPrompt.Contains("estados") || lowerPrompt.Contains("listar estados"))
-            {
-                var states = await _statusOpService.Lists();
-                return await SaveContext(context, prompt, "🗂️ **Estados disponibles:**\n\n" + string.Join("\n", states.Select(u => $"- {u.Name} (ID: {u.Id})")), ct);
             }
 
             // CAPA LLM
@@ -97,28 +79,7 @@ namespace Web.Infrastructure.Adapters.Services
                 return await SaveContext(context, prompt, "⚠️ No se ha configurado la API Key de Groq.", ct);
             }
 
-            var systemPrompt = @"Eres un asistente de TrackingTasksOp para gestión de proyectos en OpenProject.
-
-                ACCIONES DISPONIBLES:
-                1. start_task: { ""action"": ""start_task"", ""params"": { ""projectId"": int, ""statusName"": string, ""name"": string, ""assigneeName"": string, ""responsibleName"": string, ""activityName"": string, ""comment"": string } }
-                2. assign_user_to_task: { ""action"": ""assign_user_to_task"", ""params"": { ""workPackageId"": int, ""statusName"": string, ""assigneeName"": string, ""responsibleName"": string } }
-                3. end_task_session: { ""action"": ""end_task_session"", ""params"": { ""workPackageId"": int, ""activityName"": string, ""comment"": string, ""newStatusName"": string } }
-
-                REGLAS ABSOLUTAS:
-                - USA NOMBRES para estados, actividades y usuarios (ej: ""statusName"": ""En curso"").
-                - Para IDs de proyecto, SÍ debes usar números (ej: ""projectId"": 3).
-                - NO uses markdown, ```json, ni texto adicional. Solo el JSON.
-                - Si un campo no se menciona, omítelo o ponle null.
-
-                EJEMPLOS:
-                Usuario: 'Crea tarea ""Revisar despliegue"" en proyecto 3, estado ""En curso"".'
-                Respuesta: { ""action"": ""start_task"", ""params"": { ""projectId"": 3, ""statusName"": ""En curso"", ""name"": ""Revisar despliegue"" } }
-
-                Usuario: 'Finaliza la tarea 54 con actividad ""Desarrollo"" y ponla en estado ""Cerrado"". Comentario: ""deploy ok"".'
-                Respuesta: { ""action"": ""end_task_session"", ""params"": { ""workPackageId"": 54, ""activityName"": ""Desarrollo"", ""comment"": ""deploy ok"", ""newStatusName"": ""Cerrado"" } }
-                
-                Usuario: 'Pon la tarea 125 en estado ""En espera"" y asigna a ""Laura Campos"" como encargada.'
-                Respuesta: { ""action"": ""assign_user_to_task"", ""params"": { ""workPackageId"": 125, ""statusName"": ""En espera"", ""assigneeName"": ""Laura Campos"" } }";
+            string systemPrompt = await GetSystemPromptAsync();
 
             var messages = new List<object> { new { role = "system", content = systemPrompt } };
             context.History.ForEach(h => messages.Add(new { role = h.Type == "user" ? "user" : "assistant", content = h.Content }));
@@ -164,13 +125,71 @@ namespace Web.Infrastructure.Adapters.Services
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Error ejecutando acción: {Message}", ex.Message);
-                        resultMessages.Add($"❌ Hubo un error: {ex.Message}");
+                        
+                        // Transformar error técnico en amigable
+                        string friendlyError = TransformErrorToFriendlyMessage(ex.Message);
+                        resultMessages.Add(friendlyError);
                     }
                 }
                 if (resultMessages.Any()) return await SaveContext(context, prompt, string.Join("\n", resultMessages), ct);
             }
             
             return await SaveContext(context, prompt, aiResponse, ct);
+        }
+
+        private string TransformErrorToFriendlyMessage(string technicalError)
+        {
+            if (technicalError.Contains("422"))
+            {
+                var sb = new StringBuilder("⚠️ **Faltan datos obligatorios para completar la acción:**\n\n");
+                bool foundSpecific = false;
+
+                if (technicalError.Contains("customField3") || technicalError.Contains("Area") || technicalError.Contains("Área"))
+                {
+                    sb.AppendLine("- 🏢 **Área:** No puede estar en blanco.");
+                    foundSpecific = true;
+                }
+                if (technicalError.Contains("customField5") || technicalError.Contains("Modulo") || technicalError.Contains("Módulo"))
+                {
+                    sb.AppendLine("- 🧩 **Módulo:** No puede estar en blanco.");
+                    foundSpecific = true;
+                }
+                if (technicalError.Contains("subject") || technicalError.Contains("nombre"))
+                {
+                    sb.AppendLine("- 📝 **Nombre/Asunto:** Es obligatorio.");
+                    foundSpecific = true;
+                }
+
+                if (!foundSpecific) return $"⚠️ No se pudo procesar la solicitud en OpenProject (Error 422). Verifica que todos los campos obligatorios estén presentes.";
+
+                sb.AppendLine("\n💡 *Puedes decir algo como: 'Usa el área Soporte y el módulo Nómina'*.");
+                return sb.ToString();
+            }
+
+            if (technicalError.Contains("403")) return "🚫 No tienes permisos suficientes en OpenProject para realizar esta acción.";
+            if (technicalError.Contains("404")) return "🔍 No se encontró el recurso solicitado (tarea, proyecto o usuario).";
+
+            return $"❌ Hubo un error: {technicalError}";
+        }
+
+        private async Task<string> GetSystemPromptAsync()
+        {
+            try
+            {
+                string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Infrastructure", "Config", "Prompts", "GroqSystemPrompt.md");
+                if (!File.Exists(path))
+                {
+                    path = Path.Combine(Directory.GetCurrentDirectory(), "Infrastructure", "Config", "Prompts", "GroqSystemPrompt.md");
+                }
+                
+                if (File.Exists(path)) return await File.ReadAllTextAsync(path);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "No se pudo leer el system prompt desde archivo. Usando fallback.");
+            }
+
+            return "Eres un asistente de gestión de proyectos.";
         }
 
         private static List<string> ExtractJsonBlocks(string text)
@@ -221,6 +240,30 @@ namespace Web.Infrastructure.Adapters.Services
                 return activity == null ? (null, $"⚠️ La actividad '{name}' no es válida para la tarea #{wpId}.") : (activity.Id, null);
             }
 
+            async Task<(int? id, string? err)> ResolveProject(string key)
+            {
+                string name = GetStr(p, key);
+                if (string.IsNullOrEmpty(name)) return (null, null);
+                var project = await _projectOpService.FindByName(name);
+                return project == null ? (null, $"⚠️ No se encontró un proyecto llamado '{name}'.") : (project.Id, null);
+            }
+
+            async Task<(int? id, string? err)> ResolveArea(string key)
+            {
+                string name = GetStr(p, key);
+                if (string.IsNullOrEmpty(name)) return (null, null);
+                var area = await _customFieldService.FindAreaByName(name);
+                return area == null ? (null, $"⚠️ No se encontró un área llamada '{name}'.") : (area.Id, null);
+            }
+
+            async Task<(int? id, string? err)> ResolveModule(string key)
+            {
+                string name = GetStr(p, key);
+                if (string.IsNullOrEmpty(name)) return (null, null);
+                var module = await _customFieldService.FindModuleByName(name);
+                return module == null ? (null, $"⚠️ No se encontró un módulo llamado '{name}'.") : (module.Id, null);
+            }
+
             switch (action.Action)
             {
                 case "start_task":
@@ -228,17 +271,35 @@ namespace Web.Infrastructure.Adapters.Services
                     if (sErr != null) return sErr;
                     var (actId, aErr) = await ResolveActivity("activityName");
                     if (aErr != null) return aErr;
+                    var (areaId, arErr) = await ResolveArea("areaName");
+                    if (arErr != null) return arErr;
+                    var (modId, mErr) = await ResolveModule("moduleName");
+                    if (mErr != null) return mErr;
+
+                    int finalProjectId = GetInt(p, "projectId");
+                    if (finalProjectId <= 0)
+                    {
+                        var (resProjectId, pErr) = await ResolveProject("projectName");
+                        if (pErr != null) return pErr;
+                        finalProjectId = resProjectId ?? 0;
+                    }
+
+                    if (finalProjectId <= 0) return "⚠️ Debes especificar un proyecto válido (ID o nombre).";
 
                     var newTask = await _startTaskCommand.Execute(new StarTaskRequest
                     {
-                        ProjectId = GetInt(p, "projectId"),
+                        ProjectId = finalProjectId,
                         StatusId = statusId ?? 0,
                         Name = GetStr(p, "name"),
                         WorkPackageId = wpId,
                         AssigneeId = (await _userOpService.FindByName(GetStr(p, "assigneeName")))?.Id,
                         ResponsibleId = (await _userOpService.FindByName(GetStr(p, "responsibleName")))?.Id,
                         ActivityId = actId,
-                        Comment = GetStr(p, "comment")
+                        Comment = GetStr(p, "comment"),
+                        StartDate = GetStr(p, "startDate"),
+                        DueDate = GetStr(p, "dueDate"),
+                        Area = areaId?.ToString(),
+                        Module = modId?.ToString()
                     });
                     return $"🚀 Tarea **{newTask.Name}** creada y tiempo activado. (ID: {newTask.WorkPackageId})";
 
