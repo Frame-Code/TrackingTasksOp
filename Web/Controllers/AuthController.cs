@@ -66,7 +66,9 @@ public class AuthController(
         {
             OpenProjectInstanceId = appUser.OpenProjectInstanceId,
             UserId = appUser.Id,
-            Username = appUser.UserName ?? "-"
+            Username = appUser.UserName ?? "-",
+            OpenProjectInstanceUrl = opUrlNormalized,
+            ApiKey = request.ApiKey
         };
         await initializerInstanceService.InitializeAsync(initializeRequest, ct);
         return Ok(new

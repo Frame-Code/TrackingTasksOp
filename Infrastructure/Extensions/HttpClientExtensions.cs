@@ -13,6 +13,9 @@ public static class HttpClientExtensions
         services.AddTransient<OpenProjectAuthHandler>();
         services.AddHttpClient(KeyedServicesNames.OpenProjectHttpClientName, client =>
         {
+            // Placeholder necesario para que HttpClient acepte rutas relativas.
+            // OpenProjectAuthHandler lo reemplaza en runtime con la URL real del usuario.
+            client.BaseAddress = new Uri("http://op-placeholder");
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         })
         .AddHttpMessageHandler<OpenProjectAuthHandler>();
