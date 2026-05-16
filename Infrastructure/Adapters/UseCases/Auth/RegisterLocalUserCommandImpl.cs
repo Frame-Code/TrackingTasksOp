@@ -51,6 +51,7 @@ public class RegisterLocalUserCommandImpl(
                 OpenProjectUserId = user.Id,
                 OpenProjectInstanceId = instance.Id,
                 UserName = request.Email,
+                OpenProjectInstanceBaseUrl = request.OpenProjectInstanceUrl,
                 AuthMethod = AuthMethod.Local
             };
             var createResult = await userManager.CreateAsync(appUser, request.Password);

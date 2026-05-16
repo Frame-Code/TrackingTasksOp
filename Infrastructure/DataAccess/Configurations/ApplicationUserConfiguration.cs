@@ -13,6 +13,10 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
 
         builder.Property(u => u.OpenProjectInstanceId)
             .IsRequired();
+        
+        builder.Property(u => u.OpenProjectInstanceBaseUrl)
+            .IsRequired()
+            .HasMaxLength(500);
 
         builder.Property(u => u.AuthMethod)
             .IsRequired()

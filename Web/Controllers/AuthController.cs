@@ -1,9 +1,11 @@
-﻿using Application.Dto.Auth;
+﻿using System.Security.Claims;
+using Application.Dto.Auth;
 using Application.Ports.Services;
 using Application.Ports.UseCases.Auth;
 using Infrastructure.DataAccess.Entities;
 using Infrastructure.Settings;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Web.Controllers.Dto.HttpRequest;
@@ -14,10 +16,11 @@ namespace Web.Controllers;
 [Route("api/v1/[controller]")]
 public class AuthController(
     IRegisterLocalUserCommand registerLocalUserCommand,
-    [FromKeyedServices(KeyedServicesNames.OpenProjectUrlService)]
-    BaseUrlService urlService,
+    ILoginLocalUserCommand loginLocalUserCommand,
     UserManager<ApplicationUser> userManager,
-    SignInManager<ApplicationUser> signInManager) : ControllerBase
+    SignInManager<ApplicationUser> signInManager,
+    [FromKeyedServices(KeyedServicesNames.OpenProjectUrlService)]
+    BaseUrlService urlService) : ControllerBase
 {
     
     [HttpPost("local-register")]
@@ -52,14 +55,38 @@ public class AuthController(
         }
 
         var appUser = await userManager.FindByEmailAsync(response.Data!.Email)
-            ?? throw new ApplicationException($"User with email {response.Data.Email} not found");
-        
+            ?? throw new ApplicationException($"User with email {response.Data.Email} not found after registration");
         await signInManager.SignInAsync(appUser, isPersistent: true);
-        return Ok(new 
+
+        return Ok(new
         {
-            userId = appUser.Id,
-            email = appUser.Email,
+            userId = response.Data!.UserId,
+            email = response.Data.Email,
             openProjectInstanceUrl = response.Data!.OpenProjectInstanceUrl
         });
+    }
+    
+    [HttpPost("local-login")]
+    [AllowAnonymous]
+    public async Task<IActionResult> LocalLoginAsync(LocalLoginHttpRequest request, CancellationToken ct)
+    {
+        var commandRequest = new LocalLoginRequest { Email = request.Email, Password = request.Password };
+        var response = await loginLocalUserCommand.ExecuteAsync(commandRequest, ct);
+
+        if (!response.IsSuccess)
+            return Unauthorized(new { message = response.ErrorMessage });
+
+        var appUser = await userManager.FindByEmailAsync(response.Data!.Email)
+            ?? throw new ApplicationException($"User with email {response.Data.Email} not found after login");
+
+        var principal = await signInManager.CreateUserPrincipalAsync(appUser);
+        var identity = principal.Identity! as ClaimsIdentity;
+        identity?.AddClaim(new Claim("OpenProjectInstanceBaseUrl", appUser.OpenProjectInstanceBaseUrl));
+        
+        await userManager.AddClaimAsync(appUser,
+            new Claim("UserName", appUser.UserName ?? "-"));
+        await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal);
+
+        return Ok(response.Data);
     }
 }

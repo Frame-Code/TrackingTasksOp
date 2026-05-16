@@ -8,6 +8,7 @@ using Application.Ports.UseCases.WorkPackages;
 using Infrastructure.Adapters.Auth;
 using Infrastructure.Adapters.Repositories;
 using Infrastructure.Adapters.Services;
+using Infrastructure.Adapters.UseCases;
 using Infrastructure.Adapters.UseCases.Auth;
 using Infrastructure.Adapters.UseCases.Tasks;
 using Infrastructure.Adapters.UseCases.TimeEntry;
@@ -42,6 +43,7 @@ public static class ServicesExtensions
         collection.AddScoped<IEndTaskSessionCommand, EndTaskSessionCommandImpl>();
         collection.AddScoped<IAddTimeEntryCommand, AddTimeEntryCommandImpl>();
         collection.AddScoped<IRegisterLocalUserCommand, RegisterLocalUserCommandImpl>();
+        collection.AddScoped<ILoginLocalUserCommand, LoginLocalUserCommandImpl>();
         
         //Services
         collection.AddScoped<IStatusOpService, StatusOpServiceImpl>();
