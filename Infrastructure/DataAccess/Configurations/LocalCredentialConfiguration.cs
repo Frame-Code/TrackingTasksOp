@@ -19,7 +19,9 @@ public class LocalCredentialConfiguration : IEntityTypeConfiguration<LocalCreden
 
         builder.Property(c => c.ApiKeyLastValidatedAt)
             .HasColumnType("datetime");
-        
+
+        builder.HasIndex(c => c.UserId);
+            
         builder.HasOne(c => c.ApplicationUser)
             .WithOne()
             .HasForeignKey<LocalCredential>(c => c.UserId) 

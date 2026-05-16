@@ -51,7 +51,7 @@ namespace Infrastructure.Adapters.Services
             _userOpService = userOpService;
             _activityOpService = activityOpService;
             _updateWorkPackageCommand = updateWorkPackageCommand;
-            _httpClient = httpClientFactory.CreateClient(_groqSettings.HttpClientName);
+            _httpClient = httpClientFactory.CreateClient(KeyedServicesNames.GroqHttpClientName);
         }
 
         public async Task<string> GetIntentAsync(string prompt, string sessionId, CancellationToken ct = default)

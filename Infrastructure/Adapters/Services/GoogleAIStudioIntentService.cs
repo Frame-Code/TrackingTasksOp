@@ -265,7 +265,7 @@ public class GoogleAIStudioIntentService : IAiIntentService
                 }).ToList();
             
             bool finalResponseReached = false;
-            string finalResult = string.Empty;
+            string? finalResult = string.Empty;
             int loopCounter = 0;
             const int MAX_FUNCTION_CALLS = 5;
 

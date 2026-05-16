@@ -6,6 +6,7 @@ using Application.Ports.UseCases.Tasks;
 using Application.Ports.UseCases.TimeEntry;
 using Application.Ports.UseCases.WorkPackages;
 using Infrastructure.Adapters.Auth;
+using Infrastructure.Adapters.Http;
 using Infrastructure.Adapters.Repositories;
 using Infrastructure.Adapters.Services;
 using Infrastructure.Adapters.UseCases;
@@ -27,9 +28,11 @@ public static class ServicesExtensions
     {
         //Singletons
         collection.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+
+        //Current user
+        collection.AddScoped<CurrentUser, HttpContextCurrentUser>();
         
         //Settings
-        collection.Configure<OpenProjectSettings>(configuration.GetSection("OpenProjectSettings"));
         collection.Configure<RedisSettings>(configuration.GetSection("RedisSettings"));
         collection.Configure<GeminiSettings>(configuration.GetSection("GeminiSettings"));
         collection.Configure<OllamaSettings>(configuration.GetSection("OllamaSettings"));
@@ -53,6 +56,7 @@ public static class ServicesExtensions
         collection.AddScoped<IApiKeyEncryptorService, DataProtectionApiKeyEncryptorImpl>();
         collection.AddScoped<IApiKeyValidatorService, ApiKeyValidatorServiceImpl>();
         collection.AddScoped<IAuthAuditLogger, AuthAuditLoggerImpl>();
+        collection.AddScoped<IInitializerInstanceService, InitializerInstanceServiceImpl>();
         collection.AddKeyedScoped<BaseUrlService, OpenProjectUrlServiceImpl>(KeyedServicesNames.OpenProjectUrlService);
         
         //Repositories

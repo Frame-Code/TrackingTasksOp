@@ -11,17 +11,15 @@ namespace Infrastructure.Adapters.Services;
 
 public class UserOpServiceImpl(
     IHttpClientFactory httpClientFactory,
-    ILogger<UserOpServiceImpl> logger,
-    IOptions<OpenProjectSettings> settings
+    ILogger<UserOpServiceImpl> logger
     ) : IUserOpService
 {
-    private readonly OpenProjectSettings _settings = settings.Value;
-    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.Value.HttpClientName);
+    private readonly HttpClient _client = httpClientFactory.CreateClient(KeyedServicesNames.OpenProjectHttpClientName);
     
     public async Task<List<User>> Lists()
     {
         logger.LogInformation("Executing Lists:UserOpServiceImpl");
-        string url = $"{_settings.BaseUrl}/api/v3/users";
+        string url = $"/api/v3/users";
         HttpResponseMessage response = await _client.GetAsync(url);
         
         if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized)

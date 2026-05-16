@@ -11,11 +11,9 @@ namespace Infrastructure.Adapters.UseCases.TimeEntry;
 
 public class AddTimeEntryCommandImpl(
     IHttpClientFactory httpClientFactory,
-    ILogger<AddTimeEntryCommandImpl> logger,
-    IOptions<OpenProjectSettings> settings) : IAddTimeEntryCommand
+    ILogger<AddTimeEntryCommandImpl> logger) : IAddTimeEntryCommand
 {
-    private readonly OpenProjectSettings _settings = settings.Value;
-    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.Value.HttpClientName);
+    private readonly HttpClient _client = httpClientFactory.CreateClient(KeyedServicesNames.OpenProjectHttpClientName);
     
     public async Task Execute(AddTimeEntryRequest request)
     {
@@ -31,7 +29,7 @@ public class AddTimeEntryCommandImpl(
 
     private string BuildUrl()
     {
-        return $"{_settings.BaseUrl}/api/v3/time_entries";
+        return $"/api/v3/time_entries";
     }
 
     private StringContent BuildPayload(AddTimeEntryRequest request)

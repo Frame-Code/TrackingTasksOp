@@ -19,6 +19,7 @@ public class GlobalExceptionHandler(
             ArgumentNullException => (StatusCodes.Status400BadRequest, "Bad Request"),
             InvalidApiKeyException => (StatusCodes.Status400BadRequest, "Bad Request"),
             OpenProjectRequestException => (StatusCodes.Status400BadRequest, "Bad Request"),
+            InitializerInstanceException => (StatusCodes.Status400BadRequest, "Bad Request"),
             _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
         };
 

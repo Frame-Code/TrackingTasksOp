@@ -36,11 +36,11 @@ public class ApiKeyValidatorServiceImpl(IHttpClientFactory clientFactory) : IApi
 
             return user;
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException)
         {
             throw new OpenProjectRequestException($"No se pudo conectar a OpenProject en {instanceUrl}");
         }
-        catch (TaskCanceledException ex)
+        catch (TaskCanceledException)
         {
             throw new OpenProjectRequestException($"Timeout al conectar a OpenProject en {instanceUrl}");
         }

@@ -7,18 +7,15 @@ using Application.Ports.Services;
 using Domain.Entities.OpenProjectEntities.Activity;
 using Infrastructure.Settings;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Adapters.Services;
 
 public class ActivityOpServiceImpl(
     IHttpClientFactory httpClientFactory,
-    ILogger<ActivityOpServiceImpl> logger,
-    IOptions<OpenProjectSettings> iSettings
+    ILogger<ActivityOpServiceImpl> logger
     ) : IActivityOpService
 {
-    private readonly OpenProjectSettings _settings = iSettings.Value;
-    private readonly HttpClient _client = httpClientFactory.CreateClient(iSettings.Value.HttpClientName);
+    private readonly HttpClient _client = httpClientFactory.CreateClient(KeyedServicesNames.OpenProjectHttpClientName);
     
     public async Task<List<ActivityAllowedValue>> Lists(int idWorkPackage)
     {
@@ -57,7 +54,7 @@ public class ActivityOpServiceImpl(
     
     private string BuildUrl()
     {
-        return $"{_settings.BaseUrl}/api/v3/time_entries/form";
+        return $"/api/v3/time_entries/form";
     }
 
     private StringContent BuildPayload(int idWorkPackage)

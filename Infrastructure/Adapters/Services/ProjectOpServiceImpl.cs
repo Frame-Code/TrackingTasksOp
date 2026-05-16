@@ -4,18 +4,15 @@ using Application.Ports.Services;
 using Domain.Entities.OpenProjectEntities.Project;
 using Infrastructure.Settings;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Adapters.Services;
 
 public class ProjectOpServiceImpl(
     IHttpClientFactory httpClientFactory,
-    ILogger<StatusOpServiceImpl> logger,
-    IOptions<OpenProjectSettings> iSettings
+    ILogger<StatusOpServiceImpl> logger
     ) : IProjectOpService
 {
-    private readonly OpenProjectSettings _settings = iSettings.Value;
-    private readonly HttpClient _client = httpClientFactory.CreateClient(iSettings.Value.HttpClientName);
+    private readonly HttpClient _client = httpClientFactory.CreateClient(KeyedServicesNames.OpenProjectHttpClientName);
     
     public async Task<List<Project>> Lists()
     {
@@ -41,6 +38,6 @@ public class ProjectOpServiceImpl(
     
     private string BuildUrl()
     {
-        return $"{_settings.BaseUrl}/api/v3/projects";
+        return $"/api/v3/projects";
     }
 }

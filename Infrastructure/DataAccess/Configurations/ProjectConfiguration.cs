@@ -26,6 +26,8 @@ public class ProjectConfiguration : IEntityTypeConfiguration<Project>
 
         builder.Property(p => p.IsActive);
 
+        builder.HasIndex(t => t.OpenProjectInstanceId);
+        
         builder.HasOne(p => p.OpenProjectInstance)
             .WithMany()
             .HasForeignKey(p => p.OpenProjectInstanceId)

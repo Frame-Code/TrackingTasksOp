@@ -56,7 +56,11 @@ public class AuthController(
 
         var appUser = await userManager.FindByEmailAsync(response.Data!.Email)
             ?? throw new ApplicationException($"User with email {response.Data.Email} not found after registration");
-        await signInManager.SignInAsync(appUser, isPersistent: true);
+
+        var principal = await signInManager.CreateUserPrincipalAsync(appUser);
+        var identity = principal.Identity as ClaimsIdentity;
+        identity?.AddClaim(new Claim("OpenProjectInstanceBaseUrl", appUser.OpenProjectInstanceBaseUrl));
+        await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal);
 
         return Ok(new
         {
@@ -80,11 +84,8 @@ public class AuthController(
             ?? throw new ApplicationException($"User with email {response.Data.Email} not found after login");
 
         var principal = await signInManager.CreateUserPrincipalAsync(appUser);
-        var identity = principal.Identity! as ClaimsIdentity;
+        var identity = principal.Identity as ClaimsIdentity;
         identity?.AddClaim(new Claim("OpenProjectInstanceBaseUrl", appUser.OpenProjectInstanceBaseUrl));
-        
-        await userManager.AddClaimAsync(appUser,
-            new Claim("UserName", appUser.UserName ?? "-"));
         await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal);
 
         return Ok(response.Data);

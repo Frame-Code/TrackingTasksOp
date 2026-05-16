@@ -1,6 +1,7 @@
 ﻿using Application.Dto;
 using Application.Dto.Auth;
 using Application.Ports.Auth;
+using Application.Ports.Services;
 using Application.Ports.UseCases.Auth;
 using Domain.Entities.TrackingTasksEntities;
 using Infrastructure.DataAccess;
@@ -17,6 +18,7 @@ public class RegisterLocalUserCommandImpl(
     IApiKeyEncryptorService apiKeyEncryptor,
     ILogger<RegisterLocalUserCommandImpl> log,
     IAuthAuditLogger logger,
+    IInitializerInstanceService initializerInstanceService,
     TrackingTasksDbContext context,
     UserManager<ApplicationUser> userManager) : IRegisterLocalUserCommand
 {
@@ -82,7 +84,15 @@ public class RegisterLocalUserCommandImpl(
                 ApiKeyStatus = nameof(ApiKeyStatus.Valid)
             };
             
+            var initializeRequest = new InitializeInstanceRequest
+            {
+                OpenProjectInstanceId = instance.Id,
+                UserId = appUser.Id,
+                Username = appUser.UserName
+            };
+            
             context.Add(credentialUser);
+            await initializerInstanceService.InitializeAsync(initializeRequest, ct);
             await context.SaveChangesAsync(ct);
             await context.Database.CommitTransactionAsync(ct);
             await logger.LogAsync(AuditEventType.Register, appUser.Id, logDetail, ct);

@@ -33,14 +33,8 @@ public class ActivityOpServiceTests
             .Setup(x => x.CreateClient(It.IsAny<string>()))
             .Returns(client);
 
-        var settings = Options.Create(new OpenProjectSettings
-        {
-            BaseUrl = "https://fake.open-project.com",
-            HttpClientName = "op"
-        });
-
         var logger = new Mock<ILogger<ActivityOpServiceImpl>>();
-        return new ActivityOpServiceImpl(factoryMock.Object, logger.Object, settings);
+        return new ActivityOpServiceImpl(factoryMock.Object, logger.Object);
     }
 
     [Fact]

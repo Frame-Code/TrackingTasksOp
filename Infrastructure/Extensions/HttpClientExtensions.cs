@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Headers;
-using System.Text;
+using Infrastructure.Adapters.Http;
+using Infrastructure.Settings;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -9,22 +10,12 @@ public static class HttpClientExtensions
 {
     public static IServiceCollection AddHttpClients(this IServiceCollection services, IConfiguration configuration)
     {
-        var uri = configuration.GetSection("OpenProjectSettings:BaseUrl").Value
-            ?? throw new ArgumentException("OpenProjectSettings:BaseUrl is not set");
-        
-        var apiKey = configuration.GetSection("OpenProjectSettings:ApiKey").Value
-            ?? throw new ArgumentException("OpenProjectSettings:ApiKey is not set");
-
-        var opClientName = configuration.GetSection("OpenProjectSettings:HttpClientName").Value
-            ?? throw new ArgumentException("OpenProjectSettings:HttpClientName is not set");
-
-        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"apikey:{apiKey}"));
-        services.AddHttpClient(opClientName, (client) =>
+        services.AddTransient<OpenProjectAuthHandler>();
+        services.AddHttpClient(KeyedServicesNames.OpenProjectHttpClientName, client =>
         {
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            client.BaseAddress = new Uri(uri);
-        });
+        })
+        .AddHttpMessageHandler<OpenProjectAuthHandler>();
 
         var modelClient = configuration.GetSection("Groq:HttpClientName").Value;
         if(modelClient is null)

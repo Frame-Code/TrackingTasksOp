@@ -10,12 +10,10 @@ using Microsoft.Extensions.Options;
 namespace Infrastructure.Adapters.UseCases.WorkPackages;
 public class ListsWorkPackagesCommandImpl(
     IHttpClientFactory httpClientFactory,
-    ILogger<ListsWorkPackagesCommandImpl> logger,
-    IOptions<OpenProjectSettings> settings
+    ILogger<ListsWorkPackagesCommandImpl> logger
     ) : IListsWorkPackagesCommand
 {
-    private readonly OpenProjectSettings _settings = settings.Value;
-    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.Value.HttpClientName);
+    private readonly HttpClient _client = httpClientFactory.CreateClient(KeyedServicesNames.OpenProjectHttpClientName);
     
     //Listar de manera paginada todos los work packages
     public async Task<List<WorkPackage>> Execute(ListsWorkPackagesRequest request)
@@ -58,8 +56,8 @@ public class ListsWorkPackagesCommandImpl(
     private string BuildUrl(int? projectId, int offset, int pageSize)
     {
         string baseEndpoint = projectId.HasValue
-            ? $"{_settings.BaseUrl}/api/v3/projects/{projectId}/work_packages"
-            : $"{_settings.BaseUrl}/api/v3/work_packages";
+            ? $"/api/v3/projects/{projectId}/work_packages"
+            : $"/api/v3/work_packages";
 
         string filters = Uri.EscapeDataString("[{\"assignee\":{\"operator\":\"=\",\"values\":[\"me\"]}},{\"status\":{\"operator\":\"o\",\"values\":[]}}]");
         string sortBy = Uri.EscapeDataString("[[\"createdAt\",\"desc\"]]");

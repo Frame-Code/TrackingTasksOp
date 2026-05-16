@@ -10,12 +10,10 @@ namespace Infrastructure.Adapters.Services;
 
 public class StatusOpServiceImpl(
     IHttpClientFactory httpClientFactory,
-    ILogger<StatusOpServiceImpl> logger,
-    IOptions<OpenProjectSettings> settings
+    ILogger<StatusOpServiceImpl> logger
     ) : IStatusOpService
 {
-    private readonly OpenProjectSettings _settings = settings.Value;
-    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.Value.HttpClientName);
+    private readonly HttpClient _client = httpClientFactory.CreateClient(KeyedServicesNames.OpenProjectHttpClientName);
     
     public async Task<List<Status>> Lists()
     {
@@ -41,6 +39,6 @@ public class StatusOpServiceImpl(
 
     private string BuildUrl()
     {
-        return $"{_settings.BaseUrl}/api/v3/statuses";
+        return $"/api/v3/statuses";
     }
 }

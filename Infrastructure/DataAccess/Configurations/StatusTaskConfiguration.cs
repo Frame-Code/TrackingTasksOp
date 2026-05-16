@@ -23,6 +23,8 @@ public class StatusTaskConfiguration : IEntityTypeConfiguration<StatusTask>
         builder.Property(t => t.IsClosed)
             .IsRequired();
 
+        builder.HasIndex(t => t.OpenProjectInstanceId);
+
         builder.HasOne(t => t.OpenProjectInstance)
             .WithMany()
             .HasForeignKey(t => t.OpenProjectInstanceId)

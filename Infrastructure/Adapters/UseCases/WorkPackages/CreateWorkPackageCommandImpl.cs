@@ -12,18 +12,16 @@ namespace Infrastructure.Adapters.UseCases.WorkPackages;
 
 public class CreateWorkPackageCommandImpl(
     IHttpClientFactory httpClientFactory,
-    ILogger<CreateWorkPackageCommandImpl> logger,
-    IOptions<OpenProjectSettings> settings
+    ILogger<CreateWorkPackageCommandImpl> logger
     ) : ICreateWorkPackageCommand
 {
-    private readonly OpenProjectSettings _settings = settings.Value;
-    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.Value.HttpClientName);
+    private readonly HttpClient _client = httpClientFactory.CreateClient(KeyedServicesNames.OpenProjectHttpClientName);
 
     public async Task<WorkPackage> Execute(CreateWorkPackageRequest request)
     {
         logger.LogInformation("Executing CreateWorkPackageCommand for subject: {Subject}", request.Subject);
         
-        string url = $"{_settings.BaseUrl}/api/v3/projects/{request.ProjectId}/work_packages";
+        string url = $"/api/v3/projects/{request.ProjectId}/work_packages";
         
         var payload = new JsonObject
         {
