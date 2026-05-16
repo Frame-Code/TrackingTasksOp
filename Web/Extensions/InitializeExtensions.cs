@@ -9,6 +9,7 @@ public static class InitializeExtensions
         await app.Services.MigrateAsync();
         app.UseCors();
         app.UseExceptionHandler();
+        app.UseStatusCodePagesWithReExecute("/404.html");
         app.UseDefaultFiles();
         app.UseStaticFiles();
         app.UseHttpsRedirection();
