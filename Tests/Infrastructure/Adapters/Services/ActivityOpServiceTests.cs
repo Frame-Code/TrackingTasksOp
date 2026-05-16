@@ -27,7 +27,10 @@ public class ActivityOpServiceTests
                 Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json")
             });
         
-        var client = new HttpClient(handlerMock.Object);
+        var client = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri("http://localhost")
+        };
         var factoryMock = new Mock<IHttpClientFactory>();
         factoryMock
             .Setup(x => x.CreateClient(It.IsAny<string>()))
