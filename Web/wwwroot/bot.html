@@ -353,11 +353,15 @@
                 </button>
             </div>
             <div class="footer-copyright">
-                Desarrollado por Daniel, Stin y Ronald &copy; 2026. Todos los derechos reservados.
+                DarS Lab &copy; 2026. Todos los derechos reservados.
             </div>
         </div>
     </div>
 
+    <script type="module">
+        import { requireAuth } from '/js/auth-guard.js';
+        requireAuth();
+    </script>
     <script>
         const chatMessages = document.getElementById('chat-messages');
         const userInput = document.getElementById('user-input');

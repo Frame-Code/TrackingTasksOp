@@ -3,9 +3,12 @@
 public class Task
 {
     public int WorkPackageId { get; set; }
+    public string UserId { get; set; } = null!;
     public string  Name { get; set; } = null!;
     public string? Description { get; set; } = null!;
     public DateTime? CreatedAt { get; init; } = DateTime.Now;
+    public int OpenProjectInstanceId { get; set; }
+    public OpenProjectInstance OpenProjectInstance { get; set; } = null!;
     public int ProjectId { get; set; }
     public Project Project { get; set; } = null!;
     public int StatusTaskId { get; set; }

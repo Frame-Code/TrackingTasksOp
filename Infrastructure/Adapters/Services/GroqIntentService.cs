@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Adapters.Services
 {
-    public class GroqIntentService : IGeminiIntentService
+    public class GroqIntentService : IAiIntentService
     {
         private readonly ILogger<GroqIntentService> _logger;
         private readonly GroqSettings _groqSettings;
@@ -51,7 +51,7 @@ namespace Infrastructure.Adapters.Services
             _userOpService = userOpService;
             _activityOpService = activityOpService;
             _updateWorkPackageCommand = updateWorkPackageCommand;
-            _httpClient = httpClientFactory.CreateClient(_groqSettings.HttpClientName);
+            _httpClient = httpClientFactory.CreateClient(KeyedServicesNames.GroqHttpClientName);
         }
 
         public async Task<string> GetIntentAsync(string prompt, string sessionId, CancellationToken ct = default)

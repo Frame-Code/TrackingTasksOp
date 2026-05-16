@@ -7,9 +7,17 @@ const API = '/api/v1';
 
 async function apiFetch(url, options = {}) {
     const res = await fetch(url, {
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...options.headers },
         ...options
     });
+
+    // Sesión expirada o no autenticado → redirigir al login
+    if (res.status === 401) {
+        sessionStorage.removeItem('currentUser');
+        window.location.replace('/auth.html');
+        return;
+    }
 
     if (!res.ok) {
         let msg = `Error ${res.status}`;
@@ -22,6 +30,15 @@ async function apiFetch(url, options = {}) {
 
     if (res.status === 204) return null;
     return res.json();
+}
+
+export async function postLogout() {
+    await fetch(`${API}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+    });
+    sessionStorage.removeItem('currentUser');
+    window.location.replace('/auth.html');
 }
 
 export async function fetchProjects() {

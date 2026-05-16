@@ -6,12 +6,14 @@ public static class InitializeExtensions
 {
     public static async Task<WebApplication> InitializeAsync(this WebApplication app)
     {
-        await app.Services.InitializeDatabaseAsync();
+        await app.Services.MigrateAsync();
         app.UseCors();
         app.UseExceptionHandler();
+        app.UseStatusCodePagesWithReExecute("/404.html");
         app.UseDefaultFiles();
         app.UseStaticFiles();
         app.UseHttpsRedirection();
+        app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
         return app;

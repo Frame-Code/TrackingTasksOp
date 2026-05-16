@@ -9,13 +9,11 @@ using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Adapters.UseCases.TimeEntry;
 
-public class AddTimeEntryImpl(
+public class AddTimeEntryCommandImpl(
     IHttpClientFactory httpClientFactory,
-    ILogger<AddTimeEntryImpl> logger,
-    IOptions<OpenProjectSettings> settings) : IAddTimeEntry
+    ILogger<AddTimeEntryCommandImpl> logger) : IAddTimeEntryCommand
 {
-    private readonly OpenProjectSettings _settings = settings.Value;
-    private readonly HttpClient _client = httpClientFactory.CreateClient(settings.Value.HttpClientName);
+    private readonly HttpClient _client = httpClientFactory.CreateClient(KeyedServicesNames.OpenProjectHttpClientName);
     
     public async Task Execute(AddTimeEntryRequest request)
     {
@@ -31,7 +29,7 @@ public class AddTimeEntryImpl(
 
     private string BuildUrl()
     {
-        return $"{_settings.BaseUrl}/api/v3/time_entries";
+        return $"/api/v3/time_entries";
     }
 
     private StringContent BuildPayload(AddTimeEntryRequest request)

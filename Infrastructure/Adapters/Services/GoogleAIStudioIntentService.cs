@@ -15,7 +15,7 @@ namespace Infrastructure.Adapters.Services;
 /// <summary>
 /// Implementación que consume Google AI Studio (Gemini API gratuita) usando el SDK oficial de Google.GenAI.
 /// </summary>
-public class GoogleAIStudioIntentService : IGeminiIntentService
+public class GoogleAIStudioIntentService : IAiIntentService
 {
     private readonly ILogger<GoogleAIStudioIntentService> _logger;
     private readonly GeminiSettings _geminiSettings;
@@ -265,7 +265,7 @@ public class GoogleAIStudioIntentService : IGeminiIntentService
                 }).ToList();
             
             bool finalResponseReached = false;
-            string finalResult = string.Empty;
+            string? finalResult = string.Empty;
             int loopCounter = 0;
             const int MAX_FUNCTION_CALLS = 5;
 
