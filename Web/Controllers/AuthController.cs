@@ -17,6 +17,7 @@ namespace Web.Controllers;
 public class AuthController(
     IRegisterLocalUserCommand registerLocalUserCommand,
     ILoginLocalUserCommand loginLocalUserCommand,
+    IInitializerInstanceService initializerInstanceService,
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
     [FromKeyedServices(KeyedServicesNames.OpenProjectUrlService)]
@@ -61,7 +62,13 @@ public class AuthController(
         var identity = principal.Identity as ClaimsIdentity;
         identity?.AddClaim(new Claim("OpenProjectInstanceBaseUrl", appUser.OpenProjectInstanceBaseUrl));
         await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal);
-
+        var initializeRequest = new InitializeInstanceRequest
+        {
+            OpenProjectInstanceId = appUser.OpenProjectInstanceId,
+            UserId = appUser.Id,
+            Username = appUser.UserName ?? "-"
+        };
+        await initializerInstanceService.InitializeAsync(initializeRequest, ct);
         return Ok(new
         {
             userId = response.Data!.UserId,
@@ -89,5 +96,12 @@ public class AuthController(
         await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal);
 
         return Ok(response.Data);
+    }
+    
+    [HttpPost("logout")]
+    public async Task<IActionResult> LogoutAsync()
+    {
+        await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+        return NoContent();
     }
 }
