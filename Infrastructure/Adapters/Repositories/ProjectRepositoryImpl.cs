@@ -25,7 +25,7 @@ public class ProjectRepositoryImpl(TrackingTasksDbContext context) : IProjectRep
 
     public async Task<Project> SaveAsync(Project entity)
     {
-        return await context.AddOrUpdateAsync(entity, entity.Id);
+        return await context.AddOrUpdateAsync(entity, [entity.Id]);
     }
 
     public async Task SaveAllAsync(IEnumerable<Project> entities)

@@ -20,19 +20,12 @@ public static class HttpClientExtensions
         })
         .AddHttpMessageHandler<OpenProjectAuthHandler>();
 
-        var modelClient = configuration.GetSection("Groq:HttpClientName").Value;
-        if(modelClient is null)
-            return services;
+        var modelName = configuration
+            .GetSection("AIModel")
+            .GetChildren()
+            .First();
         
-        var apiKeyModel = configuration.GetSection("Groq:ApiKey").Value
-            ?? throw new ArgumentException("Groq:ApiKey is not set");
-        services.AddHttpClient(modelClient, client =>
-        {
-            client.Timeout = TimeSpan.FromSeconds(30);
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", apiKeyModel);
-        });
-
+        AiModelClientFactory.CreateClient(services, configuration, modelName);
         return services;
     }
 }

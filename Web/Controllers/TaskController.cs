@@ -11,6 +11,7 @@ namespace Web.Controllers;
 public class TaskController(
     IStartTaskCommand startTaskCommand,
     IEndTaskSessionCommand endTaskSessionCommand,
+    ICancelTaskSessionCommand cancelTaskSessionCommand,
     ITaskRepository taskRepository
     ) : ControllerBase
 {
@@ -24,6 +25,13 @@ public class TaskController(
     public async Task<TaskEntity> EndTaskSession([FromBody] EndTaskSessionRequest request)
     {
         return await endTaskSessionCommand.Execute(request);
+    }
+
+    [HttpPost("cancel_session")]
+    public async Task<IActionResult> CancelSession([FromBody] CancelTaskSessionRequest request)
+    {
+        var cancelled = await cancelTaskSessionCommand.Execute(request.WorkPackageId);
+        return cancelled ? NoContent() : NotFound(new { message = "No hay sesión activa para esta tarea." });
     }
 
     [HttpGet("{workPackageId:int}")]

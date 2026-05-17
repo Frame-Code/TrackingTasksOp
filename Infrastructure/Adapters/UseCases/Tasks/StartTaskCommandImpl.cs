@@ -1,6 +1,7 @@
 using Application.Dto.Tasks;
 using Application.Dto.TimeEntry;
 using Application.Dto.WorkPackages;
+using Application.Ports.Auth;
 using Application.Ports.Repositories;
 using Application.Ports.Services;
 using Application.Ports.UseCases.Tasks;
@@ -11,23 +12,19 @@ using Infrastructure.Adapters.Services;
 using TaskEntity = Domain.Entities.TrackingTasksEntities.Task;
 
 namespace Infrastructure.Adapters.UseCases.Tasks;
-
-
-    public class StartTaskCommandImpl(
-        ITaskRepository repository,
-           IProjectRepository projectRepository, 
-          IAddTimeEntryCommand addTimeEntryCommand,
-          ICreateWorkPackageCommand createWorkPackageCommand,
-          IProjectOpService projectOpService
-       ) : IStartTaskCommand
+public class StartTaskCommandImpl(
+    ITaskRepository repository,
+    IProjectRepository projectRepository, 
+    IAddTimeEntryCommand addTimeEntryCommand,
+    ICreateWorkPackageCommand createWorkPackageCommand,
+    CurrentUser currentUser,
+    IProjectOpService projectOpService ) : IStartTaskCommand
 {
-
-
    public async Task<TaskEntity> Execute(StarTaskRequest request)
     {
 
         // 1. Buscar el proyecto por su nombre/identificador
-          var project = await projectRepository.GetByIdAsync(request.ProjectId);
+        var project = await projectRepository.GetByIdAsync(request.ProjectId);
        
        // Si no está localmente, intentamos buscarlo en OpenProject y sincronizarlo
         if (project is null)
@@ -87,7 +84,9 @@ namespace Infrastructure.Adapters.UseCases.Tasks;
                 Name = request.Name,
                 Description = request.Description,
                 ProjectId = request.ProjectId,
-                StatusTaskId = request.StatusId
+                StatusTaskId = request.StatusId,
+                UserId = currentUser?.UserId!,
+                OpenProjectInstanceId = Convert.ToInt32(currentUser?.OpenProjectInstanceId!),
             };
         }
 
