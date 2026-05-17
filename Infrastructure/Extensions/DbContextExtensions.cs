@@ -47,9 +47,9 @@ public static class DbContextExtensions
             ?? throw new InvalidOperationException($"{typeof(T).Name} no está registrada en el modelo.");
     }
     
-    public static async Task<T> AddOrUpdateAsync<T>(this DbContext context, T entity, int id) where T : class
+    public static async Task<T> AddOrUpdateAsync<T>(this DbContext context, T entity, object[] ids) where T : class
     {
-        var existing = await context.Set<T>().FindAsync(id);
+        var existing = await context.Set<T>().FindAsync(ids);
 
         if (existing is null)
             await context.Set<T>().AddAsync(entity);

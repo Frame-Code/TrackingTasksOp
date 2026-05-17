@@ -63,6 +63,50 @@
 .status-hold         { background-color: #ffc107 !important; color: #000 !important; }
 .status-default      { background-color: #495057 !important; }
 
+/* ── Status change dropdown ─────────────────────────────────────── */
+.status-badge-btn {
+    cursor: pointer;
+    font-size: .75rem;
+    transition: opacity 0.15s ease, filter 0.15s ease;
+    /* Elimina el triángulo por defecto de Bootstrap en favor de uno pequeño */
+}
+
+.status-badge-btn:hover {
+    filter: brightness(1.15);
+}
+
+.status-badge-btn:disabled {
+    cursor: wait;
+    opacity: 0.7;
+}
+
+.status-badge-btn::after {
+    /* Chevron de Bootstrap pero más pequeño */
+    font-size: .6em;
+    vertical-align: middle;
+    margin-left: 3px;
+}
+
+.status-dropdown-menu {
+    min-width: 160px;
+    font-size: .85rem;
+}
+
+.status-dropdown-menu .dropdown-item {
+    padding: .35rem .75rem;
+    border-radius: 4px;
+    margin: 1px 4px;
+    width: calc(100% - 8px);
+}
+
+.status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
 /* ── Progress bar ───────────────────────────────────────────────── */
 .progress-thin {
     height: 5px;

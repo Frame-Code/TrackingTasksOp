@@ -80,3 +80,14 @@ export async function postEndSession(workPackageId, activityId, comment) {
         body: JSON.stringify({ workPackageId, activityId, comment })
     });
 }
+
+export async function fetchStatuses() {
+    return apiFetch(`${API}/status`);
+}
+
+export async function patchWorkPackageStatus(wpId, statusId) {
+    return apiFetch(`${API}/workpackage/${wpId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ statusId })
+    });
+}

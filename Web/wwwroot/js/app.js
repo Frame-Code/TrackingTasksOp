@@ -2,7 +2,7 @@
 
 import { store, getActiveSession, saveSession, clearSession } from './state.js';
 import { fetchProjects, fetchWorkPackages, fetchActivities, fetchTask,
-         postStartSession, postEndSession } from './api.js';
+         postStartSession, postEndSession, fetchStatuses, patchWorkPackageStatus } from './api.js';
 import { updateNavbar, renderProjectSelect, renderCards, renderStatusFilters,
          renderHistoryLoading, renderHistoryContent, renderHistoryError,
          renderActivitiesSelect } from './render.js';
@@ -24,6 +24,16 @@ async function loadProjects() {
 }
 
 const DEFAULT_STATUSES = ['new', 'nuevo', 'in progress', 'en progreso'];
+
+async function loadStatuses() {
+    try {
+        store.statuses = await fetchStatuses();
+        // Si ya hay tarjetas renderizadas, refrescarlas para mostrar los dropdowns
+        if (store.workPackages.length) renderCards();
+    } catch (e) {
+        console.warn('No se pudieron cargar los estados de OpenProject:', e.message);
+    }
+}
 
 async function loadWorkPackages(projectId) {
     setLoading(true);
@@ -80,6 +90,37 @@ async function handleStartSession(wpId) {
         if (btn) {
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-play-circle me-1"></i>Iniciar';
+        }
+    }
+}
+
+async function handleChangeStatus(wpId, statusId, statusName) {
+    const badgeBtn = document.querySelector(`.status-badge-btn[data-wp-id="${wpId}"]`);
+    const originalHtml = badgeBtn?.innerHTML;
+
+    if (badgeBtn) {
+        badgeBtn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.6rem;height:.6rem;border-width:1.5px"></span>';
+        badgeBtn.disabled = true;
+    }
+
+    try {
+        await patchWorkPackageStatus(wpId, statusId);
+
+        // Actualizar estado en el store local
+        const wp = store.workPackages.find(w => w.id === wpId);
+        if (wp?._links?.status) {
+            wp._links.status.title = statusName;
+            wp._links.status.href  = `/api/v3/statuses/${statusId}`;
+        }
+
+        renderStatusFilters();
+        renderCards();
+        showToast(`Estado cambiado a <strong>${escHtml(statusName)}</strong>`, 'success');
+    } catch (e) {
+        showToast(`Error al cambiar estado: ${e.message}`, 'danger');
+        if (badgeBtn) {
+            badgeBtn.innerHTML = originalHtml;
+            badgeBtn.disabled  = false;
         }
     }
 }
@@ -208,13 +249,19 @@ function bindPaginationEvents() {
 
 function bindGridEvents() {
     document.getElementById('wpGrid').addEventListener('click', async (e) => {
-        const startBtn   = e.target.closest('.btn-start');
-        const endBtn     = e.target.closest('.btn-end');
-        const historyBtn = e.target.closest('.btn-history');
+        const startBtn     = e.target.closest('.btn-start');
+        const endBtn       = e.target.closest('.btn-end');
+        const historyBtn   = e.target.closest('.btn-history');
+        const setStatusBtn = e.target.closest('.btn-set-status');
 
-        if (startBtn)   await handleStartSession(parseInt(startBtn.dataset.id));
-        if (endBtn)     openEndModal();
-        if (historyBtn) await handleOpenHistory(parseInt(historyBtn.dataset.id));
+        if (startBtn)     await handleStartSession(parseInt(startBtn.dataset.id));
+        if (endBtn)       openEndModal();
+        if (historyBtn)   await handleOpenHistory(parseInt(historyBtn.dataset.id));
+        if (setStatusBtn) await handleChangeStatus(
+            parseInt(setStatusBtn.dataset.wpId),
+            parseInt(setStatusBtn.dataset.statusId),
+            setStatusBtn.dataset.statusName
+        );
     });
 }
 
@@ -258,6 +305,7 @@ bindSearchEvents();
 bindPaginationEvents();
 
 loadProjects();
+loadStatuses();
 
 if (getActiveSession()) {
     startTimer();

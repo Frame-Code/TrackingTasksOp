@@ -36,7 +36,7 @@ public class TaskRepositoryImpl(TrackingTasksDbContext context) : ITaskRepositor
 
     public async Task<Task> SaveAsync(Task entity)
     {
-        return await context.AddOrUpdateAsync(entity, entity.WorkPackageId);
+        return await context.AddOrUpdateAsync(entity, [entity.UserId, entity.WorkPackageId]);
     }
 
     public async System.Threading.Tasks.Task SaveAllAsync(IEnumerable<Task> tasks)

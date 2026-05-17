@@ -178,13 +178,53 @@ export function renderPagination(total, pageCount) {
     el.innerHTML = html;
 }
 
+function buildStatusDropdown(wp, statusTitle) {
+    if (!store.statuses.length) {
+        return `<span class="badge flex-shrink-0 ${statusClass(statusTitle)}">${escHtml(statusTitle)}</span>`;
+    }
+
+    const items = store.statuses.map(s => {
+        const isCurrent = s.name === statusTitle;
+        return `
+            <li>
+                <button class="dropdown-item btn-set-status d-flex align-items-center gap-2"
+                        data-wp-id="${wp.id}"
+                        data-status-id="${s.id}"
+                        data-status-name="${escHtml(s.name)}"
+                        ${isCurrent ? 'disabled' : ''}>
+                    <span class="status-dot ${statusClass(s.name)}"></span>
+                    <span class="flex-grow-1">${escHtml(s.name)}</span>
+                    ${isCurrent ? '<i class="bi bi-check text-success"></i>' : ''}
+                </button>
+            </li>`;
+    }).join('');
+
+    return `
+        <div class="dropdown flex-shrink-0">
+            <button class="badge ${statusClass(statusTitle)} border-0 dropdown-toggle status-badge-btn"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    data-bs-auto-close="true"
+                    aria-expanded="false"
+                    data-wp-id="${wp.id}"
+                    title="Cambiar estado">
+                ${escHtml(statusTitle)}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end status-dropdown-menu shadow-sm">
+                <li><h6 class="dropdown-header py-1">Cambiar estado</h6></li>
+                <li><hr class="dropdown-divider my-1"></li>
+                ${items}
+            </ul>
+        </div>`;
+}
+
 function buildCard(wp, session) {
-    const isActive    = session?.workPackageId === wp.id;
-    const hasOther    = session && !isActive;
-    const statusTitle = wp._links?.status?.title  || 'Sin estado';
+    const isActive     = session?.workPackageId === wp.id;
+    const hasOther     = session && !isActive;
+    const statusTitle  = wp._links?.status?.title  || 'Sin estado';
     const projectTitle = wp._links?.project?.title || '';
-    const assignee    = wp._links?.assignee?.title || '';
-    const pct         = wp.percentageDone ?? 0;
+    const assignee     = wp._links?.assignee?.title || '';
+    const pct          = wp.percentageDone ?? 0;
 
     const cardExtraClass = isActive  ? 'wp-card--active'
                          : hasOther  ? 'wp-card--disabled'
@@ -220,9 +260,7 @@ function buildCard(wp, session) {
                         <h6 class="card-title mb-0 fw-semibold lh-sm" title="${escHtml(wp.subject)}">
                             ${escHtml(wp.subject)}
                         </h6>
-                        <span class="badge flex-shrink-0 ${statusClass(statusTitle)}">
-                            ${escHtml(statusTitle)}
-                        </span>
+                        ${buildStatusDropdown(wp, statusTitle)}
                     </div>
 
                     <div class="d-flex flex-wrap gap-2">

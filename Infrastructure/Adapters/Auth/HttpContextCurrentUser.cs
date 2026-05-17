@@ -16,4 +16,7 @@ public class HttpContextCurrentUser(IHttpContextAccessor accessor) : CurrentUser
 
     public override string? OpenProjectInstanceUrl =>
         Principal?.FindFirstValue("OpenProjectInstanceBaseUrl");
+
+    public override string? OpenProjectInstanceId =>
+        Principal?.FindFirstValue("OpenProjectInstanceId");
 }

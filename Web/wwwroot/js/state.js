@@ -6,6 +6,7 @@ const SESSION_KEY = 'trackingActiveSession';
 export const store = {
     projects: [],
     workPackages: [],
+    statuses: [],                    // estados de OpenProject
     activeStatusFilters: new Set(),  // vacío = mostrar todos
     searchQuery: '',
     currentPage: 1,
