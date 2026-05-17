@@ -70,9 +70,27 @@ function initDefaultStatusFilters() {
 
 // ── Acciones de sesión ────────────────────────────────────────────────────────
 
+async function requestNotifPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+        const result = await Notification.requestPermission();
+        if (result === 'granted') {
+            showToast(
+                'Notificaciones activadas. Asegúrate de que tu navegador tenga permiso de notificaciones en la configuración de Windows.',
+                'info'
+            );
+        } else if (result === 'denied') {
+            showToast('Notificaciones bloqueadas. No podrás recibir recordatorios de sesión activa.', 'warning');
+        }
+    }
+}
+
 async function handleStartSession(wpId) {
     const wp = store.workPackages.find(w => w.id === wpId);
     if (!wp) return;
+
+    // Pedir permiso de notificaciones (solo la primera vez, desde un gesto del usuario)
+    await requestNotifPermission();
 
     // Feedback visual inmediato en el botón
     const btn = document.querySelector(`.btn-start[data-id="${wpId}"]`);
