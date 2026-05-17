@@ -63,6 +63,104 @@
 .status-hold         { background-color: #ffc107 !important; color: #000 !important; }
 .status-default      { background-color: #495057 !important; }
 
+/* ── Task ID prefix ─────────────────────────────────────────────── */
+.card-title .text-muted {
+    font-size: .8em;
+    letter-spacing: 0;
+}
+
+/* ── Progress slider con fill azul ──────────────────────────────── */
+.wp-progress-input {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 5px;
+    padding: 0;
+    border-radius: 3px;
+    cursor: pointer;
+    outline: none;
+    /* El background se sobreescribe por JS con el gradiente correcto */
+    background: rgba(255,255,255,0.15);
+}
+
+/* Thumb — webkit */
+.wp-progress-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #0d6efd;
+    cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.25);
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.wp-progress-input::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 0 4px rgba(13,110,253,0.25);
+}
+
+/* Thumb — firefox */
+.wp-progress-input::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #0d6efd;
+    cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.25);
+}
+
+/* Track — firefox */
+.wp-progress-input::-moz-range-track {
+    height: 5px;
+    border-radius: 3px;
+    background: transparent;
+}
+
+/* ── Status change dropdown ─────────────────────────────────────── */
+.status-badge-btn {
+    cursor: pointer;
+    font-size: .75rem;
+    transition: opacity 0.15s ease, filter 0.15s ease;
+    /* Elimina el triángulo por defecto de Bootstrap en favor de uno pequeño */
+}
+
+.status-badge-btn:hover {
+    filter: brightness(1.15);
+}
+
+.status-badge-btn:disabled {
+    cursor: wait;
+    opacity: 0.7;
+}
+
+.status-badge-btn::after {
+    /* Chevron de Bootstrap pero más pequeño */
+    font-size: .6em;
+    vertical-align: middle;
+    margin-left: 3px;
+}
+
+.status-dropdown-menu {
+    min-width: 160px;
+    font-size: .85rem;
+}
+
+.status-dropdown-menu .dropdown-item {
+    padding: .35rem .75rem;
+    border-radius: 4px;
+    margin: 1px 4px;
+    width: calc(100% - 8px);
+}
+
+.status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
 /* ── Progress bar ───────────────────────────────────────────────── */
 .progress-thin {
     height: 5px;
@@ -91,4 +189,47 @@
 /* ── History table ──────────────────────────────────────────────── */
 .session-active-row {
     --bs-table-accent-bg: rgba(25, 135, 84, 0.12);
+}
+
+/* ── Auth page ──────────────────────────────────────────────────── */
+.auth-page {
+    background: radial-gradient(ellipse at 60% 20%, rgba(13, 110, 253, 0.07) 0%, transparent 60%),
+                radial-gradient(ellipse at 20% 80%, rgba(32, 201, 151, 0.05) 0%, transparent 50%),
+                var(--bs-body-bg);
+}
+
+.auth-card {
+    background: rgba(22, 27, 34, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    backdrop-filter: blur(12px);
+}
+
+.auth-tabs .nav-link {
+    color: var(--bs-secondary-color);
+    border-radius: 8px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.auth-tabs .nav-link.active {
+    background: rgba(13, 110, 253, 0.18);
+    color: #6ea8fe;
+}
+
+.auth-tabs .nav-link:not(.active):hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--bs-body-color);
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
 }

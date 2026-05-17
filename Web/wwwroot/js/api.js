@@ -7,9 +7,17 @@ const API = '/api/v1';
 
 async function apiFetch(url, options = {}) {
     const res = await fetch(url, {
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...options.headers },
         ...options
     });
+
+    // Sesión expirada o no autenticado → redirigir al login
+    if (res.status === 401) {
+        sessionStorage.removeItem('currentUser');
+        window.location.replace('/auth.html');
+        return;
+    }
 
     if (!res.ok) {
         let msg = `Error ${res.status}`;
@@ -22,6 +30,15 @@ async function apiFetch(url, options = {}) {
 
     if (res.status === 204) return null;
     return res.json();
+}
+
+export async function postLogout() {
+    await fetch(`${API}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+    });
+    sessionStorage.removeItem('currentUser');
+    window.location.replace('/auth.html');
 }
 
 export async function fetchProjects() {
@@ -61,5 +78,37 @@ export async function postEndSession(workPackageId, activityId, comment) {
     return apiFetch(`${API}/task/end_session`, {
         method: 'POST',
         body: JSON.stringify({ workPackageId, activityId, comment })
+    });
+}
+
+export async function fetchStatuses() {
+    return apiFetch(`${API}/status`);
+}
+
+export async function patchWorkPackageStatus(wpId, statusId) {
+    return apiFetch(`${API}/workpackage/${wpId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ statusId })
+    });
+}
+
+export async function patchWorkPackageProgress(wpId, percentageDone) {
+    return apiFetch(`${API}/workpackage/${wpId}/progress`, {
+        method: 'PATCH',
+        body: JSON.stringify({ percentageDone })
+    });
+}
+
+export async function patchWorkPackageDates(wpId, startDate, dueDate) {
+    return apiFetch(`${API}/workpackage/${wpId}/dates`, {
+        method: 'PATCH',
+        body: JSON.stringify({ startDate, dueDate })
+    });
+}
+
+export async function postCancelSession(workPackageId) {
+    return apiFetch(`${API}/task/cancel_session`, {
+        method: 'POST',
+        body: JSON.stringify({ workPackageId })
     });
 }

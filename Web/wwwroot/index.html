@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title>TrackingTasksOp</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="/css/app.css" rel="stylesheet">
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
 
     <!-- Navbar -->
     <nav class="navbar sticky-top" id="mainNav">
@@ -16,17 +17,26 @@
             <span class="navbar-brand fw-bold fs-5">
                 <i class="bi bi-clock-history me-2 text-primary"></i>TrackingTasksOp
             </span>
-            <div id="activeSessionBadge" class="d-none">
-                <div class="badge bg-success d-flex align-items-center gap-2 px-3 py-2 rounded-pill">
-                    <span class="pulse-dot"></span>
-                    <span id="activeSessionName" class="text-truncate fw-normal" style="max-width:180px"></span>
-                    <span class="fw-bold font-monospace ms-1" id="navTimer">00:00:00</span>
+            <div class="d-flex align-items-center gap-3">
+                <div id="activeSessionBadge" class="d-none">
+                    <div class="badge bg-success d-flex align-items-center gap-2 px-3 py-2 rounded-pill">
+                        <span class="pulse-dot"></span>
+                        <span id="activeSessionName" class="text-truncate fw-normal" style="max-width:180px"></span>
+                        <span class="fw-bold font-monospace ms-1" id="navTimer">00:00:00</span>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span id="navUserEmail" class="text-muted small d-none d-md-inline"></span>
+                    <button id="logoutBtn" class="btn btn-sm btn-outline-secondary" title="Cerrar sesión">
+                        <i class="bi bi-box-arrow-right me-1"></i>
+                        <span class="d-none d-md-inline">Salir</span>
+                    </button>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="container-fluid px-4 py-4">
+    <main class="container-fluid px-4 py-4 flex-grow-1">
 
         <!-- Filter bar -->
         <div class="card mb-4 border-0 bg-body-secondary">
@@ -101,6 +111,10 @@
 
     </main>
 
+    <footer class="text-center text-muted small py-3 mt-auto border-subtle">
+        <span class="opacity-50">DarS Lab &copy; 2026. Todos los derechos reservados.</span>
+    </footer>
+
     <!-- ── Modal: Finalizar sesión ── -->
     <div class="modal fade" id="endSessionModal" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog">
@@ -167,10 +181,73 @@
         </div>
     </div>
 
+    <!-- ── Modal: Editar fechas ── -->
+    <div class="modal fade" id="datesModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h5 class="modal-title">
+                            <i class="bi bi-calendar3 me-2 text-primary"></i>Editar fechas
+                        </h5>
+                        <p class="text-muted small mb-0 mt-1" id="datesModalTaskName"></p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">
+                            <i class="bi bi-calendar-event me-1 text-muted"></i>Fecha de inicio
+                        </label>
+                        <input type="date" id="datesModalStart" class="form-control">
+                    </div>
+                    <div>
+                        <label class="form-label fw-medium">
+                            <i class="bi bi-calendar-check me-1 text-muted"></i>Fecha límite
+                        </label>
+                        <input type="date" id="datesModalDue" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="confirmDatesBtn" class="btn btn-primary px-4">
+                        <i class="bi bi-check-lg me-1"></i>Guardar fechas
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Bot Floating Button -->
+    <a href="/bot.html" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
+       style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; z-index: 1050;">
+        <i class="bi bi-robot fs-2"></i>
+    </a>
+
     <!-- Toast container -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module">
+        import { requireAuth, getCurrentUser } from '/js/auth-guard.js';
+        import { postLogout } from '/js/api.js';
+
+        requireAuth();
+
+        // Mostrar email del usuario en el navbar
+        const user = getCurrentUser();
+        if (user?.email) {
+            const el = document.getElementById('navUserEmail');
+            if (el) { el.textContent = user.email; el.classList.remove('d-none'); }
+        }
+
+        // Botón logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('logoutBtn');
+            btn.disabled = true;
+            await postLogout();
+        });
+    </script>
     <script type="module" src="/js/app.js"></script>
 </body>
 </html>

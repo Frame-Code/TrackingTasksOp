@@ -1,4 +1,4 @@
-﻿namespace Application.Dto.Tasks;
+namespace Application.Dto.Tasks;
 
 public class StarTaskRequest
 {
@@ -9,4 +9,6 @@ public class StarTaskRequest
     public string? Description { get; init; }
     public int ProjectId { get; init; }
     public int StatusId { get; init; }
+    public int? AssigneeId { get; init; }
+    public int? ResponsibleId { get; init; }
 }

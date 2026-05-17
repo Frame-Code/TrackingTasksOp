@@ -178,24 +178,59 @@ export function renderPagination(total, pageCount) {
     el.innerHTML = html;
 }
 
+function buildStatusDropdown(wp, statusTitle) {
+    if (!store.statuses.length) {
+        return `<span class="badge flex-shrink-0 ${statusClass(statusTitle)}">${escHtml(statusTitle)}</span>`;
+    }
+
+    const items = store.statuses.map(s => {
+        const isCurrent = s.name === statusTitle;
+        return `
+            <li>
+                <button class="dropdown-item btn-set-status d-flex align-items-center gap-2"
+                        data-wp-id="${wp.id}"
+                        data-status-id="${s.id}"
+                        data-status-name="${escHtml(s.name)}"
+                        ${isCurrent ? 'disabled' : ''}>
+                    <span class="status-dot ${statusClass(s.name)}"></span>
+                    <span class="flex-grow-1">${escHtml(s.name)}</span>
+                    ${isCurrent ? '<i class="bi bi-check text-success"></i>' : ''}
+                </button>
+            </li>`;
+    }).join('');
+
+    return `
+        <div class="dropdown flex-shrink-0">
+            <button class="badge ${statusClass(statusTitle)} border-0 dropdown-toggle status-badge-btn"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    data-bs-auto-close="true"
+                    aria-expanded="false"
+                    data-wp-id="${wp.id}"
+                    title="Cambiar estado">
+                ${escHtml(statusTitle)}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end status-dropdown-menu shadow-sm">
+                <li><h6 class="dropdown-header py-1">Cambiar estado</h6></li>
+                <li><hr class="dropdown-divider my-1"></li>
+                ${items}
+            </ul>
+        </div>`;
+}
+
 function buildCard(wp, session) {
-    const isActive    = session?.workPackageId === wp.id;
-    const hasOther    = session && !isActive;
-    const statusTitle = wp._links?.status?.title  || 'Sin estado';
+    const isActive     = session?.workPackageId === wp.id;
+    const hasOther     = session && !isActive;
+    const statusTitle  = wp._links?.status?.title  || 'Sin estado';
     const projectTitle = wp._links?.project?.title || '';
-    const assignee    = wp._links?.assignee?.title || '';
-    const pct         = wp.percentageDone ?? 0;
+    const assignee     = wp._links?.assignee?.title || '';
+    const pct          = wp.percentageDone ?? 0;
 
     const cardExtraClass = isActive  ? 'wp-card--active'
                          : hasOther  ? 'wp-card--disabled'
                          : '';
 
-    const dueDateHtml = wp.dueDate
-        ? `<small class="text-muted">
-               <i class="bi bi-calendar3 me-1"></i>${wp.dueDate}
-           </small>`
-        : '';
-
+    // ── Timer ──────────────────────────────────────────────────────────────────
     const timerHtml = isActive
         ? `<div class="d-flex flex-column align-items-center py-2 my-1 rounded bg-body-secondary">
                <span class="card-timer">00:00:00</span>
@@ -203,8 +238,21 @@ function buildCard(wp, session) {
            </div>`
         : '';
 
-    const actionBtn = isActive
-        ? `<button class="btn btn-danger btn-sm btn-end" data-id="${wp.id}">
+    // ── Fechas (display en una sola línea: inicio – fin) ──────────────────────
+    const startTxt = wp.startDate ? escHtml(wp.startDate) : '–';
+    const dueTxt   = wp.dueDate   ? escHtml(wp.dueDate)   : '–';
+    const datesDisplay = `
+        <small class="text-muted d-flex align-items-center gap-1">
+            <i class="bi bi-calendar3"></i>
+            <span>${startTxt} — ${dueTxt}</span>
+        </small>`;
+
+    // ── Botones de acción ──────────────────────────────────────────────────────
+    const actionBtns = isActive
+        ? `<button class="btn btn-outline-secondary btn-sm btn-cancel" data-id="${wp.id}" title="Cancelar sesión sin guardar">
+               <i class="bi bi-x-circle"></i>
+           </button>
+           <button class="btn btn-danger btn-sm btn-end" data-id="${wp.id}">
                <i class="bi bi-stop-circle-fill me-1"></i>Finalizar
            </button>`
         : `<button class="btn btn-outline-success btn-sm btn-start" data-id="${wp.id}">
@@ -216,15 +264,15 @@ function buildCard(wp, session) {
             <div class="card wp-card h-100 ${cardExtraClass}" data-wp-id="${wp.id}">
                 <div class="card-body d-flex flex-column gap-2 p-3">
 
+                    <!-- Título: ID - Nombre -->
                     <div class="d-flex justify-content-between align-items-start gap-2">
-                        <h6 class="card-title mb-0 fw-semibold lh-sm" title="${escHtml(wp.subject)}">
-                            ${escHtml(wp.subject)}
+                        <h6 class="card-title mb-0 fw-semibold lh-sm" title="#${wp.id} — ${escHtml(wp.subject)}">
+                            <span class="text-muted fw-normal me-1">#${wp.id}</span>${escHtml(wp.subject)}
                         </h6>
-                        <span class="badge flex-shrink-0 ${statusClass(statusTitle)}">
-                            ${escHtml(statusTitle)}
-                        </span>
+                        ${buildStatusDropdown(wp, statusTitle)}
                     </div>
 
+                    <!-- Proyecto / Asignado -->
                     <div class="d-flex flex-wrap gap-2">
                         ${projectTitle
                             ? `<small class="text-muted d-flex align-items-center gap-1">
@@ -238,27 +286,39 @@ function buildCard(wp, session) {
                             : ''}
                     </div>
 
+                    <!-- Progreso con slider fill azul -->
                     <div>
-                        <div class="d-flex justify-content-between mb-1">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
                             <small class="text-muted">Progreso</small>
-                            <small class="fw-medium">${pct}%</small>
+                            <small class="fw-medium wp-pct-display">${pct}%</small>
                         </div>
-                        <div class="progress progress-thin">
-                            <div class="progress-bar${isActive ? ' bg-success' : ''}"
-                                 style="width:${pct}%" role="progressbar"></div>
-                        </div>
+                        <input type="range" class="form-range wp-progress-input"
+                               min="0" max="100" step="5"
+                               value="${pct}"
+                               data-wp-id="${wp.id}"
+                               style="background: linear-gradient(to right, #0d6efd ${pct}%, rgba(255,255,255,0.15) ${pct}%)">
                     </div>
 
                     ${timerHtml}
 
+                    <!-- Footer: fechas + historial + acciones -->
                     <div class="mt-auto d-flex justify-content-between align-items-center gap-2 pt-2 border-top border-subtle">
-                        <div>${dueDateHtml}</div>
+                        <div class="d-flex align-items-center gap-2">
+                            ${datesDisplay}
+                            <button class="btn btn-link btn-sm p-0 text-muted btn-dates"
+                                    data-id="${wp.id}"
+                                    data-start="${escHtml(wp.startDate || '')}"
+                                    data-due="${escHtml(wp.dueDate || '')}"
+                                    title="Editar fechas">
+                                <i class="bi bi-pencil-square" style="font-size:.8rem"></i>
+                            </button>
+                        </div>
                         <div class="d-flex gap-2">
                             <button class="btn btn-outline-secondary btn-sm btn-history"
                                     data-id="${wp.id}" title="Ver historial de sesiones">
                                 <i class="bi bi-clock-history"></i>
                             </button>
-                            ${actionBtn}
+                            ${actionBtns}
                         </div>
                     </div>
 

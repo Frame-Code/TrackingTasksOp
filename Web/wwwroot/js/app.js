@@ -2,7 +2,9 @@
 
 import { store, getActiveSession, saveSession, clearSession } from './state.js';
 import { fetchProjects, fetchWorkPackages, fetchActivities, fetchTask,
-         postStartSession, postEndSession } from './api.js';
+         postStartSession, postEndSession, fetchStatuses,
+         patchWorkPackageStatus, patchWorkPackageProgress,
+         patchWorkPackageDates, postCancelSession } from './api.js';
 import { updateNavbar, renderProjectSelect, renderCards, renderStatusFilters,
          renderHistoryLoading, renderHistoryContent, renderHistoryError,
          renderActivitiesSelect } from './render.js';
@@ -24,6 +26,16 @@ async function loadProjects() {
 }
 
 const DEFAULT_STATUSES = ['new', 'nuevo', 'in progress', 'en progreso'];
+
+async function loadStatuses() {
+    try {
+        store.statuses = await fetchStatuses();
+        // Si ya hay tarjetas renderizadas, refrescarlas para mostrar los dropdowns
+        if (store.workPackages.length) renderCards();
+    } catch (e) {
+        console.warn('No se pudieron cargar los estados de OpenProject:', e.message);
+    }
+}
 
 async function loadWorkPackages(projectId) {
     setLoading(true);
@@ -58,9 +70,27 @@ function initDefaultStatusFilters() {
 
 // ── Acciones de sesión ────────────────────────────────────────────────────────
 
+async function requestNotifPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+        const result = await Notification.requestPermission();
+        if (result === 'granted') {
+            showToast(
+                'Notificaciones activadas. Asegúrate de que tu navegador tenga permiso de notificaciones en la configuración de Windows.',
+                'info'
+            );
+        } else if (result === 'denied') {
+            showToast('Notificaciones bloqueadas. No podrás recibir recordatorios de sesión activa.', 'warning');
+        }
+    }
+}
+
 async function handleStartSession(wpId) {
     const wp = store.workPackages.find(w => w.id === wpId);
     if (!wp) return;
+
+    // Pedir permiso de notificaciones (solo la primera vez, desde un gesto del usuario)
+    await requestNotifPermission();
 
     // Feedback visual inmediato en el botón
     const btn = document.querySelector(`.btn-start[data-id="${wpId}"]`);
@@ -81,6 +111,115 @@ async function handleStartSession(wpId) {
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-play-circle me-1"></i>Iniciar';
         }
+    }
+}
+
+async function handleChangeStatus(wpId, statusId, statusName) {
+    const badgeBtn = document.querySelector(`.status-badge-btn[data-wp-id="${wpId}"]`);
+    const originalHtml = badgeBtn?.innerHTML;
+
+    if (badgeBtn) {
+        badgeBtn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.6rem;height:.6rem;border-width:1.5px"></span>';
+        badgeBtn.disabled = true;
+    }
+
+    try {
+        await patchWorkPackageStatus(wpId, statusId);
+
+        // Actualizar estado en el store local
+        const wp = store.workPackages.find(w => w.id === wpId);
+        if (wp?._links?.status) {
+            wp._links.status.title = statusName;
+            wp._links.status.href  = `/api/v3/statuses/${statusId}`;
+        }
+
+        renderStatusFilters();
+        renderCards();
+        showToast(`Estado cambiado a <strong>${escHtml(statusName)}</strong>`, 'success');
+    } catch (e) {
+        showToast(`Error al cambiar estado: ${e.message}`, 'danger');
+        if (badgeBtn) {
+            badgeBtn.innerHTML = originalHtml;
+            badgeBtn.disabled  = false;
+        }
+    }
+}
+
+async function handleCancelSession(wpId) {
+    try {
+        await postCancelSession(wpId);
+        clearSession();
+        stopTimer();
+        renderCards();
+        showToast('Sesión cancelada. No se registró ningún tiempo.', 'secondary');
+    } catch (e) {
+        showToast(`Error al cancelar: ${e.message}`, 'danger');
+    }
+}
+
+async function handleChangeProgress(wpId, pct) {
+    const wp = store.workPackages.find(w => w.id === wpId);
+    if (!wp) return;
+
+    const originalPct = wp.percentageDone ?? 0;
+
+    try {
+        await patchWorkPackageProgress(wpId, pct);
+        wp.percentageDone = pct;
+        // Actualizar solo el display %, no re-renderizar todo (el slider ya está en la posición correcta)
+        const display = document.querySelector(`.wp-progress-input[data-wp-id="${wpId}"]`)
+            ?.closest('.card-body')
+            ?.querySelector('.wp-pct-display');
+        if (display) display.textContent = `${pct}%`;
+        showToast(`Progreso actualizado a <strong>${pct}%</strong>`, 'success');
+    } catch (e) {
+        showToast(`Error al actualizar progreso: ${e.message}`, 'danger');
+        // Revertir el slider
+        const slider = document.querySelector(`.wp-progress-input[data-wp-id="${wpId}"]`);
+        if (slider) {
+            slider.value = originalPct;
+            const display = slider.closest('.card-body')?.querySelector('.wp-pct-display');
+            if (display) display.textContent = `${originalPct}%`;
+        }
+    }
+}
+
+// field = 'startDate' | 'dueDate' | 'both'
+// cuando field='both', startValue y dueValue son los dos valores nuevos
+async function handleChangeDate(wpId, field, startValue, dueValue) {
+    const wp = store.workPackages.find(w => w.id === wpId);
+    if (!wp) return;
+
+    let newStart, newDue;
+
+    if (field === 'both') {
+        newStart = startValue || null;
+        newDue   = dueValue   || null;
+    } else {
+        const isStart = field === 'startDate';
+        const value   = startValue; // único valor cuando field != 'both'
+        newStart = isStart ? (value || null) : (wp.startDate || null);
+        newDue   = isStart ? (wp.dueDate || null) : (value || null);
+    }
+
+    try {
+        await patchWorkPackageDates(wpId, newStart, newDue);
+
+        wp.startDate = newStart || '';
+        wp.dueDate   = newDue   || '';
+
+        // Actualizar el botón de fechas en la tarjeta sin re-renderizar todo
+        const datesBtn = document.querySelector(`.btn-dates[data-id="${wpId}"]`);
+        if (datesBtn) {
+            datesBtn.dataset.start = wp.startDate;
+            datesBtn.dataset.due   = wp.dueDate;
+        }
+
+        renderCards(); // re-render para actualizar el texto de fechas
+        showToast('Fechas actualizadas correctamente.', 'success');
+    } catch (e) {
+        showToast(`Error al actualizar fechas: ${e.message}`, 'danger');
+        throw e; // para que el llamador del modal pueda revertir el botón
     }
 }
 
@@ -207,14 +346,93 @@ function bindPaginationEvents() {
 }
 
 function bindGridEvents() {
-    document.getElementById('wpGrid').addEventListener('click', async (e) => {
-        const startBtn   = e.target.closest('.btn-start');
-        const endBtn     = e.target.closest('.btn-end');
-        const historyBtn = e.target.closest('.btn-history');
+    const grid = document.getElementById('wpGrid');
 
-        if (startBtn)   await handleStartSession(parseInt(startBtn.dataset.id));
-        if (endBtn)     openEndModal();
-        if (historyBtn) await handleOpenHistory(parseInt(historyBtn.dataset.id));
+    // ── Clicks ────────────────────────────────────────────────────────────────
+    grid.addEventListener('click', async (e) => {
+        const startBtn     = e.target.closest('.btn-start');
+        const endBtn       = e.target.closest('.btn-end');
+        const cancelBtn    = e.target.closest('.btn-cancel');
+        const historyBtn   = e.target.closest('.btn-history');
+        const setStatusBtn = e.target.closest('.btn-set-status');
+
+        if (startBtn)     await handleStartSession(parseInt(startBtn.dataset.id));
+        if (endBtn)       openEndModal();
+        if (cancelBtn)    await handleCancelSession(parseInt(cancelBtn.dataset.id));
+        if (historyBtn)   await handleOpenHistory(parseInt(historyBtn.dataset.id));
+
+        const datesBtn = e.target.closest('.btn-dates');
+        if (datesBtn)     openDatesModal(parseInt(datesBtn.dataset.id), datesBtn.dataset.start, datesBtn.dataset.due);
+
+        if (setStatusBtn) await handleChangeStatus(
+            parseInt(setStatusBtn.dataset.wpId),
+            parseInt(setStatusBtn.dataset.statusId),
+            setStatusBtn.dataset.statusName
+        );
+    });
+
+    // ── Slider progreso: actualiza % y fill azul en tiempo real ──────────────
+    grid.addEventListener('input', (e) => {
+        const slider = e.target.closest('.wp-progress-input');
+        if (!slider) return;
+        const pct = slider.value;
+        slider.style.background =
+            `linear-gradient(to right, #0d6efd ${pct}%, rgba(255,255,255,0.15) ${pct}%)`;
+        const display = slider.closest('.card-body')?.querySelector('.wp-pct-display');
+        if (display) display.textContent = `${pct}%`;
+    });
+
+    // ── Slider progreso: guarda al soltar ────────────────────────────────────
+    grid.addEventListener('change', async (e) => {
+        const slider = e.target.closest('.wp-progress-input');
+        if (slider) {
+            await handleChangeProgress(
+                parseInt(slider.dataset.wpId),
+                parseInt(slider.value)
+            );
+        }
+    });
+}
+
+// ── Modal: Editar fechas ──────────────────────────────────────────────────────
+
+let _datesModalWpId = null;
+
+function openDatesModal(wpId, currentStart, currentDue) {
+    _datesModalWpId = wpId;
+
+    const wp = store.workPackages.find(w => w.id === wpId);
+    document.getElementById('datesModalTaskName').textContent =
+        wp ? `#${wp.id} — ${wp.subject}` : `#${wpId}`;
+    document.getElementById('datesModalStart').value = currentStart || '';
+    document.getElementById('datesModalDue').value   = currentDue   || '';
+
+    const confirmBtn = document.getElementById('confirmDatesBtn');
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Guardar fechas';
+
+    new bootstrap.Modal(document.getElementById('datesModal')).show();
+}
+
+function bindConfirmDatesButton() {
+    document.getElementById('confirmDatesBtn').addEventListener('click', async () => {
+        if (!_datesModalWpId) return;
+
+        const startVal = document.getElementById('datesModalStart').value;
+        const dueVal   = document.getElementById('datesModalDue').value;
+        const btn      = document.getElementById('confirmDatesBtn');
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
+
+        try {
+            await handleChangeDate(_datesModalWpId, 'both', startVal, dueVal);
+            bootstrap.Modal.getInstance(document.getElementById('datesModal'))?.hide();
+        } catch (_) {
+            // handleChangeDate ya muestra el toast de error
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Guardar fechas';
+        }
     });
 }
 
@@ -253,11 +471,13 @@ function bindConfirmEndButton() {
 bindGridEvents();
 bindLoadButton();
 bindConfirmEndButton();
+bindConfirmDatesButton();
 bindStatusFilterEvents();
 bindSearchEvents();
 bindPaginationEvents();
 
 loadProjects();
+loadStatuses();
 
 if (getActiveSession()) {
     startTimer();

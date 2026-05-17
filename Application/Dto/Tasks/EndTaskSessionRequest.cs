@@ -1,7 +1,8 @@
-﻿namespace Application.Dto.Tasks;
+namespace Application.Dto.Tasks;
 
 public record EndTaskSessionRequest(
     int WorkPackageId,
     int ActivityId,
-    string Comment
-    );
+    string Comment,
+    int? NewStatusId = null
+);
