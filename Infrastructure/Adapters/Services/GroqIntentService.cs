@@ -108,15 +108,7 @@ namespace Infrastructure.Adapters.Services
             // ==============================================================================
             // 2. CAPA LLM — GROQ
             // ==============================================================================
-            _logger.LogInformation("Consultando Groq ({Model}) para intención compleja.", _groqSettings.Model);
-
-            // Validar que la API key esté configurada
-            if (string.IsNullOrWhiteSpace(_groqSettings.ApiKey))
-            {
-                const string noKeyMsg = "⚠️ No se ha configurado la API Key de Groq. " +
-                                        "Agrega tu key en appsettings.Development.json bajo 'Groq:ApiKey'.";
-                return await SaveContext(context, prompt, noKeyMsg, ct);
-            }
+            _logger.LogInformation("Consultando Groq para intención compleja.");
 
             var systemPrompt = @"Eres un asistente de TrackingTasksOp para gestión de proyectos en OpenProject.
 

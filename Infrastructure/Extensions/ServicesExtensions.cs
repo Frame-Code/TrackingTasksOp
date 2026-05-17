@@ -34,9 +34,12 @@ public static class ServicesExtensions
         
         //Settings
         collection.Configure<RedisSettings>(configuration.GetSection("RedisSettings"));
-        collection.Configure<GeminiSettings>(configuration.GetSection("GeminiSettings"));
-        collection.Configure<OllamaSettings>(configuration.GetSection("OllamaSettings"));
-        collection.Configure<GroqSettings>(configuration.GetSection("Groq"));
+        var aiModel = configuration.GetSection("AIModel")
+            .GetChildren()
+            .First();
+        collection.Configure<GroqSettings>(aiModel);
+        //collection.Configure<GeminiSettings>(aiModel);
+        //collection.Configure<OllamaSettings>(aiModel);
 
         //Use cases
         collection.AddScoped<IListsWorkPackagesCommand, ListsWorkPackagesCommandImpl>();
@@ -77,9 +80,6 @@ public static class ServicesExtensions
                 ConnectionMultiplexer.Connect(redisSettings.Configuration));
         }
         
-        // collection.AddGoogleClients(configuration); // Comentado - El nuevo GeminiIntentService ya no necesita el PredictionServiceClient inyectado.
-
-
         return collection;
     }
 
