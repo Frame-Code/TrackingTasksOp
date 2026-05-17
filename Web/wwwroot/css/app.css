@@ -63,6 +63,60 @@
 .status-hold         { background-color: #ffc107 !important; color: #000 !important; }
 .status-default      { background-color: #495057 !important; }
 
+/* ── Task ID prefix ─────────────────────────────────────────────── */
+.card-title .text-muted {
+    font-size: .8em;
+    letter-spacing: 0;
+}
+
+/* ── Progress slider con fill azul ──────────────────────────────── */
+.wp-progress-input {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 5px;
+    padding: 0;
+    border-radius: 3px;
+    cursor: pointer;
+    outline: none;
+    /* El background se sobreescribe por JS con el gradiente correcto */
+    background: rgba(255,255,255,0.15);
+}
+
+/* Thumb — webkit */
+.wp-progress-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #0d6efd;
+    cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.25);
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.wp-progress-input::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 0 4px rgba(13,110,253,0.25);
+}
+
+/* Thumb — firefox */
+.wp-progress-input::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #0d6efd;
+    cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.25);
+}
+
+/* Track — firefox */
+.wp-progress-input::-moz-range-track {
+    height: 5px;
+    border-radius: 3px;
+    background: transparent;
+}
+
 /* ── Status change dropdown ─────────────────────────────────────── */
 .status-badge-btn {
     cursor: pointer;

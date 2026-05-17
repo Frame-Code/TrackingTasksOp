@@ -44,6 +44,7 @@ public static class ServicesExtensions
         collection.AddScoped<IUpdateWorkPackageCommand, UpdateWorkPackageCommandImpl>();
         collection.AddScoped<IStartTaskCommand, StartTaskCommandImpl>();
         collection.AddScoped<IEndTaskSessionCommand, EndTaskSessionCommandImpl>();
+        collection.AddScoped<ICancelTaskSessionCommand, CancelTaskSessionCommandImpl>();
         collection.AddScoped<IAddTimeEntryCommand, AddTimeEntryCommandImpl>();
         collection.AddScoped<IRegisterLocalUserCommand, RegisterLocalUserCommandImpl>();
         collection.AddScoped<ILoginLocalUserCommand, LoginLocalUserCommandImpl>();

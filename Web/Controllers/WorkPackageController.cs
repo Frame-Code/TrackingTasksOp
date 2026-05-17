@@ -28,4 +28,18 @@ public class WorkPackageController(
         await updateCommand.Execute(id, statusId: request.StatusId);
         return NoContent();
     }
+
+    [HttpPatch("{id:int}/progress")]
+    public async Task<IActionResult> UpdateProgress(int id, [FromBody] UpdateWorkPackageProgressRequest request)
+    {
+        await updateCommand.Execute(id, percentageDone: request.PercentageDone);
+        return NoContent();
+    }
+
+    [HttpPatch("{id:int}/dates")]
+    public async Task<IActionResult> UpdateDates(int id, [FromBody] UpdateWorkPackageDatesRequest request)
+    {
+        await updateCommand.Execute(id, startDate: request.StartDate, dueDate: request.DueDate);
+        return NoContent();
+    }
 }

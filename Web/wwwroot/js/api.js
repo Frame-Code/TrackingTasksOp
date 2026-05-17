@@ -91,3 +91,24 @@ export async function patchWorkPackageStatus(wpId, statusId) {
         body: JSON.stringify({ statusId })
     });
 }
+
+export async function patchWorkPackageProgress(wpId, percentageDone) {
+    return apiFetch(`${API}/workpackage/${wpId}/progress`, {
+        method: 'PATCH',
+        body: JSON.stringify({ percentageDone })
+    });
+}
+
+export async function patchWorkPackageDates(wpId, startDate, dueDate) {
+    return apiFetch(`${API}/workpackage/${wpId}/dates`, {
+        method: 'PATCH',
+        body: JSON.stringify({ startDate, dueDate })
+    });
+}
+
+export async function postCancelSession(workPackageId) {
+    return apiFetch(`${API}/task/cancel_session`, {
+        method: 'POST',
+        body: JSON.stringify({ workPackageId })
+    });
+}

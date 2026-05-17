@@ -35,7 +35,9 @@ public class EndTaskSessionCommandTests
 
         var updateMock = new Mock<IUpdateWorkPackageCommand>();
         updateMock
-            .Setup(x => x.Execute(It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<int?>()))
+            .Setup(x => x.Execute(
+                It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<int?>(),
+                It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
         var useCase = new EndTaskSessionCommandImpl(
@@ -102,10 +104,8 @@ public class EndTaskSessionCommandTests
             r.Hours == 2.5)), Times.Once);
         repoMock.Verify(x => x.SaveAsync(task), Times.Once);
         updateMock.Verify(x => x.Execute(
-            It.IsAny<int>(),
-            It.IsAny<int?>(),
-            It.IsAny<int?>(),
-            It.IsAny<int?>()), Times.Never);
+            It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<int?>(),
+            It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Never);
     }
 
     [Fact]
@@ -150,7 +150,8 @@ public class EndTaskSessionCommandTests
         await useCase.Execute(request);
 
         Assert.Equal(5, task.StatusTaskId);
-        updateMock.Verify(x => x.Execute(1, 5, null, null), Times.Once);
+        updateMock.Verify(x => x.Execute(
+            1, 5, null, null, null, It.IsAny<string?>(), It.IsAny<string?>()), Times.Once);
     }
 
     [Fact]
@@ -172,10 +173,8 @@ public class EndTaskSessionCommandTests
 
         Assert.Equal(7, task.StatusTaskId);
         updateMock.Verify(x => x.Execute(
-            It.IsAny<int>(),
-            It.IsAny<int?>(),
-            It.IsAny<int?>(),
-            It.IsAny<int?>()), Times.Never);
+            It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<int?>(),
+            It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Never);
     }
 
     [Fact]
@@ -197,10 +196,8 @@ public class EndTaskSessionCommandTests
 
         Assert.Equal(7, task.StatusTaskId);
         updateMock.Verify(x => x.Execute(
-            It.IsAny<int>(),
-            It.IsAny<int?>(),
-            It.IsAny<int?>(),
-            It.IsAny<int?>()), Times.Never);
+            It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<int?>(),
+            It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Never);
     }
 
     [Fact]
