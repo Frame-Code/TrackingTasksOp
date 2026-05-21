@@ -1,4 +1,5 @@
-﻿using Infrastructure.DataAccess;
+﻿using Infrastructure.Adapters.Auth;
+using Infrastructure.DataAccess;
 using Infrastructure.DataAccess.Entities;
 using Infrastructure.Settings;
 using Microsoft.AspNetCore.Identity;
@@ -27,7 +28,8 @@ public static class IdentityExtensions
             opt.User.RequireUniqueEmail = settings.User.RequireUniqueEmail;
         })
         .AddEntityFrameworkStores<TrackingTasksDbContext>()
-        .AddDefaultTokenProviders();
+        .AddDefaultTokenProviders()
+        .AddClaimsPrincipalFactory<ApplicationUserClaimsPrincipalFactory>();
 
         services.ConfigureApplicationCookie(opt =>
         {
