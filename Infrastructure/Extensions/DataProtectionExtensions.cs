@@ -11,11 +11,16 @@ public static class DataProtectionExtensions
     {
         var settings = configuration.GetSection("DataProtectionSettings").Get<DataProtectionSettings>()
             ?? throw new Exception("DataProtectionSettings not found");
-        
-        Directory.CreateDirectory(settings.KeyRingPath);
+
+        // Carpeta de datos de aplicación del usuario actual: independiente del SO
+        // (Windows: %LOCALAPPDATA%, Linux: ~/.local/share, macOS: ~/Library/Application Support)
+        var basePath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var keyRingPath = Path.Combine(basePath, settings.ApplicationName, "Keys");
+
+        Directory.CreateDirectory(keyRingPath);
         services.AddDataProtection()
             .SetApplicationName(settings.ApplicationName)
-            .PersistKeysToFileSystem(new DirectoryInfo(settings.KeyRingPath));
+            .PersistKeysToFileSystem(new DirectoryInfo(keyRingPath));
         return services;
     }
 }
