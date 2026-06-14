@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using Application.Dto.Auth;
+﻿using Application.Dto.Auth;
 using Application.Ports.Services;
 using Application.Ports.UseCases.Auth;
 using Infrastructure.DataAccess.Entities;
@@ -59,9 +58,6 @@ public class AuthController(
             ?? throw new ApplicationException($"User with email {response.Data.Email} not found after registration");
 
         var principal = await signInManager.CreateUserPrincipalAsync(appUser);
-        var identity = principal.Identity as ClaimsIdentity;
-        identity?.AddClaim(new Claim("OpenProjectInstanceBaseUrl", appUser.OpenProjectInstanceBaseUrl));
-        identity?.AddClaim(new Claim("OpenProjectInstanceId", appUser.OpenProjectInstanceId.ToString()));
         await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal);
         var initializeRequest = new InitializeInstanceRequest
         {
@@ -94,9 +90,6 @@ public class AuthController(
             ?? throw new ApplicationException($"User with email {response.Data.Email} not found after login");
 
         var principal = await signInManager.CreateUserPrincipalAsync(appUser);
-        var identity = principal.Identity as ClaimsIdentity;
-        identity?.AddClaim(new Claim("OpenProjectInstanceBaseUrl", appUser.OpenProjectInstanceBaseUrl));
-        identity?.AddClaim(new Claim("OpenProjectInstanceId", appUser.OpenProjectInstanceId.ToString()));
         await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal);
 
         return Ok(response.Data);

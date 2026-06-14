@@ -9,6 +9,7 @@ namespace Application.Dto.ListWorkPackages
     public record ListsWorkPackagesRequest (
         int? ProjectId,
         int offset,
-        int pageSize
+        int pageSize,
+        int? StatusId = null
     ){}
 }

@@ -11,4 +11,7 @@ public class StarTaskRequest
     public int StatusId { get; init; }
     public int? AssigneeId { get; init; }
     public int? ResponsibleId { get; init; }
+    public DateOnly? StartDate { get; init; }
+    public DateOnly? DueDate { get; init; }
+    public Dictionary<string, int>? CustomFieldOptionIds { get; init; }
 }

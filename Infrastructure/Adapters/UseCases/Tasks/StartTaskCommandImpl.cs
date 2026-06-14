@@ -12,16 +12,23 @@ using Infrastructure.Adapters.Services;
 using TaskEntity = Domain.Entities.TrackingTasksEntities.Task;
 
 namespace Infrastructure.Adapters.UseCases.Tasks;
-public class StartTaskCommandImpl(
-    ITaskRepository repository,
-    IProjectRepository projectRepository, 
-    IAddTimeEntryCommand addTimeEntryCommand,
-    ICreateWorkPackageCommand createWorkPackageCommand,
-    CurrentUser currentUser,
-    IProjectOpService projectOpService ) : IStartTaskCommand
+
+
+    public class StartTaskCommandImpl(
+        ITaskRepository repository,
+           IProjectRepository projectRepository,
+          IAddTimeEntryCommand addTimeEntryCommand,
+          ICreateWorkPackageCommand createWorkPackageCommand,
+          IProjectOpService projectOpService,
+          CurrentUser currentUser
+       ) : IStartTaskCommand
 {
    public async Task<TaskEntity> Execute(StarTaskRequest request)
     {
+        var userId = currentUser.UserId
+            ?? throw new Exception("No se pudo determinar el usuario actual.");
+        var openProjectInstanceId = currentUser.OpenProjectInstanceId
+            ?? throw new Exception("El usuario actual no tiene una instancia de OpenProject configurada.");
 
         // 1. Buscar el proyecto por su nombre/identificador
         var project = await projectRepository.GetByIdAsync(request.ProjectId);
@@ -39,7 +46,8 @@ public class StartTaskCommandImpl(
                     Id = opProject.Id,
                     Name = opProject.Name,
                     Identifier = opProject.Identifier,
-                    IsActive = opProject.IsActive
+                    IsActive = opProject.IsActive,
+                    OpenProjectInstanceId = openProjectInstanceId
                 };
                 await projectRepository.SaveAsync(project);
             }
@@ -72,7 +80,10 @@ public class StartTaskCommandImpl(
                     null, // PriorityId opcional
                     request.Description,
                     request.AssigneeId,
-                    request.ResponsibleId
+                    request.ResponsibleId,
+                    request.StartDate,
+                    request.DueDate,
+                    request.CustomFieldOptionIds
                 );
                 var opWorkPackage = await createWorkPackageCommand.Execute(createRequest);
                 workPackageId = opWorkPackage.Id;
@@ -81,12 +92,12 @@ public class StartTaskCommandImpl(
             task = new TaskEntity
             {
                 WorkPackageId = workPackageId,
+                UserId = userId,
+                OpenProjectInstanceId = openProjectInstanceId,
                 Name = request.Name,
                 Description = request.Description,
                 ProjectId = request.ProjectId,
                 StatusTaskId = request.StatusId,
-                UserId = currentUser?.UserId!,
-                OpenProjectInstanceId = Convert.ToInt32(currentUser?.OpenProjectInstanceId!),
             };
         }
 
@@ -126,6 +137,7 @@ public class StartTaskCommandImpl(
         //Crear la nueva entrada de tiempo
         var detail = new TaskTimeDetail
         {
+            UserId = userId,
             IdTask = task.WorkPackageId
         };
 
