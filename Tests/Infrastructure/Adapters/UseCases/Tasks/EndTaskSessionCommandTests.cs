@@ -264,6 +264,29 @@ public class EndTaskSessionCommandTests
     }
 
     [Fact]
+    public async Task Execute_LastDetailAlreadyUploaded_DoesNotDuplicateTimeEntry()
+    {
+        // La sesión ya fue cerrada y subida (ej. por una pausa previa); al finalizar la tarea
+        // no debe registrarse el tiempo nuevamente.
+        var detail = new TaskTimeDetail
+        {
+            Id = 1,
+            StartTime = new DateTime(2026, 5, 1, 10, 0, 0),
+            EndTime = new DateTime(2026, 5, 1, 11, 0, 0),
+            Uploaded = true
+        };
+        var task = BuildTask(detail);
+        var (useCase, repoMock, addMock, _, _) = BuildUseCase(task);
+        var request = new EndTaskSessionRequest(1, 2, "cerrar tras pausa");
+
+        await useCase.Execute(request);
+
+        Assert.True(detail.Uploaded);
+        addMock.Verify(x => x.Execute(It.IsAny<AddTimeEntryRequest>()), Times.Never);
+        repoMock.Verify(x => x.SaveAsync(task), Times.Once);
+    }
+
+    [Fact]
     public async Task Execute_PicksLatestTimeDetailByStartTime()
     {
         var oldest = new TaskTimeDetail

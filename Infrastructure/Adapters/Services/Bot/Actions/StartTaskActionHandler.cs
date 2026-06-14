@@ -87,6 +87,18 @@ public class StartTaskActionHandler(
             }
         }
 
+        string assigneeName = GroqActionParams.GetStr(p, "assigneeName", "assignee");
+        string responsibleName = GroqActionParams.GetStr(p, "responsibleName", "responsible");
+
+        int? assigneeId = await entityResolver.ResolveUserId(assigneeName, projId);
+        int? responsibleId = await entityResolver.ResolveUserId(responsibleName, projId);
+
+        if (!string.IsNullOrEmpty(assigneeName) && !assigneeId.HasValue)
+            throw new Exception($"No pude encontrar al usuario '{assigneeName}' para asignarlo. Verifica el nombre o usa 'listar usuarios del proyecto'.");
+
+        if (!string.IsNullOrEmpty(responsibleName) && !responsibleId.HasValue)
+            throw new Exception($"No pude encontrar al usuario '{responsibleName}' como responsable. Verifica el nombre o usa 'listar usuarios del proyecto'.");
+
         var startReq = new StarTaskRequest
         {
             ProjectId = projId.Value,
@@ -96,8 +108,8 @@ public class StartTaskActionHandler(
             Description = GroqActionParams.GetStr(p, "description"),
             ActivityId = GroqActionParams.GetNullableInt(p, "activityId"),
             Comment = GroqActionParams.GetStr(p, "comment"),
-            AssigneeId = await entityResolver.ResolveUserId(GroqActionParams.GetStr(p, "assigneeName", "assignee"), projId),
-            ResponsibleId = await entityResolver.ResolveUserId(GroqActionParams.GetStr(p, "responsibleName", "responsible"), projId),
+            AssigneeId = assigneeId,
+            ResponsibleId = responsibleId,
             StartDate = GroqActionParams.GetDate(p, "startDate"),
             DueDate = GroqActionParams.GetDate(p, "dueDate"),
             CustomFieldOptionIds = customFieldOptionIds

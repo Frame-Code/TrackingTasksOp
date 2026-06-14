@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using Application.Dto.WorkPackages;
+using Application.Ports.Auth;
 using Infrastructure.Adapters.Services;
 using Infrastructure.Adapters.Services.Bot;
 using Infrastructure.Adapters.UseCases.WorkPackages;
@@ -21,6 +22,15 @@ public class StartTaskIntegrationTests
     private const string OpenProjectBaseUrl = "http://localhost:8081";
     private static readonly string ApiKey =
         Environment.GetEnvironmentVariable("OPENPROJECT_TEST_API_KEY") ?? "YOUR_OPENPROJECT_API_KEY";
+
+    private class FakeCurrentUser : CurrentUser
+    {
+        public override string? UserId => "user-1";
+        public override bool IsAuthenticated => true;
+        public override string? OpenProjectInstanceUrl => OpenProjectBaseUrl;
+        public override int? OpenProjectInstanceId => 2;
+        public override int? OpenProjectUserId => null;
+    }
 
     private static IHttpClientFactory BuildRealHttpClientFactory()
     {
@@ -43,7 +53,8 @@ public class StartTaskIntegrationTests
         var resolver = new OpenProjectEntityResolver(
             new ProjectOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
             new StatusOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
-            new UserOpServiceImpl(factory, NullLogger<UserOpServiceImpl>.Instance));
+            new UserOpServiceImpl(factory, NullLogger<UserOpServiceImpl>.Instance),
+            new FakeCurrentUser());
 
         var projectId = await resolver.ResolveProjectId("sexitoanalsito");
         Assert.NotNull(projectId);
@@ -61,7 +72,8 @@ public class StartTaskIntegrationTests
         var resolver = new OpenProjectEntityResolver(
             new ProjectOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
             new StatusOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
-            new UserOpServiceImpl(factory, NullLogger<UserOpServiceImpl>.Instance));
+            new UserOpServiceImpl(factory, NullLogger<UserOpServiceImpl>.Instance),
+            new FakeCurrentUser());
 
         var ex = await Assert.ThrowsAsync<Exception>(() => resolver.ResolveUserId("Stin Sanchez"));
 
@@ -78,7 +90,8 @@ public class StartTaskIntegrationTests
         var resolver = new OpenProjectEntityResolver(
             new ProjectOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
             new StatusOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
-            new UserOpServiceImpl(factory, NullLogger<UserOpServiceImpl>.Instance));
+            new UserOpServiceImpl(factory, NullLogger<UserOpServiceImpl>.Instance),
+            new FakeCurrentUser());
         var createCommand = new CreateWorkPackageCommandImpl(factory, NullLogger<CreateWorkPackageCommandImpl>.Instance);
 
         var projectId = await resolver.ResolveProjectId("sexitoanalsito");
@@ -100,7 +113,8 @@ public class StartTaskIntegrationTests
         var resolver = new OpenProjectEntityResolver(
             new ProjectOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
             new StatusOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
-            new UserOpServiceImpl(factory, NullLogger<UserOpServiceImpl>.Instance));
+            new UserOpServiceImpl(factory, NullLogger<UserOpServiceImpl>.Instance),
+            new FakeCurrentUser());
         var createCommand = new CreateWorkPackageCommandImpl(factory, NullLogger<CreateWorkPackageCommandImpl>.Instance);
 
         var projectId = await resolver.ResolveProjectId("sexoanal");

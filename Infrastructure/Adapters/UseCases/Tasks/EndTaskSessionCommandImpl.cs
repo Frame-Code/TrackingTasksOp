@@ -35,15 +35,20 @@ public class EndTaskSessionCommandImpl
                 lastTimeDetails.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(20, 40));
         }
 
-        var activityId = request.ActivityId is > 0
-            ? request.ActivityId.Value
-            : await ResolveDefaultActivityId(request.WorkPackageId);
+        // Si la última sesión ya fue subida (ej. porque la tarea se pausó y reanudó sin
+        // generar una nueva sesión), no volvemos a registrar el tiempo para evitar duplicados.
+        if (!lastTimeDetails.Uploaded)
+        {
+            var activityId = request.ActivityId is > 0
+                ? request.ActivityId.Value
+                : await ResolveDefaultActivityId(request.WorkPackageId);
 
-        var timeEntryRequest = new AddTimeEntryRequest(request.WorkPackageId, activityId,
-            lastTimeDetails.GetHoursWorked()!.Value.TotalHours, request.Comment);
+            var timeEntryRequest = new AddTimeEntryRequest(request.WorkPackageId, activityId,
+                lastTimeDetails.GetHoursWorked()!.Value.TotalHours, request.Comment);
 
-        await addTimeEntryCommand.Execute(timeEntryRequest);
-        lastTimeDetails.Uploaded = true;
+            await addTimeEntryCommand.Execute(timeEntryRequest);
+            lastTimeDetails.Uploaded = true;
+        }
 
         // Persistimos el registro de tiempo de inmediato: si el cambio de estado falla
         // después, no debe perderse ni duplicarse al reintentar.

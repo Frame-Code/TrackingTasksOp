@@ -22,6 +22,6 @@ public class PauseTaskActionHandler(
         int? onHoldStatusId = await entityResolver.ResolveStatusId(statusToResolve);
 
         await pauseTaskCommand.Execute(new PauseTaskRequest(wpId, onHoldStatusId));
-        return $"⏸️ Tarea #{wpId} pausada. El tiempo transcurrido se guardó localmente (no se subió a OpenProject todavía).";
+        return $"⏸️ Tarea #{wpId} pausada. El tiempo transcurrido se registró en OpenProject.";
     }
 }

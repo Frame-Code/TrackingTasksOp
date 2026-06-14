@@ -6,4 +6,5 @@ public abstract class CurrentUser
     public abstract bool IsAuthenticated { get; }
     public abstract string? OpenProjectInstanceUrl { get; }
     public abstract int? OpenProjectInstanceId { get; }
+    public abstract int? OpenProjectUserId { get; }
 }
