@@ -51,13 +51,13 @@ El bot procesa cada mensaje del usuario en capas, en este orden:
    - Proyecto (si no lo das, el bot probablemente no podrá resolver `projectId` y fallará).
    - Si quieres evitar la pregunta de confirmación, da también: estado, fechas, descripción y a quién asignarla.
    - Ejemplo completo:
-     > "Crea una tarea 'Revisar PR #45' en el proyecto eProduction, estado New, asígnala a Stin Sanchez, con fecha de inicio hoy y fin el viernes."
+     > "Crea una tarea 'Revisar PR #45' en el proyecto Tracking Task, estado New, asígnala a Stin Sanchez, con fecha de inicio hoy y fin el viernes."
    - Ejemplo mínimo (el bot preguntará por los valores por defecto antes de crear):
-     > "Crea una tarea 'Revisar PR #45' en eProduction"
+     > "Crea una tarea 'Revisar PR #45' en Tracking Task"
      >
      > → El bot responderá explicando qué valores por defecto usará (fecha de hoy, sin asignar, etc.) y pedirá confirmación ("sí", "dale", "confirmo", "adelante", "procede").
 
-3. **Si el proyecto tiene campos personalizados obligatorios** (ej. "Area", "Modulo" en eProduction), el bot los pedirá automáticamente la primera vez que intentes crear una tarea ahí. Responde con los valores exactos que te ofrezca (son opciones predefinidas, no texto libre).
+3. **Si el proyecto tiene campos personalizados obligatorios** (ej. "Area", "Modulo" en Tracking Task ), el bot los pedirá automáticamente la primera vez que intentes crear una tarea ahí. Responde con los valores exactos que te ofrezca (son opciones predefinidas, no texto libre).
 
 4. **Para acciones sobre tareas existentes** (`resume_task`, `pause_task`, `end_task_session`, `update_task_status`, `assign_user_to_task`, `update_progress`, `update_task_dates`), **siempre incluye el número de tarea** (`#1134`, `tarea 1134`, `ID 1134`, `work package 1134`). El bot lo toma literalmente y ejecuta sin pedir confirmación adicional — si el ID no existe, OpenProject devolverá el error correspondiente.
    - Ejemplos válidos: *"Pausa la tarea #1134"*, *"Cambia el estado de la tarea 1134 a Developed"*, *"Asigna la tarea #1134 a Juan"*.
@@ -91,8 +91,8 @@ El bot procesa cada mensaje del usuario en capas, en este orden:
 Listar proyectos
 ¿Qué tengo pendiente hoy?
 Ver estados disponibles
-Muéstrame los usuarios del proyecto eProduction
-Crea una tarea "Corregir bug de login" en eProduction, estado New, asígnala a Stin Sanchez, descripción "El login falla con OAuth", fecha de inicio hoy y fin el viernes
+Muéstrame los usuarios del proyecto Tracking Task
+Crea una tarea "Corregir bug de login" en Tracking Task sexy girl , estado New, asígnala a Stin Sanchez, descripción "El login falla con OAuth", fecha de inicio hoy y fin el viernes
 Reanuda el seguimiento de la tarea #1134
 Pausa la tarea #1134
 Finaliza la sesión de la tarea #1134 con el comentario "Avance del día" y cámbiala a estado Developed
