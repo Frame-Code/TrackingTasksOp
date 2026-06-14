@@ -13,19 +13,13 @@ un `IDataProtector` a partir del *key ring* configurado en
 
 ## Dónde se guardan las claves (key ring)
 
-Las claves criptográficas (los archivos `key-<guid>.xml`) se guardan en la carpeta
-de datos de aplicación **del usuario del sistema operativo actual**, usando
-`Environment.SpecialFolder.LocalApplicationData`:
+Las claves criptográficas (los archivos `key-<guid>.xml`) se guardan en
+**`Web/Keys/`**, dentro del propio proyecto (`ContentRootPath`), independientemente
+del SO, de la terminal o del usuario que ejecute la app.
 
-| SO | Ruta |
-|---|---|
-| Windows | `%LOCALAPPDATA%\TrackingTaskOp\Keys` (ej. `C:\Users\<usuario>\AppData\Local\TrackingTaskOp\Keys`) |
-| Linux | `~/.local/share/TrackingTaskOp/Keys` |
-| macOS | `~/Library/Application Support/TrackingTaskOp/Keys` |
-
-El nombre de la subcarpeta (`TrackingTaskOp`) viene de `DataProtectionSettings:ApplicationName`
-en `appsettings.json`. **No se necesita configurar ninguna ruta** — la carpeta se crea
-sola en el primer arranque (`Directory.CreateDirectory`).
+**No se necesita configurar ninguna ruta** — la carpeta se crea sola en el primer
+arranque (`Directory.CreateDirectory`). `Web/Keys/` está en `.gitignore`: es local
+de cada copia del repo y nunca debe commitearse.
 
 ```jsonc
 // Web/appsettings.json
@@ -55,22 +49,29 @@ en la base de datos dejaba de poder descifrarse:
 System.Security.Cryptography.CryptographicException: The key {xxxxxxxx-...} was not found in the key ring.
 ```
 
-Con `LocalApplicationData` este problema no vuelve a ocurrir: la ruta es siempre la
-misma, correcta para el SO, no depende de la carpeta desde la que se ejecuta `dotnet run`,
-y no vive dentro del repositorio (por lo tanto nunca se commitea por error).
+Se evaluó primero usar `Environment.SpecialFolder.LocalApplicationData`
+(`~/.local/share` en Linux, `%LOCALAPPDATA%` en Windows), pero en Linux esa ruta
+depende de la variable de entorno `XDG_DATA_HOME`, que algunas terminales
+(p. ej. la integrada de VS Code instalado como *snap*) sobreescriben a una ruta
+distinta (`~/snap/code/<rev>/.local/share`). Esto provocaba que, según desde qué
+terminal se ejecutara `dotnet run`, la app generara/buscara el keyring en una
+carpeta distinta — mismo problema de fondo, distinto disfraz.
+
+La solución final usa `Web/Keys/` (relativo al `ContentRootPath` del proyecto):
+siempre la misma ruta, sin importar el SO, la terminal, variables de entorno o el
+usuario que ejecute la app.
 
 ## Configuración para un dev nuevo
 
 **No requiere ninguna configuración manual.** Al clonar el repo y ejecutar la app por
 primera vez:
 
-1. `Directory.CreateDirectory` crea automáticamente la carpeta del key ring
-   (`~/.local/share/TrackingTaskOp/Keys` en Linux, etc.) si no existe.
+1. `Directory.CreateDirectory` crea automáticamente `Web/Keys/` si no existe.
 2. ASP.NET Core genera ahí una clave nueva la primera vez que se necesita cifrar/descifrar
    algo.
-3. Mientras `DataProtectionSettings:ApplicationName` no cambie y esa carpeta no se borre,
+3. Mientras `DataProtectionSettings:ApplicationName` no cambie y `Web/Keys/` no se borre,
    los API keys de OpenProject que el usuario registre seguirán siendo descifrables en
-   reinicios sucesivos de la app.
+   reinicios sucesivos de la app, sin importar desde qué terminal se ejecute.
 
 ### Importante: no cambiar `ApplicationName` a la ligera
 
@@ -88,11 +89,10 @@ packages. La única solución es volver a registrar tu API key de OpenProject
 
 ## Despliegue como servicio (producción)
 
-Si la app corre como **servicio de Windows** bajo una cuenta de servicio (no un
-usuario interactivo), `LocalApplicationData` resuelve a la carpeta de perfil de esa
-cuenta de servicio. Asegúrate de que dicha cuenta tenga un perfil de usuario cargable
-y permisos de escritura sobre su propia carpeta `AppData\Local` (esto es el
-comportamiento por defecto; no suele requerir configuración adicional).
+Al correr como **servicio de Windows**, `ContentRootPath` es la carpeta donde se
+publicó la app (`./publish`), así que el keyring quedará en `./publish/Keys`.
+Asegúrate de que la cuenta con la que corre el servicio tenga permisos de escritura
+sobre esa carpeta.
 
 Si en el futuro se necesita **compartir el key ring entre varias instancias/máquinas**
 (por ejemplo, balanceo de carga), se debe volver a introducir una ruta explícita
