@@ -9,6 +9,8 @@ using Infrastructure.Adapters.Auth;
 using Infrastructure.Adapters.Http;
 using Infrastructure.Adapters.Repositories;
 using Infrastructure.Adapters.Services;
+using Infrastructure.Adapters.Services.Bot;
+using Infrastructure.Adapters.Services.Bot.Actions;
 using Infrastructure.Adapters.UseCases;
 using Infrastructure.Adapters.UseCases.Auth;
 using Infrastructure.Adapters.UseCases.Tasks;
@@ -45,9 +47,12 @@ public static class ServicesExtensions
         collection.AddScoped<IListsWorkPackagesCommand, ListsWorkPackagesCommandImpl>();
         collection.AddScoped<ICreateWorkPackageCommand, CreateWorkPackageCommandImpl>();
         collection.AddScoped<IUpdateWorkPackageCommand, UpdateWorkPackageCommandImpl>();
+        collection.AddScoped<IGetWorkPackageCommand, GetWorkPackageCommandImpl>();
         collection.AddScoped<IStartTaskCommand, StartTaskCommandImpl>();
         collection.AddScoped<IEndTaskSessionCommand, EndTaskSessionCommandImpl>();
         collection.AddScoped<ICancelTaskSessionCommand, CancelTaskSessionCommandImpl>();
+        collection.AddScoped<IPauseTaskCommand, PauseTaskCommandImpl>();
+        collection.AddScoped<IResumeTaskCommand, ResumeTaskCommandImpl>();
         collection.AddScoped<IAddTimeEntryCommand, AddTimeEntryCommandImpl>();
         collection.AddScoped<IRegisterLocalUserCommand, RegisterLocalUserCommandImpl>();
         collection.AddScoped<ILoginLocalUserCommand, LoginLocalUserCommandImpl>();
@@ -71,7 +76,25 @@ public static class ServicesExtensions
         // AI Services
         collection.AddScoped<IAiIntentService, GroqIntentService>();
         collection.AddScoped<IConversationContextService, RedisConversationService>();
-        
+
+        // Bot - Groq adapter
+        collection.AddScoped<IGroqApiClient, GroqApiClient>();
+        collection.AddScoped<IBotIntentInterceptor, HeuristicIntentInterceptor>();
+        collection.AddScoped<IOpenProjectEntityResolver, OpenProjectEntityResolver>();
+        collection.AddScoped<IBotActionExecutor, BotActionExecutor>();
+        collection.AddScoped<IBotActionHandler, ListProjectsActionHandler>();
+        collection.AddScoped<IBotActionHandler, ListTasksActionHandler>();
+        collection.AddScoped<IBotActionHandler, ListStatusesActionHandler>();
+        collection.AddScoped<IBotActionHandler, StartTaskActionHandler>();
+        collection.AddScoped<IBotActionHandler, AssignUserToTaskActionHandler>();
+        collection.AddScoped<IBotActionHandler, EndTaskSessionActionHandler>();
+        collection.AddScoped<IBotActionHandler, UpdateTaskStatusActionHandler>();
+        collection.AddScoped<IBotActionHandler, ListProjectUsersActionHandler>();
+        collection.AddScoped<IBotActionHandler, UpdateProgressActionHandler>();
+        collection.AddScoped<IBotActionHandler, UpdateTaskDatesActionHandler>();
+        collection.AddScoped<IBotActionHandler, PauseTaskActionHandler>();
+        collection.AddScoped<IBotActionHandler, ResumeTaskActionHandler>();
+
         // Infrastructure Clients
         var redisSettings = configuration.GetSection("RedisSettings").Get<RedisSettings>();
         if (redisSettings != null)

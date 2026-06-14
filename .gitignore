@@ -6,6 +6,7 @@
 ## Private files
 .env
 http-client.private.env.json
+.claude/
 
 ##Config files
 Web/appsettings.Development.json

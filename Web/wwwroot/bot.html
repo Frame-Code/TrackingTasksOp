@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TrackingTasksOp Bot</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
             /* Colores oficiales Dark Mode */
@@ -15,16 +18,17 @@
             --text-secondary: #c4c7c5;
             --accent-blue: #4d90fe;
             --user-msg-bg: #2b2c2f;
-            --bot-msg-bg: transparent;
+            --bot-msg-bg: #1c1d1f;
             --border-color: #444746;
             --hover-bg: #333537;
+            --code-bg: #2a2b2d;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Google Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', 'Google Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
 
         body {
@@ -47,19 +51,61 @@
 
         /* Header */
         .header {
-            padding: 16px 24px;
+            padding: 14px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            background-color: rgba(19, 19, 20, 0.85);
+            backdrop-filter: blur(10px);
             z-index: 10;
         }
 
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.05rem;
+            background: linear-gradient(135deg, #4285f4, #9b72cb);
+            box-shadow: 0 0 0 4px rgba(77, 144, 254, 0.08);
+        }
+
         .header h1 {
-            font-size: 1.25rem;
-            font-weight: 500;
+            font-size: 1.3rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
             background: linear-gradient(90deg, #4285f4, #9b72cb, #d96570);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            line-height: 1.3;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .status-online-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background-color: #81c995;
+            box-shadow: 0 0 0 3px rgba(129, 201, 149, 0.18);
         }
 
         .nav-back {
@@ -123,9 +169,180 @@
 
         .message-content {
             flex: 1;
-            line-height: 1.6;
-            font-size: 1rem;
+            line-height: 1.7;
+            font-size: 0.975rem;
+            letter-spacing: 0.005em;
             word-wrap: break-word;
+        }
+
+        .message-content p {
+            margin-bottom: 10px;
+        }
+
+        .message-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message-content strong {
+            font-weight: 600;
+            color: #f1f3f4;
+        }
+
+        .message-content ul {
+            list-style: none;
+            margin: 6px 0 12px 0;
+            padding-left: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .message-content ul li {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px 12px;
+            padding: 7px 10px;
+            border-radius: 8px;
+            transition: background 0.15s;
+        }
+
+        .message-content ul li:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .message-content ul li .task-label {
+            flex: 1 1 200px;
+            min-width: 0;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .message-content ul li .status-badge {
+            margin-left: auto;
+        }
+
+        /* Título de listado de tareas (ej. "📝 Tus Tareas Pendientes:") */
+        .message-content .task-list-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #f1f3f4;
+            margin: 2px 0 8px 0;
+        }
+
+        /* Encabezado de grupo por proyecto (ej. "📁 eProduction") */
+        .message-content .task-group-header {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin: 14px 0 4px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .message-content .task-group-header:first-child {
+            margin-top: 0;
+        }
+
+        /* Insignias de estado (ej. "Estado: Developed") */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 3px 10px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        .status-badge .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: currentColor;
+        }
+
+        .status-badge.status-new {
+            background-color: rgba(95, 99, 104, 0.25);
+            color: #c4c7c5;
+        }
+
+        .status-badge.status-progress {
+            background-color: rgba(77, 144, 254, 0.18);
+            color: #8ab4f8;
+        }
+
+        .status-badge.status-developed {
+            background-color: rgba(155, 114, 203, 0.18);
+            color: #c58af9;
+        }
+
+        .status-badge.status-testing {
+            background-color: rgba(251, 188, 4, 0.18);
+            color: #fdd663;
+        }
+
+        .status-badge.status-hold {
+            background-color: rgba(255, 138, 101, 0.18);
+            color: #ffab91;
+        }
+
+        .status-badge.status-closed {
+            background-color: rgba(52, 168, 83, 0.18);
+            color: #81c995;
+        }
+
+        .status-badge.status-rejected {
+            background-color: rgba(217, 101, 112, 0.18);
+            color: #f28b82;
+        }
+
+        .status-badge.status-default {
+            background-color: rgba(255, 255, 255, 0.06);
+            color: var(--text-secondary);
+        }
+
+        .message-content h4 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin: 14px 0 6px 0;
+            color: #f1f3f4;
+        }
+
+        .message-content code {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.85em;
+            background-color: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #f1c40f;
+        }
+
+        .message-content pre {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.85em;
+            background-color: var(--code-bg);
+            padding: 12px 14px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .message-content pre code {
+            background: none;
+            padding: 0;
+            color: var(--text-main);
+        }
+
+        .message-row:not(.user-row) .message-content {
+            background-color: var(--bot-msg-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 14px 18px;
         }
 
         .message-row.user-row {
@@ -138,6 +355,7 @@
             border-radius: 18px;
             max-width: 80%;
             flex: none;
+            font-size: 0.95rem;
         }
 
         /* Action Card Styling */
@@ -158,12 +376,13 @@
             align-items: center;
             gap: 8px;
             color: var(--accent-blue);
-            font-weight: 500;
+            font-weight: 600;
             font-size: 0.9rem;
         }
 
         .card-body {
             font-size: 0.95rem;
+            line-height: 1.6;
         }
 
         .card-footer {
@@ -218,18 +437,19 @@
 
         .input-wrapper {
             background-color: var(--bg-container);
-            border-radius: 28px;
-            padding: 8px 16px 8px 24px;
+            border-radius: 24px;
+            padding: 6px 8px 6px 24px;
             display: flex;
-            align-items: center;
-            gap: 12px;
-            border: 1px solid transparent;
-            transition: border-color 0.2s;
+            align-items: flex-end;
+            gap: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
         .input-wrapper:focus-within {
-            border-color: var(--border-color);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            border-color: var(--accent-blue);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25), 0 0 0 3px rgba(77, 144, 254, 0.12);
         }
 
         #user-input {
@@ -237,38 +457,67 @@
             background: transparent;
             border: none;
             color: var(--text-main);
-            font-size: 1rem;
-            padding: 12px 0;
+            font-family: inherit;
+            font-size: 0.975rem;
+            line-height: 1.5;
+            padding: 13px 0;
+            margin: 0;
             outline: none;
+            resize: none;
+            overflow-y: auto;
+            max-height: 160px;
+            min-height: 24px;
+        }
+
+        #user-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        /* Scrollbar del textarea */
+        #user-input::-webkit-scrollbar { width: 6px; }
+        #user-input::-webkit-scrollbar-thumb {
+            background-color: var(--border-color);
+            border-radius: 10px;
         }
 
         #send-btn, #cancel-btn {
-            background: transparent;
             border: none;
             width: 44px;
             height: 44px;
+            margin-bottom: 4px;
             border-radius: 50%;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.2s;
+            flex-shrink: 0;
+            transition: background 0.2s, opacity 0.2s, transform 0.1s;
         }
 
         #send-btn {
-            color: var(--accent-blue);
+            background: linear-gradient(135deg, #4285f4, #9b72cb);
+            color: white;
+        }
+
+        #send-btn:active:not(:disabled) {
+            transform: scale(0.94);
         }
 
         #cancel-btn {
-            color: #d96570;
-            display: none;
+            background: rgba(217, 101, 112, 0.12);
+            color: #f28b82;
         }
 
-        #send-btn:hover:not(:disabled), #cancel-btn:hover {
-            background-color: var(--hover-bg);
+        #send-btn:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        #cancel-btn:hover {
+            background-color: rgba(217, 101, 112, 0.2);
         }
 
         #send-btn:disabled {
+            background: var(--hover-bg);
             color: #5f6368;
             cursor: not-allowed;
         }
@@ -291,14 +540,24 @@
             padding: 8px 16px;
             border-radius: 18px;
             font-size: 0.85rem;
+            font-weight: 500;
             white-space: nowrap;
             cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
             transition: all 0.2s;
+        }
+
+        .suggestion-chip i {
+            color: var(--accent-blue);
+            font-size: 0.9rem;
         }
 
         .suggestion-chip:hover {
             background-color: var(--hover-bg);
             border-color: var(--text-secondary);
+            transform: translateY(-1px);
         }
 
         .footer-copyright {
@@ -321,7 +580,13 @@
 
     <div class="chat-layout">
         <div class="header">
-            <h1>TrackingTasksOp</h1>
+            <div class="header-title">
+                <div class="header-avatar"><i class="bi bi-stars"></i></div>
+                <div>
+                    <h1>TrackingTasksOp</h1>
+                    <div class="header-status"><span class="status-online-dot"></span>Asistente activo</div>
+                </div>
+            </div>
             <a href="/" class="nav-back">
                 <i class="bi bi-grid-1x2"></i> Volver al Dashboard
             </a>
@@ -338,13 +603,13 @@
 
         <div class="input-container">
             <div class="suggestions">
-                <div class="suggestion-chip">¿Qué tengo pendiente hoy?</div>
-                <div class="suggestion-chip">Listar proyectos</div>
-                <div class="suggestion-chip">Mostrar usuarios del sistema</div>
-                <div class="suggestion-chip">Ver estados disponibles</div>
+                <div class="suggestion-chip"><i class="bi bi-calendar-check"></i> ¿Qué tengo pendiente hoy?</div>
+                <div class="suggestion-chip"><i class="bi bi-kanban"></i> Listar proyectos</div>
+                <div class="suggestion-chip"><i class="bi bi-people"></i> Mostrar usuarios del sistema</div>
+                <div class="suggestion-chip"><i class="bi bi-flag"></i> Ver estados disponibles</div>
             </div>
             <div class="input-wrapper">
-                <input type="text" id="user-input" placeholder="Escribe aquí para chatear..." autocomplete="off">
+                <textarea id="user-input" placeholder="Escribe aquí para chatear..." rows="1" autocomplete="off"></textarea>
                 <button id="cancel-btn" title="Cancelar petición">
                     <i class="bi bi-stop-circle-fill fs-5"></i>
                 </button>
@@ -360,9 +625,12 @@
 
     <script type="module">
         import { requireAuth } from '/js/auth-guard.js';
+        import { fetchTask } from '/js/api.js';
+        import { escHtml } from '/js/helpers.js';
+        import { getActiveSession, saveSession, clearSession } from '/js/state.js';
+
         requireAuth();
-    </script>
-    <script>
+
         const chatMessages = document.getElementById('chat-messages');
         const userInput = document.getElementById('user-input');
         const sendBtn = document.getElementById('send-btn');
@@ -371,15 +639,71 @@
 
         let sessionId = localStorage.getItem('chat_session_id') || ('sess_' + Math.random().toString(36).substr(2, 9));
         localStorage.setItem('chat_session_id', sessionId);
-        
+
         let currentAbortController = null;
 
+        // Auto-expande el textarea según el contenido, hasta un alto máximo (luego hace scroll).
+        function autoResizeInput() {
+            userInput.style.height = 'auto';
+            userInput.style.height = Math.min(userInput.scrollHeight, 160) + 'px';
+        }
+        userInput.addEventListener('input', autoResizeInput);
+
+        // Asigna una clase de color a la insignia de estado según el nombre del estado
+        // (consistencia visual: el mismo color siempre representa el mismo tipo de estado).
+        function statusBadgeClass(status) {
+            const s = (status || '').toLowerCase();
+            if (/(closed|cerrad|complet|finaliz|done)/.test(s)) return 'status-closed';
+            if (/(reject|rechaz|cancel)/.test(s)) return 'status-rejected';
+            if (/(hold|espera|pausa)/.test(s)) return 'status-hold';
+            if (/(testing|prueba|revis)/.test(s)) return 'status-testing';
+            if (/(progress|curso|progreso)/.test(s)) return 'status-progress';
+            if (/(develop|desarroll)/.test(s)) return 'status-developed';
+            if (/^new$|^nuevo$/.test(s)) return 'status-new';
+            return 'status-default';
+        }
+
         function formatMarkdown(text) {
-            // Simplificación de markdown para negritas y listas
-            return text
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/^\* (.*)/gm, '• $1')
-                .replace(/\n/g, '<br>');
+            let html = escHtml(text);
+
+            // Bloques de código ```...```
+            html = html.replace(/```([\s\S]*?)```/g, (_, code) => `<pre><code>${code.trim()}</code></pre>`);
+            // Código inline
+            html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+            // Negritas
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Encabezados ###
+            html = html.replace(/^### (.*)$/gm, '<h4>$1</h4>');
+            // Insignias de estado: "*(Estado: X)*" -> badge de color según el estado
+            html = html.replace(/\*\(Estado: ([^)]+)\)\*/g, (_, status) => {
+                const label = status.trim();
+                return `<span class="status-badge ${statusBadgeClass(label)}"><span class="status-dot"></span>${label}</span>`;
+            });
+            // Título de listado (ej. "📝 Tus Tareas Pendientes:")
+            html = html.replace(/(?:^|\n)📝 (.*?)(?=\n|$)/g, (_, content) => `\n<div class="task-list-title">📝 ${content}</div>`);
+            // Encabezado de grupo por proyecto (ej. "📁 eProduction")
+            html = html.replace(/(?:^|\n)📁 (.*?)(?=\n|$)/g, (_, content) => `\n<div class="task-group-header">📁 ${content}</div>`);
+            // Listas: agrupa líneas consecutivas que empiezan con "* " o "- "
+            html = html.replace(/(?:^|\n)((?:[*-] .*(?:\n|$))+)/g, (match, list) => {
+                const items = list.trim().split('\n')
+                    .map(line => {
+                        const itemText = line.replace(/^[*-]\s+/, '');
+                        const badgeMatch = itemText.match(/^(.*?)\s*(<span class="status-badge.*<\/span>)\s*$/);
+                        return badgeMatch
+                            ? `<li><span class="task-label">${badgeMatch[1]}</span>${badgeMatch[2]}</li>`
+                            : `<li><span class="task-label">${itemText}</span></li>`;
+                    })
+                    .join('');
+                return `\n<ul>${items}</ul>`;
+            });
+            // Saltos de línea restantes
+            html = html.replace(/\n/g, '<br>');
+            // Limpia saltos de línea sobrantes al inicio (insertados antes de listas)
+            html = html.replace(/^(<br>)+/, '');
+            // Limpia <br> redundantes alrededor de bloques (títulos, encabezados y listas)
+            html = html.replace(/<br>(<div class="task-(?:list-title|group-header)">|<ul>)/g, '$1');
+            html = html.replace(/(<\/div>|<\/ul>)<br>/g, '$1');
+            return html;
         }
 
         function createActionCard(data) {
@@ -390,9 +714,9 @@
                         <i class="bi bi-check2-circle"></i> Acción Ejecutada
                     </div>
                     <div class="card-body">
-                        <strong>Tarea:</strong> ${data.name || 'Sin nombre'}<br>
+                        <strong>Tarea:</strong> ${escHtml(data.name || 'Sin nombre')}<br>
                         <strong>ID:</strong> #${data.workPackageId}<br>
-                        <span style="color: var(--text-secondary); font-size: 0.8rem;">${data.status || ''}</span>
+                        <span style="color: var(--text-secondary); font-size: 0.8rem;">${escHtml(data.status || '')}</span>
                     </div>
                     <div class="card-footer">
                         <button class="btn-action" onclick="window.open('http://localhost:8080/work_packages/${data.workPackageId}', '_blank')">
@@ -403,6 +727,34 @@
             `;
         }
 
+        // ── Sincronización del temporizador del dashboard con acciones del bot ────
+        // Cuando el bot reanuda/inicia el seguimiento de una tarea, activamos el
+        // temporizador local igual que si se hubiera presionado "Iniciar" en el
+        // dashboard. Cuando la pausa o finaliza, lo desactivamos.
+        async function syncSessionFromResponse(text) {
+            let match = text.match(/Tarea #(\d+) reanudada/)
+                     || text.match(/seguimiento iniciado \(ID:\s*(\d+)\)/);
+            if (match) {
+                const wpId = parseInt(match[1]);
+                try {
+                    const task = await fetchTask(wpId);
+                    const active = task?.tasksTimeDetails?.find(d => !d.endTime);
+                    if (active) {
+                        saveSession({ workPackageId: wpId, subject: task.name, startTime: active.startTime });
+                    }
+                } catch (_) { /* el dashboard se sincronizará en su próxima carga */ }
+                return;
+            }
+
+            match = text.match(/Tarea #(\d+) pausada/) || text.match(/tarea #(\d+) finalizada/i);
+            if (match) {
+                const session = getActiveSession();
+                if (session && session.workPackageId === parseInt(match[1])) {
+                    clearSession();
+                }
+            }
+        }
+
         function addMessage(content, isUser = false, isRawData = false) {
             const row = document.createElement('div');
             row.className = `message-row ${isUser ? 'user-row' : ''}`;
@@ -411,7 +763,7 @@
                 ? '<div class="avatar user"><i class="bi bi-person-fill"></i></div>'
                 : '<div class="avatar bot"><i class="bi bi-stars"></i></div>';
             
-            let contentHtml = isUser ? content : formatMarkdown(content);
+            let contentHtml = isUser ? escHtml(content) : formatMarkdown(content);
             
             row.innerHTML = `
                 ${avatarHtml}
@@ -429,7 +781,10 @@
             const prompt = text || userInput.value.trim();
             if (!prompt) return;
 
-            if (!text) userInput.value = '';
+            if (!text) {
+                userInput.value = '';
+                autoResizeInput();
+            }
             userInput.disabled = true;
             sendBtn.style.display = 'none';
             cancelBtn.style.display = 'flex';
@@ -459,23 +814,42 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ Prompt: prompt }),
-                    signal: currentAbortController.signal
+                    signal: currentAbortController.signal,
+                    credentials: 'include'
                 });
+
+                // Sesión expirada o no autenticado → redirigir al login
+                if (response.status === 401) {
+                    chatMessages.removeChild(typingRow);
+                    sessionStorage.removeItem('currentUser');
+                    window.location.replace('/auth.html');
+                    return;
+                }
 
                 const data = await response.json();
                 chatMessages.removeChild(typingRow);
 
+                if (!response.ok) {
+                    const errorMsg = data.detail || data.title || `Ocurrió un error (${response.status}).`;
+                    addMessage(`⚠️ ${errorMsg}`);
+                    return;
+                }
+
                 // Si la respuesta contiene datos de una tarea creada/iniciada, mostramos la tarjeta
                 const botRow = addMessage(data.response || 'Operación completada.');
-                
+
                 if(data.metadata) {
                     botRow.querySelector('.message-content').innerHTML += createActionCard(data.metadata);
                 }
 
+                // Activa/desactiva el temporizador del dashboard si el bot inició,
+                // reanudó, pausó o finalizó el seguimiento de una tarea.
+                if (data.response) syncSessionFromResponse(data.response);
+
             } catch (error) {
                 chatMessages.removeChild(typingRow);
                 if (error.name === 'AbortError') {
-                    addMessage('🛑 <i>Petición cancelada por el usuario.</i>');
+                    addMessage('🛑 Petición cancelada por el usuario.');
                 } else {
                     addMessage('Lo siento, no pude conectar con el servidor. Verifica que el backend esté corriendo.');
                 }
@@ -495,8 +869,12 @@
         });
 
         sendBtn.addEventListener('click', () => sendMessage());
-        userInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
+        userInput.addEventListener('keydown', (e) => {
+            // Enter envía el mensaje; Shift+Enter inserta un salto de línea.
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
         });
 
         suggestionChips.forEach(chip => {

@@ -11,9 +11,56 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
+
+   <!-- Solo se incluye en Windows -->
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices"
+                      Version="8.0.0" />
+
+    <!-- Solo se incluye en Linux -->
+    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd"
+                      Version="8.0.0" />
+
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
+
+  <!-- Fix bug SDK Ubuntu - glob con backslash no se expande en Linux (filesystem NTFS) -->
+  <PropertyGroup>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableDefaultRazorComponentItems>false</EnableDefaultRazorComponentItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Remove="**/*.resx" />
+    <Content Remove="**/*.cshtml" />
+    <Content Remove="**/*.razor" />
+    <Content Remove="**/*.config" />
+    <Content Remove="**/*.json" />
+  </ItemGroup>
+
+  <!-- Tarea inline: usa System.IO para encontrar .cs sin depender de glob expansion de MSBuild -->
+  <UsingTask TaskName="FindCsFiles" TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <RootDir ParameterType="System.String" Required="true" />
+      <Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        Files = Directory.GetFiles(RootDir, "*.cs", SearchOption.AllDirectories)
+          .Where(f => !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar)
+                   && !f.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar))
+          .Select(f => (ITaskItem)new Microsoft.Build.Utilities.TaskItem(f))
+          .ToArray();
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="AddCsFiles" BeforeTargets="CoreCompile">
+    <FindCsFiles RootDir="$(MSBuildProjectDirectory)">
+      <Output TaskParameter="Files" ItemName="Compile" />
+    </FindCsFiles>
+  </Target>
 
   <ItemGroup>
     <ProjectReference Include="..\Application\Application.csproj" />

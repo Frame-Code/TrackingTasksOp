@@ -5,7 +5,13 @@ using Infrastructure.Extensions;
 using Microsoft.AspNetCore.Mvc.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Host.UseWindowsService();
+
+
+if (OperatingSystem.IsWindows())
+    builder.Host.UseWindowsService();
+else
+    builder.Host.UseSystemd();
+
 builder.Services.AddControllers(opt => opt.Filters.Add(new AuthorizeFilter()))
     .AddJsonOptions(options => options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 builder.Services.AddEndpointsApiExplorer();
