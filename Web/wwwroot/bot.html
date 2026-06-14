@@ -522,6 +522,43 @@
             cursor: not-allowed;
         }
 
+        #mic-btn {
+            border: none;
+            background-color: transparent;
+            color: var(--text-secondary);
+            width: 44px;
+            height: 44px;
+            margin-bottom: 4px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.2s, color 0.2s, transform 0.1s;
+        }
+
+        #mic-btn:hover:not(:disabled) {
+            background-color: var(--hover-bg);
+            color: var(--text-main);
+        }
+
+        #mic-btn.recording {
+            background-color: rgba(217, 101, 112, 0.15);
+            color: #f28b82;
+            animation: pulse-rec 1.2s infinite;
+        }
+
+        #mic-btn:disabled {
+            color: #5f6368;
+            cursor: not-allowed;
+        }
+
+        @keyframes pulse-rec {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(242, 139, 130, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(242, 139, 130, 0); }
+        }
+
         /* Quick Suggestions */
         .suggestions {
             display: flex;
@@ -610,6 +647,9 @@
             </div>
             <div class="input-wrapper">
                 <textarea id="user-input" placeholder="Escribe aquí para chatear..." rows="1" autocomplete="off"></textarea>
+                <button id="mic-btn" title="Grabar mensaje de voz">
+                    <i class="bi bi-mic-fill fs-5"></i>
+                </button>
                 <button id="cancel-btn" title="Cancelar petición">
                     <i class="bi bi-stop-circle-fill fs-5"></i>
                 </button>
@@ -635,6 +675,7 @@
         const userInput = document.getElementById('user-input');
         const sendBtn = document.getElementById('send-btn');
         const cancelBtn = document.getElementById('cancel-btn');
+        const micBtn = document.getElementById('mic-btn');
         const suggestionChips = document.querySelectorAll('.suggestion-chip');
 
         let sessionId = localStorage.getItem('chat_session_id') || ('sess_' + Math.random().toString(36).substr(2, 9));
@@ -777,21 +818,8 @@
             return row;
         }
 
-        async function sendMessage(text = null) {
-            const prompt = text || userInput.value.trim();
-            if (!prompt) return;
-
-            if (!text) {
-                userInput.value = '';
-                autoResizeInput();
-            }
-            userInput.disabled = true;
-            sendBtn.style.display = 'none';
-            cancelBtn.style.display = 'flex';
-
-            addMessage(prompt, true);
-
-            // Indicador de escritura animado
+        // Indicador de escritura animado (compartido entre texto y voz)
+        function addTypingRow() {
             const typingRow = document.createElement('div');
             typingRow.className = 'message-row';
             typingRow.innerHTML = `
@@ -806,6 +834,34 @@
             `;
             chatMessages.appendChild(typingRow);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+            return typingRow;
+        }
+
+        // Maneja la respuesta común del bot (tarjeta de acción + sincronización del temporizador).
+        function handleBotResponse(data) {
+            const botRow = addMessage(data.response || 'Operación completada.');
+            if (data.metadata) {
+                botRow.querySelector('.message-content').innerHTML += createActionCard(data.metadata);
+            }
+            if (data.response) syncSessionFromResponse(data.response);
+        }
+
+        async function sendMessage(text = null) {
+            const prompt = text || userInput.value.trim();
+            if (!prompt) return;
+
+            if (!text) {
+                userInput.value = '';
+                autoResizeInput();
+            }
+            userInput.disabled = true;
+            sendBtn.style.display = 'none';
+            cancelBtn.style.display = 'flex';
+            micBtn.disabled = true;
+
+            addMessage(prompt, true);
+
+            const typingRow = addTypingRow();
 
             currentAbortController = new AbortController();
 
@@ -836,15 +892,8 @@
                 }
 
                 // Si la respuesta contiene datos de una tarea creada/iniciada, mostramos la tarjeta
-                const botRow = addMessage(data.response || 'Operación completada.');
-
-                if(data.metadata) {
-                    botRow.querySelector('.message-content').innerHTML += createActionCard(data.metadata);
-                }
-
-                // Activa/desactiva el temporizador del dashboard si el bot inició,
-                // reanudó, pausó o finalizó el seguimiento de una tarea.
-                if (data.response) syncSessionFromResponse(data.response);
+                // y sincronizamos el temporizador del dashboard si aplica.
+                handleBotResponse(data);
 
             } catch (error) {
                 chatMessages.removeChild(typingRow);
@@ -858,9 +907,124 @@
                 userInput.disabled = false;
                 sendBtn.style.display = 'flex';
                 cancelBtn.style.display = 'none';
+                micBtn.disabled = false;
                 userInput.focus();
             }
         }
+
+        // ── Entrada por voz ─────────────────────────────────────────────────
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+
+        async function startRecording() {
+            if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+                addMessage('⚠️ Tu navegador no soporta grabación de audio.');
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioChunks = [];
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) audioChunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    stream.getTracks().forEach(track => track.stop());
+                    const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+                    if (blob.size > 0) sendVoiceMessage(blob);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                micBtn.classList.add('recording');
+                micBtn.querySelector('i').className = 'bi bi-stop-fill fs-5';
+                micBtn.title = 'Detener grabación';
+            } catch (err) {
+                addMessage('⚠️ No se pudo acceder al micrófono. Verifica los permisos del navegador.');
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+            }
+            isRecording = false;
+            micBtn.classList.remove('recording');
+            micBtn.querySelector('i').className = 'bi bi-mic-fill fs-5';
+            micBtn.title = 'Grabar mensaje de voz';
+        }
+
+        async function sendVoiceMessage(blob) {
+            userInput.disabled = true;
+            sendBtn.style.display = 'none';
+            cancelBtn.style.display = 'flex';
+            micBtn.disabled = true;
+
+            const typingRow = addTypingRow();
+            currentAbortController = new AbortController();
+
+            try {
+                const ext = (blob.type.split('/')[1] || 'webm').split(';')[0];
+                const formData = new FormData();
+                formData.append('audio', blob, `audio.${ext}`);
+
+                const response = await fetch(`/api/v1/Bot/voice/${sessionId}`, {
+                    method: 'POST',
+                    body: formData,
+                    signal: currentAbortController.signal,
+                    credentials: 'include'
+                });
+
+                if (response.status === 401) {
+                    chatMessages.removeChild(typingRow);
+                    sessionStorage.removeItem('currentUser');
+                    window.location.replace('/auth.html');
+                    return;
+                }
+
+                const data = await response.json();
+                chatMessages.removeChild(typingRow);
+
+                if (!response.ok) {
+                    const errorMsg = data.detail || data.title || `Ocurrió un error (${response.status}).`;
+                    addMessage(`⚠️ ${errorMsg}`);
+                    return;
+                }
+
+                if (data.transcript) {
+                    addMessage(data.transcript, true);
+                }
+
+                handleBotResponse(data);
+
+            } catch (error) {
+                chatMessages.removeChild(typingRow);
+                if (error.name === 'AbortError') {
+                    addMessage('🛑 Petición cancelada por el usuario.');
+                } else {
+                    addMessage('Lo siento, no pude conectar con el servidor. Verifica que el backend esté corriendo.');
+                }
+            } finally {
+                currentAbortController = null;
+                userInput.disabled = false;
+                sendBtn.style.display = 'flex';
+                cancelBtn.style.display = 'none';
+                micBtn.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        micBtn.addEventListener('click', () => {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        });
 
         cancelBtn.addEventListener('click', () => {
             if (currentAbortController) {

@@ -27,6 +27,7 @@ public class ResumeTaskCommandImplTests
         public override bool IsAuthenticated => true;
         public override string? OpenProjectInstanceUrl => "http://localhost:8080";
         public override int? OpenProjectInstanceId => 2;
+        public override int? OpenProjectUserId => 7;
     }
 
     private ResumeTaskCommandImpl BuildUseCase() => new(

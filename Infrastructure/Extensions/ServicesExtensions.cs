@@ -79,6 +79,7 @@ public static class ServicesExtensions
 
         // Bot - Groq adapter
         collection.AddScoped<IGroqApiClient, GroqApiClient>();
+        collection.AddScoped<IAudioTranscriptionService, GroqTranscriptionClient>();
         collection.AddScoped<IBotIntentInterceptor, HeuristicIntentInterceptor>();
         collection.AddScoped<IOpenProjectEntityResolver, OpenProjectEntityResolver>();
         collection.AddScoped<IBotActionExecutor, BotActionExecutor>();

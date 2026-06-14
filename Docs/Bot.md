@@ -17,6 +17,34 @@ El bot procesa cada mensaje del usuario en capas, en este orden:
 
 ---
 
+## 1.1 Entrada por voz
+
+El bot también acepta un mensaje hablado en lugar de texto. El **resultado siempre se devuelve en texto** (no hay respuesta hablada / TTS).
+
+**Endpoint:** `POST /api/v1/Bot/voice/{sessionId}`, `multipart/form-data` con un campo `audio` que contiene el archivo grabado.
+
+**Flujo:**
+1. El frontend (`bot.html`) graba audio con `MediaRecorder` (botón de micrófono junto al input de texto) y lo envía como `audio/webm`.
+2. El backend transcribe el audio a texto mediante `IAudioTranscriptionService` (adapter `GroqTranscriptionClient`, modelo `whisper-large-v3-turbo` de Groq).
+3. El texto transcrito se procesa exactamente igual que un mensaje escrito: pasa por `HeuristicIntentInterceptor` → `GroqIntentService` → `BotActionExecutor`, usando el mismo `sessionId` y el mismo historial de Redis.
+4. La respuesta incluye `{ "transcript": "texto transcrito", "response": "respuesta del bot", "metadata": {...} }`.
+
+**Configuración** (`AIModel:Groq` en `appsettings.json`):
+```json
+"TranscriptionModel": "whisper-large-v3-turbo",
+"TranscriptionBaseUrl": "https://api.groq.com/openai/v1/audio/transcriptions",
+"TranscriptionLanguage": "es"
+```
+Usa la misma `ApiKey` de Groq ya configurada para el chat de texto.
+
+**Límites y validaciones:**
+- Tamaño máximo del audio: 10 MB (`[RequestSizeLimit]` en `BotController.Voice`).
+- Tipos MIME aceptados: `audio/webm`, `audio/ogg`, `audio/wav`, `audio/x-wav`, `audio/mpeg`, `audio/mp3`, `audio/mp4`, `audio/m4a`.
+- Si el audio no se puede transcribir (vacío, corrupto, error de Groq), el endpoint responde `200 OK` con un mensaje amigable pidiendo repetir o escribir, en vez de un error 500.
+- Si `AIModel:Groq:ApiKey` no está configurada, responde indicando que la transcripción no está disponible.
+
+---
+
 ## 2. Acciones disponibles (`action` + `params`)
 
 | Acción | Params (nombres aceptados) | Obligatorios | Notas |

@@ -1,3 +1,4 @@
+using Application.Ports.Auth;
 using Application.Ports.Services;
 using Domain.Entities.OpenProjectEntities.Project;
 using Domain.Entities.OpenProjectEntities.Status;
@@ -14,10 +15,20 @@ public class OpenProjectEntityResolverTests
     private readonly Mock<IStatusOpService> _statusOpServiceMock = new();
     private readonly Mock<IUserOpService> _userOpServiceMock = new();
 
-    private OpenProjectEntityResolver BuildResolver() => new(
+    private class FakeCurrentUser(int? openProjectUserId) : CurrentUser
+    {
+        public override string? UserId => "user-1";
+        public override bool IsAuthenticated => true;
+        public override string? OpenProjectInstanceUrl => "http://localhost:8080";
+        public override int? OpenProjectInstanceId => 2;
+        public override int? OpenProjectUserId => openProjectUserId;
+    }
+
+    private OpenProjectEntityResolver BuildResolver(int? currentOpenProjectUserId = 7) => new(
         _projectOpServiceMock.Object,
         _statusOpServiceMock.Object,
-        _userOpServiceMock.Object);
+        _userOpServiceMock.Object,
+        new FakeCurrentUser(currentOpenProjectUserId));
 
     [Fact]
     public async Task ResolveProjectId_ExactMatch_ShouldReturnId()
@@ -152,5 +163,35 @@ public class OpenProjectEntityResolverTests
 
         Assert.Equal(30, result);
         _userOpServiceMock.Verify(s => s.FindByName(It.IsAny<string>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("yo")]
+    [InlineData("Yo")]
+    [InlineData("mí")]
+    [InlineData("mi")]
+    [InlineData("a mí")]
+    [InlineData("yo mismo")]
+    [InlineData("conmigo")]
+    public async Task ResolveUserId_SelfReference_ShouldReturnCurrentUserOpenProjectId(string selfReference)
+    {
+        var resolver = BuildResolver(currentOpenProjectUserId: 7);
+
+        var result = await resolver.ResolveUserId(selfReference);
+
+        Assert.Equal(7, result);
+        _userOpServiceMock.Verify(s => s.FindByName(It.IsAny<string>()), Times.Never);
+        _userOpServiceMock.Verify(s => s.FindAssigneeByName(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ResolveUserId_SelfReference_WithProjectId_ShouldNotCallAssigneeLookup()
+    {
+        var resolver = BuildResolver(currentOpenProjectUserId: 7);
+
+        var result = await resolver.ResolveUserId("yo", 4);
+
+        Assert.Equal(7, result);
+        _userOpServiceMock.Verify(s => s.FindAssigneeByName(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
     }
 }

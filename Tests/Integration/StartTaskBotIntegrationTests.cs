@@ -46,6 +46,7 @@ public class StartTaskBotIntegrationTests
         public override bool IsAuthenticated => true;
         public override string? OpenProjectInstanceUrl => OpenProjectBaseUrl;
         public override int? OpenProjectInstanceId => SeedOpenProjectInstanceId;
+        public override int? OpenProjectUserId => null;
     }
 
     private static IHttpClientFactory BuildRealHttpClientFactory()
@@ -74,7 +75,7 @@ public class StartTaskBotIntegrationTests
         var projectOpService = new ProjectOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance);
         var statusOpService = new StatusOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance);
         var userOpService = new UserOpServiceImpl(factory, NullLogger<UserOpServiceImpl>.Instance);
-        var entityResolver = new OpenProjectEntityResolver(projectOpService, statusOpService, userOpService);
+        var entityResolver = new OpenProjectEntityResolver(projectOpService, statusOpService, userOpService, new FakeCurrentUser());
         var createWorkPackageCommand = new CreateWorkPackageCommandImpl(factory, NullLogger<CreateWorkPackageCommandImpl>.Instance);
         var addTimeEntryCommand = new AddTimeEntryCommandImpl(factory, NullLogger<AddTimeEntryCommandImpl>.Instance);
 

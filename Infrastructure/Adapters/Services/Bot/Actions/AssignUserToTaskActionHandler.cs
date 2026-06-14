@@ -15,9 +15,20 @@ public class AssignUserToTaskActionHandler(
         if (wpId == 0 && contextWpId.HasValue) wpId = contextWpId.Value;
 
         if (wpId <= 0) throw new Exception("Se requiere un ID de tarea válido (workPackageId).");
-        await updateWorkPackageCommand.Execute(wpId,
-            assigneeId: await entityResolver.ResolveUserId(GroqActionParams.GetStr(p, "assigneeName", "assignee")),
-            responsibleId: await entityResolver.ResolveUserId(GroqActionParams.GetStr(p, "responsibleName", "responsible")));
+
+        string assigneeName = GroqActionParams.GetStr(p, "assigneeName", "assignee");
+        string responsibleName = GroqActionParams.GetStr(p, "responsibleName", "responsible");
+
+        int? assigneeId = await entityResolver.ResolveUserId(assigneeName);
+        int? responsibleId = await entityResolver.ResolveUserId(responsibleName);
+
+        if (!string.IsNullOrEmpty(assigneeName) && !assigneeId.HasValue)
+            throw new Exception($"No pude encontrar al usuario '{assigneeName}' para asignarlo como responsable de ejecución. Verifica el nombre o usa 'listar usuarios del proyecto'.");
+
+        if (!string.IsNullOrEmpty(responsibleName) && !responsibleId.HasValue)
+            throw new Exception($"No pude encontrar al usuario '{responsibleName}' para asignarlo como responsable. Verifica el nombre o usa 'listar usuarios del proyecto'.");
+
+        await updateWorkPackageCommand.Execute(wpId, assigneeId: assigneeId, responsibleId: responsibleId);
         return $"👤 Usuarios asignados correctamente a la tarea #{wpId}.";
     }
 }

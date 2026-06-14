@@ -19,4 +19,7 @@ public class HttpContextCurrentUser(IHttpContextAccessor accessor) : CurrentUser
 
     public override int? OpenProjectInstanceId =>
         int.TryParse(Principal?.FindFirstValue("OpenProjectInstanceId"), out var id) ? id : null;
+
+    public override int? OpenProjectUserId =>
+        int.TryParse(Principal?.FindFirstValue("OpenProjectUserId"), out var id) ? id : null;
 }
