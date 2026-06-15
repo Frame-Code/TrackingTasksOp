@@ -7,8 +7,16 @@ namespace Web.Controllers;
 [Route("api/v1/[controller]")]
 public class BotController(
     IAiIntentService geminiIntentService,
+    IAudioTranscriptionService audioTranscriptionService,
     ILogger<BotController> logger) : ControllerBase
 {
+    private const long MaxAudioSizeBytes = 10 * 1024 * 1024; // 10 MB
+
+    private static readonly HashSet<string> AllowedAudioContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "audio/webm", "audio/ogg", "audio/wav", "audio/x-wav", "audio/mpeg", "audio/mp3", "audio/mp4", "audio/m4a"
+    };
+
     public record ChatRequest(string Prompt);
 
     /// <summary>
@@ -29,10 +37,72 @@ public class BotController(
         {
             return BadRequest("El ID de sesión no puede estar vacío.");
         }
-        
+
         logger.LogInformation("Processing chat request for session {SessionId}", sessionId);
         var response = await geminiIntentService.GetIntentAsync(request.Prompt, sessionId, HttpContext.RequestAborted);
 
         return Ok(new { response });
+    }
+
+    /// <summary>
+    /// Transcribe un audio a texto y procesa el resultado como un prompt de chat
+    /// para la sesión indicada, devolviendo tanto la transcripción como la respuesta del bot.
+    /// </summary>
+    /// <param name="sessionId">El identificador de la sesión de chat.</param>
+    /// <param name="audio">El archivo de audio grabado por el usuario.</param>
+    [HttpPost("voice/{sessionId}")]
+    [RequestSizeLimit(MaxAudioSizeBytes)]
+    public async Task<IActionResult> Voice(string sessionId, IFormFile? audio)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            return BadRequest("El ID de sesión no puede estar vacío.");
+        }
+
+        if (audio == null || audio.Length == 0)
+        {
+            return BadRequest("Debes enviar un archivo de audio.");
+        }
+
+        if (audio.Length > MaxAudioSizeBytes)
+        {
+            return BadRequest("El audio supera el tamaño máximo permitido (10 MB).");
+        }
+
+        // El navegador envía el Content-Type con parámetros (ej. "audio/webm;codecs=opus");
+        // solo el tipo base nos interesa para validar el formato.
+        var mediaType = audio.ContentType.Split(';')[0].Trim();
+        if (!AllowedAudioContentTypes.Contains(mediaType))
+        {
+            return BadRequest($"Tipo de audio no soportado: {audio.ContentType}");
+        }
+
+        if (!audioTranscriptionService.IsConfigured)
+        {
+            return Ok(new { transcript = "", response = "⚠️ La transcripción de audio no está configurada." });
+        }
+
+        logger.LogInformation("Processing voice request for session {SessionId}", sessionId);
+
+        string transcript;
+        try
+        {
+            await using var stream = audio.OpenReadStream();
+            transcript = await audioTranscriptionService.TranscribeAsync(stream, audio.FileName, mediaType, HttpContext.RequestAborted);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error transcribing audio for session {SessionId}", sessionId);
+            return Ok(new { transcript = "", response = "No pude procesar el audio enviado. Intenta de nuevo o escribe tu mensaje." });
+        }
+
+        if (string.IsNullOrWhiteSpace(transcript))
+        {
+            return Ok(new { transcript = "", response = "No pude entender el audio, ¿puedes repetirlo o escribirlo?" });
+        }
+
+        var response = await geminiIntentService.GetIntentAsync(transcript, sessionId, HttpContext.RequestAborted);
+
+        return Ok(new { transcript, response });
     }
 }

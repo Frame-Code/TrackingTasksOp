@@ -25,7 +25,7 @@ public class StatusTaskRepositoryImpl(TrackingTasksDbContext context) : IStatusT
 
     public async Task<StatusTask> SaveAsync(StatusTask entity)
     {
-        return await context.AddOrUpdateAsync(entity, [entity.Id]);
+        return await context.AddOrUpdateAsync(entity, entity.Id, entity.OpenProjectInstanceId);
     }
 
     public async Task SaveAllAsync(IEnumerable<StatusTask> entities)

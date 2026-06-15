@@ -26,7 +26,7 @@ public class ListsWorkPackagesCommandImpl(
         logger.LogInformation("Executing ListsWorkPackagesCommand, offset={Offset}, pageSize={PageSize}", offset, pageSize);   
         do
         {
-            string url = BuildUrl(request.ProjectId, offset, pageSize);
+            string url = BuildUrl(request.ProjectId, offset, pageSize, request.StatusId);
             HttpResponseMessage  response = await _client.GetAsync(url);
 
             if (response.StatusCode == HttpStatusCode.NotFound)
@@ -53,13 +53,16 @@ public class ListsWorkPackagesCommandImpl(
         return allItems;
     }
     
-    private string BuildUrl(int? projectId, int offset, int pageSize)
+    private string BuildUrl(int? projectId, int offset, int pageSize, int? statusId)
     {
         string baseEndpoint = projectId.HasValue
             ? $"/api/v3/projects/{projectId}/work_packages"
             : $"/api/v3/work_packages";
 
-        string filters = Uri.EscapeDataString("[{\"assignee\":{\"operator\":\"=\",\"values\":[\"me\"]}},{\"status\":{\"operator\":\"o\",\"values\":[]}}]");
+        string statusFilter = statusId.HasValue
+            ? $"{{\"status\":{{\"operator\":\"=\",\"values\":[\"{statusId.Value}\"]}}}}"
+            : "{\"status\":{\"operator\":\"o\",\"values\":[]}}";
+        string filters = Uri.EscapeDataString($"[{{\"assignee\":{{\"operator\":\"=\",\"values\":[\"me\"]}}}},{statusFilter}]");
         string sortBy = Uri.EscapeDataString("[[\"createdAt\",\"desc\"]]");
         return $"{baseEndpoint}?filters={filters}&offset={offset}&pageSize={pageSize}&sortBy={sortBy}";
     }

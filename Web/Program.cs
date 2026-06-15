@@ -5,14 +5,20 @@ using Infrastructure.Extensions;
 using Microsoft.AspNetCore.Mvc.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Host.UseWindowsService();
+
+
+if (OperatingSystem.IsWindows())
+    builder.Host.UseWindowsService();
+else
+    builder.Host.UseSystemd();
+
 builder.Services.AddControllers(opt => opt.Filters.Add(new AuthorizeFilter()))
     .AddJsonOptions(options => options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddSwaggerGen();
-builder.Services.AddTrackingDataProtection(builder.Configuration);
+builder.Services.AddTrackingDataProtection(builder.Configuration, builder.Environment.ContentRootPath);
 builder.Services.AddIdentityAndAuth(builder.Configuration);
 builder.Services.AddHttpClients(builder.Configuration);
 builder.Services.AddServices(builder.Configuration);

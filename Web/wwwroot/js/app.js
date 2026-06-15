@@ -466,6 +466,21 @@ function bindConfirmEndButton() {
     });
 }
 
+// ── Sincronización entre pestañas (ej. acciones del bot en /bot.html) ──────────
+
+function bindStorageSync() {
+    window.addEventListener('storage', (e) => {
+        if (e.key !== 'trackingActiveSession') return;
+
+        if (getActiveSession()) {
+            startTimer();
+        } else {
+            stopTimer();
+        }
+        if (store.workPackages.length) renderCards();
+    });
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 bindGridEvents();
@@ -475,6 +490,7 @@ bindConfirmDatesButton();
 bindStatusFilterEvents();
 bindSearchEvents();
 bindPaginationEvents();
+bindStorageSync();
 
 loadProjects();
 loadStatuses();

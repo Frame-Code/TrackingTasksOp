@@ -33,6 +33,12 @@ public class CreateWorkPackageCommandImpl(
             }
         };
 
+        if (request.StartDate.HasValue)
+            payload["startDate"] = request.StartDate.Value.ToString("yyyy-MM-dd");
+
+        if (request.DueDate.HasValue)
+            payload["dueDate"] = request.DueDate.Value.ToString("yyyy-MM-dd");
+
         var links = new JsonObject();
         
         if (request.StatusId.HasValue && request.StatusId.Value > 0)
@@ -40,16 +46,10 @@ public class CreateWorkPackageCommandImpl(
             links["status"] = new JsonObject { ["href"] = $"/api/v3/statuses/{request.StatusId}" };
         }
         
-        if (request.TypeId.HasValue && request.TypeId.Value > 0)
-        {
-            links["type"] = new JsonObject { ["href"] = $"/api/v3/types/{request.TypeId}" };
-        }
-        else
-        {
-            // Intentar usar un tipo por defecto (por ejemplo 1: Task) si no se especifica
-            links["type"] = new JsonObject { ["href"] = $"/api/v3/types/1" };
-        }
-        
+        int typeId = request.TypeId is > 0 ? request.TypeId.Value : await GetDefaultTypeIdAsync(request.ProjectId);
+        links["type"] = new JsonObject { ["href"] = $"/api/v3/types/{typeId}" };
+
+
         if (request.PriorityId.HasValue && request.PriorityId.Value > 0)
         {
             links["priority"] = new JsonObject { ["href"] = $"/api/v3/priorities/{request.PriorityId}" };
@@ -63,6 +63,14 @@ public class CreateWorkPackageCommandImpl(
         if (request.ResponsibleId.HasValue && request.ResponsibleId.Value > 0)
         {
             links["responsible"] = new JsonObject { ["href"] = $"/api/v3/users/{request.ResponsibleId}" };
+        }
+
+        if (request.CustomFieldOptionIds != null)
+        {
+            foreach (var (key, optionId) in request.CustomFieldOptionIds)
+            {
+                links[key] = new JsonObject { ["href"] = $"/api/v3/custom_options/{optionId}" };
+            }
         }
 
         payload["_links"] = links;
@@ -82,5 +90,83 @@ public class CreateWorkPackageCommandImpl(
         var workPackage = JsonSerializer.Deserialize<WorkPackage>(jsonResponse, options);
 
         return workPackage ?? throw new Exception("Failed to deserialize created work package.");
+    }
+
+    public async Task<List<RequiredCustomField>> GetRequiredCustomFieldsAsync(int projectId, int? typeId = null)
+    {
+        int resolvedTypeId = typeId is > 0 ? typeId.Value : await GetDefaultTypeIdAsync(projectId);
+        string url = $"/api/v3/projects/{projectId}/work_packages/form";
+
+        var payload = new JsonObject
+        {
+            ["_links"] = new JsonObject
+            {
+                ["type"] = new JsonObject { ["href"] = $"/api/v3/types/{resolvedTypeId}" }
+            }
+        };
+
+        var content = new StringContent(payload.ToJsonString(), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync(url, content);
+        var jsonResponse = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            logger.LogError("Error fetching work package form schema: {Response}", jsonResponse);
+            return new List<RequiredCustomField>();
+        }
+
+        var result = new List<RequiredCustomField>();
+        var schema = JsonNode.Parse(jsonResponse)?["_embedded"]?["schema"]?.AsObject();
+        if (schema is null) return result;
+
+        foreach (var (key, node) in schema)
+        {
+            if (!key.StartsWith("customField") || node is not JsonObject field) continue;
+
+            bool isCustomOption = field["type"]?.GetValue<string>() == "CustomOption";
+            bool isRequired = field["required"]?.GetValue<bool>() == true;
+            if (!isCustomOption || !isRequired) continue;
+
+            string name = field["name"]?.GetValue<string>() ?? key;
+            var allowedValues = new List<CustomFieldOption>();
+            if (field["_embedded"]?["allowedValues"] is JsonArray values)
+            {
+                foreach (var value in values)
+                {
+                    if (value is null) continue;
+                    int id = value["id"]?.GetValue<int>() ?? 0;
+                    string optionValue = value["value"]?.GetValue<string>() ?? "";
+                    allowedValues.Add(new CustomFieldOption(id, optionValue));
+                }
+            }
+
+            result.Add(new RequiredCustomField(key, name, allowedValues));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Resuelve un tipo de work package válido para el proyecto cuando no se especifica uno.
+    /// No se puede asumir un ID fijo (ej. 1 = "Task") porque los tipos disponibles varían por proyecto;
+    /// usar un ID inexistente hace que OpenProject ignore silenciosamente los campos personalizados enviados.
+    /// </summary>
+    private async Task<int> GetDefaultTypeIdAsync(int projectId)
+    {
+        string url = $"/api/v3/projects/{projectId}/types";
+        var response = await _client.GetAsync(url);
+        if (!response.IsSuccessStatusCode) return 1;
+
+        var json = await response.Content.ReadAsStringAsync();
+        var elements = JsonNode.Parse(json)?["_embedded"]?["elements"]?.AsArray();
+        if (elements is null || elements.Count == 0) return 1;
+
+        var taskType = elements.FirstOrDefault(e =>
+        {
+            var name = e?["name"]?.GetValue<string>() ?? "";
+            return name.Contains("Task", StringComparison.OrdinalIgnoreCase) || name.Contains("Tarea", StringComparison.OrdinalIgnoreCase);
+        });
+
+        return (taskType ?? elements[0])?["id"]?.GetValue<int>() ?? 1;
     }
 }

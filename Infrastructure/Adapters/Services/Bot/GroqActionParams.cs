@@ -1,0 +1,75 @@
+using System.Text.Json;
+
+namespace Infrastructure.Adapters.Services.Bot;
+
+/// <summary>
+/// Helpers para leer parámetros débilmente tipados (Dictionary&lt;string, object&gt;)
+/// devueltos por la deserialización de las acciones JSON de Groq.
+/// </summary>
+public static class GroqActionParams
+{
+    public static int GetInt(Dictionary<string, object>? d, params string[] keys)
+    {
+        if (d == null) return 0;
+        foreach (var k in keys)
+        {
+            if (d.TryGetValue(k, out var v) && v != null)
+                return v is JsonElement e ? (e.ValueKind == JsonValueKind.Number ? e.GetInt32() : 0) : Convert.ToInt32(v);
+        }
+        return 0;
+    }
+
+    public static int? GetNullableInt(Dictionary<string, object>? d, params string[] keys)
+    {
+        if (d == null) return null;
+        foreach (var k in keys)
+        {
+            if (d.TryGetValue(k, out var v) && v != null)
+            {
+                if (v is JsonElement e)
+                {
+                    return e.ValueKind == JsonValueKind.Number ? e.GetInt32() : null;
+                }
+                return Convert.ToInt32(v);
+            }
+        }
+        return null;
+    }
+
+    public static DateOnly? GetDate(Dictionary<string, object>? d, params string[] keys)
+    {
+        var raw = GetStr(d, keys);
+        return DateOnly.TryParse(raw, out var date) ? date : null;
+    }
+
+    public static string GetStr(Dictionary<string, object>? d, params string[] keys)
+    {
+        if (d == null) return "";
+        foreach (var k in keys)
+        {
+            if (d.TryGetValue(k, out var v) && v != null)
+                return v.ToString() ?? "";
+        }
+        return "";
+    }
+
+    /// <summary>
+    /// Lee un parámetro de tipo objeto (ej. "customFields": { "Area": "Producción", "Modulo": "Backend" })
+    /// y lo devuelve como un diccionario string-string.
+    /// </summary>
+    public static Dictionary<string, string>? GetDict(Dictionary<string, object>? d, params string[] keys)
+    {
+        if (d == null) return null;
+        foreach (var k in keys)
+        {
+            if (d.TryGetValue(k, out var v) && v is JsonElement { ValueKind: JsonValueKind.Object } e)
+            {
+                var result = new Dictionary<string, string>();
+                foreach (var prop in e.EnumerateObject())
+                    result[prop.Name] = prop.Value.ToString();
+                return result;
+            }
+        }
+        return null;
+    }
+}
