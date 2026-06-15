@@ -1,6 +1,8 @@
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Application.Ports.UseCases.WorkPackages;
+using Infrastructure.Exceptions;
 using Infrastructure.Settings;
 using Microsoft.Extensions.Logging;
 
@@ -74,7 +76,70 @@ public class UpdateWorkPackageCommandImpl(
         {
             var jsonResponse = await response.Content.ReadAsStringAsync();
             logger.LogError("Error updating work package: {Response}", jsonResponse);
+
+            if (statusId.HasValue && IsStatusConstraintViolation(jsonResponse))
+            {
+                var allowedStatuses = await GetAllowedStatusNames(workPackageId, lockVersion);
+                throw new InvalidStatusTransitionException(ExtractMessage(jsonResponse), allowedStatuses);
+            }
+
             throw new Exception($"Error HTTP {(int)response.StatusCode}: {jsonResponse}");
+        }
+    }
+
+    private static bool IsStatusConstraintViolation(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.TryGetProperty("_embedded", out var embedded)
+                && embedded.TryGetProperty("details", out var details)
+                && details.TryGetProperty("attribute", out var attribute)
+                && attribute.GetString() == "status";
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static string ExtractMessage(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.TryGetProperty("message", out var message) ? message.GetString() ?? json : json;
+        }
+        catch (JsonException)
+        {
+            return json;
+        }
+    }
+
+    private async Task<List<string>> GetAllowedStatusNames(int workPackageId, int lockVersion)
+    {
+        var payload = new JsonObject { ["lockVersion"] = lockVersion };
+        var content = new StringContent(payload.ToJsonString(), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"/api/v3/work_packages/{workPackageId}/form", content);
+        if (!response.IsSuccessStatusCode) return new List<string>();
+
+        var json = await response.Content.ReadAsStringAsync();
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var allowedValues = doc.RootElement
+                .GetProperty("_embedded").GetProperty("schema")
+                .GetProperty("status").GetProperty("_embedded").GetProperty("allowedValues");
+
+            return allowedValues.EnumerateArray()
+                .Select(v => v.GetProperty("name").GetString() ?? "")
+                .Where(name => name.Length > 0)
+                .ToList();
+        }
+        catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException)
+        {
+            logger.LogWarning("No se pudieron obtener los estados permitidos para el work package {Id}: {Error}", workPackageId, ex.Message);
+            return new List<string>();
         }
     }
 

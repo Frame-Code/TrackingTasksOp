@@ -15,6 +15,7 @@ public class ApplicationUserClaimsPrincipalFactory(
         var identity = await base.GenerateClaimsAsync(user);
         identity.AddClaim(new Claim("OpenProjectInstanceBaseUrl", user.OpenProjectInstanceBaseUrl ?? string.Empty));
         identity.AddClaim(new Claim("OpenProjectInstanceId", user.OpenProjectInstanceId.ToString()));
+        identity.AddClaim(new Claim("OpenProjectUserId", user.OpenProjectUserId.ToString()));
         return identity;
     }
 }

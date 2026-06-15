@@ -89,4 +89,30 @@ public class HttpContextCurrentUserTests
         var user = BuildWithContext(context);
         Assert.Null(user.OpenProjectInstanceUrl);
     }
+
+    [Fact]
+    public void OpenProjectUserId_ClaimPresent_ReturnsId()
+    {
+        var context = BuildAuthenticatedContext(
+            new Claim(ClaimTypes.NameIdentifier, "user-123"),
+            new Claim("OpenProjectUserId", "42"));
+        var user = BuildWithContext(context);
+        Assert.Equal(42, user.OpenProjectUserId);
+    }
+
+    [Fact]
+    public void OpenProjectUserId_ClaimAbsent_ReturnsNull()
+    {
+        var context = BuildAuthenticatedContext(
+            new Claim(ClaimTypes.NameIdentifier, "user-123"));
+        var user = BuildWithContext(context);
+        Assert.Null(user.OpenProjectUserId);
+    }
+
+    [Fact]
+    public void OpenProjectUserId_NoHttpContext_ReturnsNull()
+    {
+        var user = BuildWithContext(null);
+        Assert.Null(user.OpenProjectUserId);
+    }
 }

@@ -45,4 +45,32 @@ public class UserOpServiceImpl(
         var users = await Lists();
         return users.FirstOrDefault(u => u.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
     }
+
+    public async Task<List<User>> ListAssignees(int projectId)
+    {
+        logger.LogInformation("Executing ListAssignees:UserOpServiceImpl for project {ProjectId}", projectId);
+        string url = $"/api/v3/projects/{projectId}/available_assignees";
+        HttpResponseMessage response = await _client.GetAsync(url);
+
+        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            return new List<User>();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            string error = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Error HTTP {(int)response.StatusCode}: {error}");
+        }
+
+        string json = await response.Content.ReadAsStringAsync();
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var collection = JsonSerializer.Deserialize<UserCollection>(json, options);
+
+        return collection?.Embedded?.Elements ?? new List<User>();
+    }
+
+    public async Task<User?> FindAssigneeByName(int projectId, string name)
+    {
+        var users = await ListAssignees(projectId);
+        return users.FirstOrDefault(u => u.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
+    }
 }

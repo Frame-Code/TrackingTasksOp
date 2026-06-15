@@ -6,9 +6,17 @@
 ## Private files
 .env
 http-client.private.env.json
+.claude/
 
 ##Config files
 Web/appsettings.Development.json
+
+## Carpetas heredadas de un KeyRingPath de Data Protection con ruta Windows
+## (en Linux/macOS se interpretan como nombre de carpeta literal). No deben versionarse.
+Web/C:*
+
+## Claves de Data Protection (cifrado de API keys de OpenProject). Locales por dev/máquina.
+Web/Keys/
 
 ##visual studio
 .vs/

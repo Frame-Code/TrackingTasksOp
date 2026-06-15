@@ -1,4 +1,4 @@
-﻿using Task = Domain.Entities.TrackingTasksEntities.Task;
+using Task = Domain.Entities.TrackingTasksEntities.Task;
 
 namespace Application.Ports.Repositories;
 
