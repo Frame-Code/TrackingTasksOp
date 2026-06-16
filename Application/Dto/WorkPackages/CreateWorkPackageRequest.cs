@@ -11,5 +11,6 @@ public record CreateWorkPackageRequest(
     int? ResponsibleId = null,
     DateOnly? StartDate = null,
     DateOnly? DueDate = null,
-    Dictionary<string, int>? CustomFieldOptionIds = null
+    Dictionary<string, int>? CustomFieldOptionIds = null,
+    Dictionary<string, string>? CustomFieldTextValues = null
 );

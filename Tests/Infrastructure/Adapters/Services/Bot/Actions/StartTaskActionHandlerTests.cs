@@ -270,12 +270,12 @@ public class StartTaskActionHandlerTests
     {
         _createWorkPackageCommandMock.Setup(c => c.GetRequiredCustomFieldsAsync(1, null)).ReturnsAsync(
         [
-            new RequiredCustomField("customField3", "Area",
+            new RequiredCustomField("customField3", "Area", "CustomOption",
             [
                 new CustomFieldOption(7, "PRODUCCION"),
                 new CustomFieldOption(8, "ADMINISTRACION")
             ]),
-            new RequiredCustomField("customField5", "Modulo",
+            new RequiredCustomField("customField5", "Modulo", "CustomOption",
             [
                 new CustomFieldOption(11, "Backend"),
                 new CustomFieldOption(12, "Frontend")
@@ -308,7 +308,7 @@ public class StartTaskActionHandlerTests
     {
         _createWorkPackageCommandMock.Setup(c => c.GetRequiredCustomFieldsAsync(1, null)).ReturnsAsync(
         [
-            new RequiredCustomField("customField5", "Modulo",
+            new RequiredCustomField("customField5", "Modulo", "CustomOption",
             [
                 new CustomFieldOption(11, "Backend"),
                 new CustomFieldOption(12, "Frontend")

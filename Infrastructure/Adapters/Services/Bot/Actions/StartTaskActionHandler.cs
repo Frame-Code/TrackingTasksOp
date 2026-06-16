@@ -50,13 +50,15 @@ public class StartTaskActionHandler(
         // Si vamos a crear un work package nuevo (no a iniciar seguimiento de uno existente),
         // verificamos si el tipo de tarea del proyecto tiene campos personalizados obligatorios.
         Dictionary<string, int>? customFieldOptionIds = null;
+        Dictionary<string, string>? customFieldTextValues = null;
         if (wpId <= 0)
         {
             var requiredFields = await createWorkPackageCommand.GetRequiredCustomFieldsAsync(projId.Value);
             if (requiredFields.Count > 0)
             {
                 var providedCustomFields = GroqActionParams.GetDict(p, "customFields");
-                var resolved = new Dictionary<string, int>();
+                var resolvedOptions = new Dictionary<string, int>();
+                var resolvedTexts = new Dictionary<string, string>();
                 var missing = new List<RequiredCustomField>();
 
                 foreach (var field in requiredFields)
@@ -64,26 +66,41 @@ public class StartTaskActionHandler(
                     var providedValue = providedCustomFields?
                         .FirstOrDefault(kv => kv.Key.Equals(field.Name, StringComparison.OrdinalIgnoreCase)).Value;
 
-                    var matchedOption = !string.IsNullOrEmpty(providedValue)
-                        ? field.AllowedValues.FirstOrDefault(o =>
-                            o.Value.Equals(providedValue, StringComparison.OrdinalIgnoreCase) ||
-                            o.Value.Contains(providedValue, StringComparison.OrdinalIgnoreCase))
-                        : null;
+                    if (field.IsOptionType)
+                    {
+                        var matchedOption = !string.IsNullOrEmpty(providedValue)
+                            ? field.AllowedValues.FirstOrDefault(o =>
+                                o.Value.Equals(providedValue, StringComparison.OrdinalIgnoreCase) ||
+                                o.Value.Contains(providedValue, StringComparison.OrdinalIgnoreCase) ||
+                                providedValue.Contains(o.Value, StringComparison.OrdinalIgnoreCase))
+                            : null;
 
-                    if (matchedOption != null) resolved[field.Key] = matchedOption.Id;
-                    else missing.Add(field);
+                        if (matchedOption != null) resolvedOptions[field.Key] = matchedOption.Id;
+                        else missing.Add(field);
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(providedValue)) resolvedTexts[field.Key] = providedValue;
+                        else missing.Add(field);
+                    }
                 }
 
                 if (missing.Count > 0)
                 {
                     var msg = "🤔 Para crear esta tarea necesito que me indiques los siguientes datos:\n\n";
                     foreach (var f in missing)
-                        msg += $"- **{f.Name}**: {string.Join(", ", f.AllowedValues.Select(o => o.Value))}\n";
+                    {
+                        if (f.IsOptionType)
+                            msg += $"- **{f.Name}**: {string.Join(", ", f.AllowedValues.Select(o => o.Value))}\n";
+                        else
+                            msg += $"- **{f.Name}**: (texto libre)\n";
+                    }
                     msg += "\nIndícame estos valores y vuelvo a crear la tarea.";
                     return msg;
                 }
 
-                customFieldOptionIds = resolved;
+                if (resolvedOptions.Count > 0) customFieldOptionIds = resolvedOptions;
+                if (resolvedTexts.Count > 0) customFieldTextValues = resolvedTexts;
             }
         }
 
@@ -112,7 +129,8 @@ public class StartTaskActionHandler(
             ResponsibleId = responsibleId,
             StartDate = GroqActionParams.GetDate(p, "startDate"),
             DueDate = GroqActionParams.GetDate(p, "dueDate"),
-            CustomFieldOptionIds = customFieldOptionIds
+            CustomFieldOptionIds = customFieldOptionIds,
+            CustomFieldTextValues = customFieldTextValues
         };
         var newTask = await startTaskCommand.Execute(startReq);
         var message = $"🚀 Tarea **{newTask.Name}** preparada y seguimiento iniciado (ID: {newTask.WorkPackageId}).";

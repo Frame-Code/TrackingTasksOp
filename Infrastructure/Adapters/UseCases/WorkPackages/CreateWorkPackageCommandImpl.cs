@@ -75,6 +75,12 @@ public class CreateWorkPackageCommandImpl(
 
         payload["_links"] = links;
 
+        if (request.CustomFieldTextValues != null)
+        {
+            foreach (var (key, value) in request.CustomFieldTextValues)
+                payload[key] = value;
+        }
+
         var content = new StringContent(payload.ToJsonString(), Encoding.UTF8, "application/json");
         
         var response = await _client.PostAsync(url, content);
@@ -119,28 +125,42 @@ public class CreateWorkPackageCommandImpl(
         var schema = JsonNode.Parse(jsonResponse)?["_embedded"]?["schema"]?.AsObject();
         if (schema is null) return result;
 
+        var textFieldTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "String", "Text", "Integer", "Float", "Date", "Boolean" };
+
         foreach (var (key, node) in schema)
         {
             if (!key.StartsWith("customField") || node is not JsonObject field) continue;
 
-            bool isCustomOption = field["type"]?.GetValue<string>() == "CustomOption";
+            string fieldType = field["type"]?.GetValue<string>() ?? "";
             bool isRequired = field["required"]?.GetValue<bool>() == true;
-            if (!isCustomOption || !isRequired) continue;
+            if (!isRequired) continue;
 
             string name = field["name"]?.GetValue<string>() ?? key;
-            var allowedValues = new List<CustomFieldOption>();
-            if (field["_embedded"]?["allowedValues"] is JsonArray values)
-            {
-                foreach (var value in values)
-                {
-                    if (value is null) continue;
-                    int id = value["id"]?.GetValue<int>() ?? 0;
-                    string optionValue = value["value"]?.GetValue<string>() ?? "";
-                    allowedValues.Add(new CustomFieldOption(id, optionValue));
-                }
-            }
 
-            result.Add(new RequiredCustomField(key, name, allowedValues));
+            if (fieldType == "CustomOption")
+            {
+                var allowedValues = new List<CustomFieldOption>();
+                if (field["_embedded"]?["allowedValues"] is JsonArray values)
+                {
+                    foreach (var value in values)
+                    {
+                        if (value is null) continue;
+                        int id = value["id"]?.GetValue<int>() ?? 0;
+                        string optionValue = value["value"]?.GetValue<string>() ?? "";
+                        allowedValues.Add(new CustomFieldOption(id, optionValue));
+                    }
+                }
+
+                // Saltar campos de lista sin opciones configuradas; no se puede preguntar al usuario.
+                if (allowedValues.Count == 0) continue;
+
+                result.Add(new RequiredCustomField(key, name, fieldType, allowedValues));
+            }
+            else if (textFieldTypes.Contains(fieldType))
+            {
+                result.Add(new RequiredCustomField(key, name, fieldType, new List<CustomFieldOption>()));
+            }
         }
 
         return result;
