@@ -83,7 +83,8 @@ namespace Infrastructure.Adapters.UseCases.Tasks;
                     request.ResponsibleId,
                     request.StartDate,
                     request.DueDate,
-                    request.CustomFieldOptionIds
+                    request.CustomFieldOptionIds,
+                    request.CustomFieldTextValues
                 );
                 var opWorkPackage = await createWorkPackageCommand.Execute(createRequest);
                 workPackageId = opWorkPackage.Id;
