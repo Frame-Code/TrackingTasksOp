@@ -26,7 +26,7 @@ public class GroqApiClient(IHttpClientFactory httpClientFactory, IOptions<GroqSe
             max_tokens = 1024
         };
 
-        var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
+        var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, " application/json ");
         var httpResponse = await HttpClient.PostAsync(_groqSettings.BaseUrl, jsonContent, ct);
 
         if (!httpResponse.IsSuccessStatusCode)
