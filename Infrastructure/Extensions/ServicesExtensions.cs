@@ -2,6 +2,7 @@
 using Application.Ports.Repositories;
 using Application.Ports.Services;
 using Application.Ports.UseCases.Auth;
+using Application.Ports.UseCases.Reports;
 using Application.Ports.UseCases.Tasks;
 using Application.Ports.UseCases.TimeEntry;
 using Application.Ports.UseCases.WorkPackages;
@@ -13,6 +14,7 @@ using Infrastructure.Adapters.Services.Bot;
 using Infrastructure.Adapters.Services.Bot.Actions;
 using Infrastructure.Adapters.UseCases;
 using Infrastructure.Adapters.UseCases.Auth;
+using Infrastructure.Adapters.UseCases.Reports;
 using Infrastructure.Adapters.UseCases.Tasks;
 using Infrastructure.Adapters.UseCases.TimeEntry;
 using Infrastructure.Adapters.UseCases.WorkPackages;
@@ -56,7 +58,8 @@ public static class ServicesExtensions
         collection.AddScoped<IAddTimeEntryCommand, AddTimeEntryCommandImpl>();
         collection.AddScoped<IRegisterLocalUserCommand, RegisterLocalUserCommandImpl>();
         collection.AddScoped<ILoginLocalUserCommand, LoginLocalUserCommandImpl>();
-        
+        collection.AddScoped<IGenerateDailyTaskReportCommand, GenerateDailyTaskReportCommandImpl>();
+
         //Services
         collection.AddScoped<IStatusOpService, StatusOpServiceImpl>();
         collection.AddScoped<IProjectOpService, ProjectOpServiceImpl>();

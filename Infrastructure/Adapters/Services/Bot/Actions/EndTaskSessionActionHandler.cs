@@ -1,3 +1,4 @@
+using Application.Dto.Conversation;
 using Application.Dto.Tasks;
 using Application.Ports.UseCases.Tasks;
 using Infrastructure.Exceptions;
@@ -10,7 +11,7 @@ public class EndTaskSessionActionHandler(
 {
     public string ActionName => "end_task_session";
 
-    public async Task<string> ExecuteAsync(GroqAction action, int? contextWpId, CancellationToken ct = default)
+    public async Task<string> ExecuteAsync(GroqAction action, int? contextWpId, ConversationContext? conversationContext = null, CancellationToken ct = default)
     {
         var p = action.Params;
         int wpId = GroqActionParams.GetInt(p, "workPackageId", "id", "wpId");

@@ -27,6 +27,10 @@
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <span id="navUserEmail" class="text-muted small d-none d-md-inline"></span>
+                    <button id="reportBtn" class="btn btn-sm btn-outline-secondary" title="Descargar reporte de tareas">
+                        <i class="bi bi-file-earmark-excel me-1"></i>
+                        <span class="d-none d-md-inline">Reporte</span>
+                    </button>
                     <button id="logoutBtn" class="btn btn-sm btn-outline-secondary" title="Cerrar sesión">
                         <i class="bi bi-box-arrow-right me-1"></i>
                         <span class="d-none d-md-inline">Salir</span>
@@ -212,6 +216,38 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" id="confirmDatesBtn" class="btn btn-primary px-4">
                         <i class="bi bi-check-lg me-1"></i>Guardar fechas
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Modal: Reporte de tareas diarias ── -->
+    <div class="modal fade" id="reportModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title">
+                        <i class="bi bi-file-earmark-excel me-2 text-success"></i>Reporte de tareas
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Descarga en Excel las tareas trabajadas por día en el rango seleccionado.</p>
+                    <div id="reportError" class="alert alert-danger py-2 small d-none"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Desde</label>
+                        <input type="date" id="reportFromDate" class="form-control">
+                    </div>
+                    <div>
+                        <label class="form-label fw-medium">Hasta</label>
+                        <input type="date" id="reportToDate" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="confirmReportBtn" class="btn btn-success px-4">
+                        <i class="bi bi-download me-1"></i>Descargar
                     </button>
                 </div>
             </div>

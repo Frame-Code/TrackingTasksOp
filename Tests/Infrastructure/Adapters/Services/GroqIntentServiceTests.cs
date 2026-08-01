@@ -68,13 +68,13 @@ public class GroqIntentServiceTests
         _interceptorMock.Setup(i => i.TryInterceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((string?)null);
         _groqApiClientMock.Setup(c => c.IsConfigured).Returns(true);
         _groqApiClientMock.Setup(c => c.GetCompletionAsync(context, "hola", It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Hola, ¿en qué puedo ayudarte?");
+            .ReturnsAsync(new GroqCompletionResult { Text = "Hola, ¿en qué puedo ayudarte?" });
 
         var service = BuildService();
         var result = await service.GetIntentAsync("hola", "session1");
 
         Assert.Equal("Hola, ¿en qué puedo ayudarte?", result);
-        _botActionExecutorMock.Verify(e => e.ExecuteAllAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()), Times.Never);
+        _botActionExecutorMock.Verify(e => e.ExecuteAllAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<ConversationContext>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -87,8 +87,8 @@ public class GroqIntentServiceTests
 
         var aiResponse = "{\"action\": \"list_projects\"}";
         _groqApiClientMock.Setup(c => c.GetCompletionAsync(context, "listar proyectos", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(aiResponse);
-        _botActionExecutorMock.Setup(e => e.ExecuteAllAsync(It.Is<IEnumerable<string>>(blocks => blocks.Single() == aiResponse), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GroqCompletionResult { Text = aiResponse });
+        _botActionExecutorMock.Setup(e => e.ExecuteAllAsync(It.Is<IEnumerable<string>>(blocks => blocks.Single() == aiResponse), context, It.IsAny<CancellationToken>()))
             .ReturnsAsync(["📋 **Tus Proyectos Disponibles:**\n\n- **Proyecto A** (ID: 1)"]);
 
         var service = BuildService();
@@ -98,6 +98,36 @@ public class GroqIntentServiceTests
         _contextServiceMock.Verify(s => s.SaveAsync(context, It.IsAny<CancellationToken>()), Times.Once);
         Assert.Equal(2, context.History.Count);
         Assert.Equal("ttm", context.History[1].Type);
+    }
+
+    [Fact]
+    public async Task GetIntentAsync_GroqReturnsToolCall_ShouldBuildJsonBlockAndDelegateToExecutor()
+    {
+        var context = new ConversationContext { SessionId = "session1" };
+        SetupContext("session1", context);
+        _interceptorMock.Setup(i => i.TryInterceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((string?)null);
+        _groqApiClientMock.Setup(c => c.IsConfigured).Returns(true);
+
+        var toolCall = new GroqToolCall
+        {
+            Id = "call_1",
+            Name = "start_task",
+            ArgumentsJson = "{\"projectName\":\"eProduction\",\"name\":\"Test\"}"
+        };
+        _groqApiClientMock.Setup(c => c.GetCompletionAsync(context, "crea una tarea", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GroqCompletionResult { Text = "", ToolCalls = [toolCall] });
+
+        _botActionExecutorMock.Setup(e => e.ExecuteAllAsync(
+                It.Is<IEnumerable<string>>(blocks =>
+                    blocks.Single().Contains("\"action\":\"start_task\"") &&
+                    blocks.Single().Contains("\"projectName\":\"eProduction\"")),
+                context, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(["🚀 Tarea **Test** preparada y seguimiento iniciado (ID: 202)."]);
+
+        var service = BuildService();
+        var result = await service.GetIntentAsync("crea una tarea", "session1");
+
+        Assert.Contains("ID: 202", result);
     }
 
     [Fact]

@@ -1,3 +1,5 @@
+using Application.Dto.Conversation;
+
 namespace Infrastructure.Adapters.Services.Bot;
 
 /// <summary>
@@ -14,5 +16,6 @@ public interface IBotActionHandler
     /// Ejecuta la acción y devuelve el mensaje de resultado para el usuario.
     /// </summary>
     /// <param name="contextWpId">ID de work package creado por una acción previa en el mismo turno, usado como fallback.</param>
-    Task<string> ExecuteAsync(GroqAction action, int? contextWpId, CancellationToken ct = default);
+    /// <param name="conversationContext">Contexto de la conversación; la mayoría de los handlers lo ignoran, solo lo usan los que necesitan recordar estado entre turnos (ej. "start_task").</param>
+    Task<string> ExecuteAsync(GroqAction action, int? contextWpId, ConversationContext? conversationContext = null, CancellationToken ct = default);
 }

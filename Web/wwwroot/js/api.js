@@ -112,3 +112,32 @@ export async function postCancelSession(workPackageId) {
         body: JSON.stringify({ workPackageId })
     });
 }
+
+export async function downloadDailyTaskReport(from, to) {
+    const res = await fetch(`${API}/report/daily-tasks?from=${from}&to=${to}`, { credentials: 'include' });
+
+    if (res.status === 401) {
+        sessionStorage.removeItem('currentUser');
+        window.location.replace('/auth.html');
+        return;
+    }
+
+    if (!res.ok) {
+        let msg = `Error ${res.status}`;
+        try {
+            const body = await res.json();
+            msg = body.title || body.message || body.detail || msg;
+        } catch (_) { /* ignorar errores de parseo */ }
+        throw new Error(msg);
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Reporte_Tareas_${from}_${to}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+}

@@ -1,3 +1,4 @@
+using Application.Dto.Conversation;
 using Application.Ports.UseCases.WorkPackages;
 
 namespace Infrastructure.Adapters.Services.Bot.Actions;
@@ -8,7 +9,7 @@ public class AssignUserToTaskActionHandler(
 {
     public string ActionName => "assign_user_to_task";
 
-    public async Task<string> ExecuteAsync(GroqAction action, int? contextWpId, CancellationToken ct = default)
+    public async Task<string> ExecuteAsync(GroqAction action, int? contextWpId, ConversationContext? conversationContext = null, CancellationToken ct = default)
     {
         var p = action.Params;
         int wpId = GroqActionParams.GetInt(p, "workPackageId", "id", "wpId");
