@@ -31,6 +31,10 @@
                         <i class="bi bi-file-earmark-excel me-1"></i>
                         <span class="d-none d-md-inline">Reporte</span>
                     </button>
+                    <button id="apiKeyBtn" class="btn btn-sm btn-outline-secondary" title="Actualizar API key de OpenProject">
+                        <i class="bi bi-key me-1"></i>
+                        <span class="d-none d-md-inline">API Key</span>
+                    </button>
                     <button id="logoutBtn" class="btn btn-sm btn-outline-secondary" title="Cerrar sesión">
                         <i class="bi bi-box-arrow-right me-1"></i>
                         <span class="d-none d-md-inline">Salir</span>
@@ -248,6 +252,34 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" id="confirmReportBtn" class="btn btn-success px-4">
                         <i class="bi bi-download me-1"></i>Descargar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Modal: Actualizar API key de OpenProject ── -->
+    <div class="modal fade" id="apiKeyModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title">
+                        <i class="bi bi-key me-2 text-warning"></i>Actualizar API key
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Actualiza tu API key de OpenProject si dejó de funcionar (por ejemplo, tras un redeploy).</p>
+                    <div id="apiKeyError" class="alert alert-danger py-2 small d-none"></div>
+                    <div>
+                        <label class="form-label fw-medium">Nueva API key</label>
+                        <input type="password" id="apiKeyInput" class="form-control" autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="confirmApiKeyBtn" class="btn btn-warning px-4">
+                        <i class="bi bi-check-lg me-1"></i>Actualizar
                     </button>
                 </div>
             </div>

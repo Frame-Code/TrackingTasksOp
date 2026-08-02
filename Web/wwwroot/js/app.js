@@ -5,7 +5,7 @@ import { fetchProjects, fetchWorkPackages, fetchActivities, fetchTask,
          postStartSession, postEndSession, fetchStatuses,
          patchWorkPackageStatus, patchWorkPackageProgress,
          patchWorkPackageDates, postCancelSession,
-         downloadDailyTaskReport } from './api.js';
+         downloadDailyTaskReport, updateApiKey } from './api.js';
 import { updateNavbar, renderProjectSelect, renderCards, renderStatusFilters,
          renderHistoryLoading, renderHistoryContent, renderHistoryError,
          renderActivitiesSelect } from './render.js';
@@ -491,6 +491,53 @@ function bindConfirmReportButton() {
     });
 }
 
+// ── Modal: Actualizar API key ─────────────────────────────────────────────────
+
+function openApiKeyModal() {
+    document.getElementById('apiKeyInput').value = '';
+    document.getElementById('apiKeyError').classList.add('d-none');
+
+    const confirmBtn = document.getElementById('confirmApiKeyBtn');
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Actualizar';
+
+    new bootstrap.Modal(document.getElementById('apiKeyModal')).show();
+}
+
+function bindApiKeyButton() {
+    document.getElementById('apiKeyBtn').addEventListener('click', openApiKeyModal);
+}
+
+function bindConfirmApiKeyButton() {
+    document.getElementById('confirmApiKeyBtn').addEventListener('click', async () => {
+        const apiKey = document.getElementById('apiKeyInput').value.trim();
+        const errorBox = document.getElementById('apiKeyError');
+        errorBox.classList.add('d-none');
+
+        if (!apiKey) {
+            errorBox.textContent = 'Debes indicar la API key.';
+            errorBox.classList.remove('d-none');
+            return;
+        }
+
+        const btn = document.getElementById('confirmApiKeyBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Actualizando...';
+
+        try {
+            await updateApiKey(apiKey);
+            bootstrap.Modal.getInstance(document.getElementById('apiKeyModal'))?.hide();
+            showToast('API key actualizada correctamente.', 'success');
+        } catch (e) {
+            errorBox.textContent = `Error al actualizar: ${e.message}`;
+            errorBox.classList.remove('d-none');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Actualizar';
+        }
+    });
+}
+
 function bindLoadButton() {
     document.getElementById('loadBtn').addEventListener('click', () => {
         const projectId = document.getElementById('projectSelect').value || null;
@@ -544,6 +591,8 @@ bindConfirmEndButton();
 bindConfirmDatesButton();
 bindReportButton();
 bindConfirmReportButton();
+bindApiKeyButton();
+bindConfirmApiKeyButton();
 bindStatusFilterEvents();
 bindSearchEvents();
 bindPaginationEvents();

@@ -141,3 +141,10 @@ export async function downloadDailyTaskReport(from, to) {
     a.remove();
     URL.revokeObjectURL(url);
 }
+
+export async function updateApiKey(apiKey) {
+    return apiFetch(`${API}/auth/api-key`, {
+        method: 'PUT',
+        body: JSON.stringify({ apiKey })
+    });
+}

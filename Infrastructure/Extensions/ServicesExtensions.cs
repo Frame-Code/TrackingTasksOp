@@ -58,6 +58,7 @@ public static class ServicesExtensions
         collection.AddScoped<IAddTimeEntryCommand, AddTimeEntryCommandImpl>();
         collection.AddScoped<IRegisterLocalUserCommand, RegisterLocalUserCommandImpl>();
         collection.AddScoped<ILoginLocalUserCommand, LoginLocalUserCommandImpl>();
+        collection.AddScoped<IUpdateApiKeyCommand, UpdateApiKeyCommandImpl>();
         collection.AddScoped<IGenerateDailyTaskReportCommand, GenerateDailyTaskReportCommandImpl>();
 
         //Services
@@ -103,8 +104,13 @@ public static class ServicesExtensions
         var redisSettings = configuration.GetSection("RedisSettings").Get<RedisSettings>();
         if (redisSettings != null)
         {
-            collection.AddSingleton<IConnectionMultiplexer>(
-                ConnectionMultiplexer.Connect(redisSettings.Configuration));
+            // AbortOnConnectFail=false: si Redis no está disponible en este instante (ej. corre en
+            // WSL y todavía no arrancó), el multiplexer no tira una excepción que se lleve puesta
+            // TODA la app — sigue reintentando en segundo plano. RedisConversationService ya maneja
+            // los fallos de conexión en cada operación puntual (guardar/leer contexto del bot).
+            var redisOptions = ConfigurationOptions.Parse(redisSettings.Configuration);
+            redisOptions.AbortOnConnectFail = false;
+            collection.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisOptions));
         }
         
         return collection;
