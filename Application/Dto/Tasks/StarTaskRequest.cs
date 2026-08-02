@@ -14,4 +14,5 @@ public class StarTaskRequest
     public DateOnly? StartDate { get; init; }
     public DateOnly? DueDate { get; init; }
     public Dictionary<string, int>? CustomFieldOptionIds { get; init; }
+    public Dictionary<string, string>? CustomFieldTextValues { get; init; }
 }

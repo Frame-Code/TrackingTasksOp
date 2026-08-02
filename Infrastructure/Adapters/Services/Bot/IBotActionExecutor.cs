@@ -1,3 +1,5 @@
+using Application.Dto.Conversation;
+
 namespace Infrastructure.Adapters.Services.Bot;
 
 /// <summary>
@@ -10,5 +12,6 @@ public interface IBotActionExecutor
     /// Deserializa y ejecuta cada bloque JSON de acción, en orden, devolviendo
     /// el mensaje de resultado de cada una.
     /// </summary>
-    Task<List<string>> ExecuteAllAsync(IEnumerable<string> jsonBlocks, CancellationToken ct = default);
+    /// <param name="conversationContext">Contexto de la conversación actual; permite a los handlers persistir estado entre turnos (ej. campos de tarea ya resueltos).</param>
+    Task<List<string>> ExecuteAllAsync(IEnumerable<string> jsonBlocks, ConversationContext conversationContext, CancellationToken ct = default);
 }

@@ -1,3 +1,4 @@
+using Application.Dto.Conversation;
 using Application.Dto.Tasks;
 using Application.Dto.WorkPackages;
 using Application.Ports.Services;
@@ -270,12 +271,12 @@ public class StartTaskActionHandlerTests
     {
         _createWorkPackageCommandMock.Setup(c => c.GetRequiredCustomFieldsAsync(1, null)).ReturnsAsync(
         [
-            new RequiredCustomField("customField3", "Area",
+            new RequiredCustomField("customField3", "Area", "CustomOption",
             [
                 new CustomFieldOption(7, "PRODUCCION"),
                 new CustomFieldOption(8, "ADMINISTRACION")
             ]),
-            new RequiredCustomField("customField5", "Modulo",
+            new RequiredCustomField("customField5", "Modulo", "CustomOption",
             [
                 new CustomFieldOption(11, "Backend"),
                 new CustomFieldOption(12, "Frontend")
@@ -308,7 +309,7 @@ public class StartTaskActionHandlerTests
     {
         _createWorkPackageCommandMock.Setup(c => c.GetRequiredCustomFieldsAsync(1, null)).ReturnsAsync(
         [
-            new RequiredCustomField("customField5", "Modulo",
+            new RequiredCustomField("customField5", "Modulo", "CustomOption",
             [
                 new CustomFieldOption(11, "Backend"),
                 new CustomFieldOption(12, "Frontend")
@@ -337,5 +338,141 @@ public class StartTaskActionHandlerTests
         _startTaskCommandMock.Verify(c => c.Execute(It.Is<StarTaskRequest>(r =>
             r.CustomFieldOptionIds != null &&
             r.CustomFieldOptionIds["customField5"] == 11)), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_AlreadyProvidedFieldsAcrossTurns_ShouldNotBeAskedAgain()
+    {
+        // Reproduce el bug reportado: el usuario da "Area" en el primer turno, falta "Modulo".
+        // En el segundo turno solo da "Modulo" (como cualquier conversación real, no repite
+        // datos ya dados) y la tarea debe crearse usando el "Area" recordado, no volver a pedirlo.
+        _createWorkPackageCommandMock.Setup(c => c.GetRequiredCustomFieldsAsync(1, null)).ReturnsAsync(
+        [
+            new RequiredCustomField("customField3", "Area", "CustomOption",
+            [
+                new CustomFieldOption(7, "PRODUCCION"),
+                new CustomFieldOption(8, "ADMINISTRACION")
+            ]),
+            new RequiredCustomField("customField5", "Modulo", "CustomOption",
+            [
+                new CustomFieldOption(11, "Backend"),
+                new CustomFieldOption(12, "Frontend")
+            ])
+        ]);
+
+        var conversationContext = new ConversationContext { SessionId = "session1" };
+        var handler = BuildHandler();
+
+        var firstTurnFields = System.Text.Json.JsonSerializer.SerializeToElement(new Dictionary<string, string> { ["Area"] = "PRODUCCION" });
+        var firstAction = new GroqAction
+        {
+            Action = "start_task",
+            Params = new Dictionary<string, object>
+            {
+                ["projectId"] = 1,
+                ["statusId"] = 1,
+                ["name"] = "New Task",
+                ["customFields"] = firstTurnFields
+            }
+        };
+
+        var firstResult = await handler.ExecuteAsync(firstAction, null, conversationContext);
+
+        Assert.Contains("Modulo", firstResult);
+        Assert.DoesNotContain("Area", firstResult);
+        Assert.Equal(1, conversationContext.PendingTaskProjectId);
+        Assert.Equal("PRODUCCION", conversationContext.PendingCustomFields?["Area"]);
+
+        _startTaskCommandMock.Setup(c => c.Execute(It.IsAny<StarTaskRequest>()))
+            .ReturnsAsync(new TaskEntity { WorkPackageId = 505, Name = "New Task" });
+
+        var secondTurnFields = System.Text.Json.JsonSerializer.SerializeToElement(new Dictionary<string, string> { ["Modulo"] = "Backend" });
+        var secondAction = new GroqAction
+        {
+            Action = "start_task",
+            Params = new Dictionary<string, object>
+            {
+                ["projectId"] = 1,
+                ["statusId"] = 1,
+                ["name"] = "New Task",
+                ["customFields"] = secondTurnFields
+            }
+        };
+
+        var secondResult = await handler.ExecuteAsync(secondAction, null, conversationContext);
+
+        Assert.Contains("ID: 505", secondResult);
+        _startTaskCommandMock.Verify(c => c.Execute(It.Is<StarTaskRequest>(r =>
+            r.CustomFieldOptionIds != null &&
+            r.CustomFieldOptionIds["customField3"] == 7 &&
+            r.CustomFieldOptionIds["customField5"] == 11)), Times.Once);
+        Assert.Null(conversationContext.PendingCustomFields);
+        Assert.Null(conversationContext.PendingTaskProjectId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SecondTurnOmitsCoreFields_ShouldUsePersistedDraft()
+    {
+        // El modelo (LLM chico) no siempre repite project/name/assignee/fechas al responder
+        // una pregunta de "falta este dato". El handler debe poder completar la tarea igual,
+        // usando el borrador guardado en el turno anterior.
+        _entityResolverMock.Setup(r => r.ResolveUserId("Stin", It.IsAny<int?>())).ReturnsAsync(30);
+        _createWorkPackageCommandMock.Setup(c => c.GetRequiredCustomFieldsAsync(1, null)).ReturnsAsync(
+        [
+            new RequiredCustomField("customField3", "Area", "CustomOption",
+            [
+                new CustomFieldOption(7, "PRODUCCION"),
+                new CustomFieldOption(8, "ADMINISTRACION")
+            ])
+        ]);
+
+        var conversationContext = new ConversationContext { SessionId = "session1" };
+        var handler = BuildHandler();
+
+        var firstAction = new GroqAction
+        {
+            Action = "start_task",
+            Params = new Dictionary<string, object>
+            {
+                ["projectId"] = 1,
+                ["statusId"] = 1,
+                ["name"] = "New Task",
+                ["assigneeName"] = "Stin",
+                ["startDate"] = "2026-06-13"
+            }
+        };
+
+        var firstResult = await handler.ExecuteAsync(firstAction, null, conversationContext);
+
+        Assert.Contains("Area", firstResult);
+        Assert.NotNull(conversationContext.PendingStartTaskDraft);
+        Assert.Equal("New Task", conversationContext.PendingStartTaskDraft!.Name);
+        Assert.Equal(1, conversationContext.PendingStartTaskDraft.StatusId);
+        Assert.Equal(30, conversationContext.PendingStartTaskDraft.AssigneeId);
+        Assert.Equal(new DateOnly(2026, 6, 13), conversationContext.PendingStartTaskDraft.StartDate);
+
+        _startTaskCommandMock.Setup(c => c.Execute(It.IsAny<StarTaskRequest>()))
+            .ReturnsAsync(new TaskEntity { WorkPackageId = 606, Name = "New Task" });
+
+        var secondTurnFields = System.Text.Json.JsonSerializer.SerializeToElement(new Dictionary<string, string> { ["Area"] = "PRODUCCION" });
+        var secondAction = new GroqAction
+        {
+            Action = "start_task",
+            // El modelo NO repite projectId/statusId/name/assigneeName/startDate
+            Params = new Dictionary<string, object> { ["customFields"] = secondTurnFields }
+        };
+
+        var secondResult = await handler.ExecuteAsync(secondAction, null, conversationContext);
+
+        Assert.Contains("ID: 606", secondResult);
+        _startTaskCommandMock.Verify(c => c.Execute(It.Is<StarTaskRequest>(r =>
+            r.ProjectId == 1 &&
+            r.StatusId == 1 &&
+            r.Name == "New Task" &&
+            r.AssigneeId == 30 &&
+            r.StartDate == new DateOnly(2026, 6, 13) &&
+            r.CustomFieldOptionIds != null &&
+            r.CustomFieldOptionIds["customField3"] == 7)), Times.Once);
+        Assert.Null(conversationContext.PendingStartTaskDraft);
     }
 }

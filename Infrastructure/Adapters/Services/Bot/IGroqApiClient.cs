@@ -15,7 +15,8 @@ public interface IGroqApiClient
 
     /// <summary>
     /// Solicita una respuesta al modelo de Groq para el prompt actual,
-    /// incluyendo el historial de la conversación como contexto.
+    /// incluyendo el historial de la conversación como contexto. Puede devolver
+    /// texto plano, tool calls estructuradas (ver <see cref="GroqTools"/>), o ambos.
     /// </summary>
-    Task<string> GetCompletionAsync(ConversationContext context, string prompt, CancellationToken ct = default);
+    Task<GroqCompletionResult> GetCompletionAsync(ConversationContext context, string prompt, CancellationToken ct = default);
 }

@@ -1,3 +1,4 @@
+using Application.Dto.Conversation;
 using Application.Dto.ListWorkPackages;
 using Application.Ports.Services;
 using Application.Ports.UseCases.WorkPackages;
@@ -11,7 +12,7 @@ public class ListTasksActionHandler(
 {
     public string ActionName => "list_tasks";
 
-    public async Task<string> ExecuteAsync(GroqAction action, int? contextWpId, CancellationToken ct = default)
+    public async Task<string> ExecuteAsync(GroqAction action, int? contextWpId, ConversationContext? conversationContext = null, CancellationToken ct = default)
     {
         string sName = GroqActionParams.GetStr(action.Params, "statusName", "status");
 

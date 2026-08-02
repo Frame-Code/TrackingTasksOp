@@ -13,14 +13,14 @@
     </PackageReference>
 
    <!-- Solo se incluye en Windows -->
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices"
-                      Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
 
     <!-- Solo se incluye en Linux -->
-    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd"
-                      Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="8.0.0" />
 
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
   </ItemGroup>
 
   <!-- Fix bug SDK Ubuntu - glob con backslash no se expande en Linux (filesystem NTFS) -->
@@ -38,8 +38,7 @@
   </ItemGroup>
 
   <!-- Tarea inline: usa System.IO para encontrar .cs sin depender de glob expansion de MSBuild -->
-  <UsingTask TaskName="FindCsFiles" TaskFactory="RoslynCodeTaskFactory"
-             AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+  <UsingTask TaskName="FindCsFiles" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
     <ParameterGroup>
       <RootDir ParameterType="System.String" Required="true" />
       <Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true" />
@@ -61,6 +60,12 @@
       <Output TaskParameter="Files" ItemName="Compile" />
     </FindCsFiles>
   </Target>
+
+  <ItemGroup>
+    <Content Include="appsettings.Development.json" />
+    <Content Include="appsettings.example.json" />
+    <Content Include="appsettings.json" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Application\Application.csproj" />

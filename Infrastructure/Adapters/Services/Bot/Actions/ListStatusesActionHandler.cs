@@ -1,3 +1,4 @@
+using Application.Dto.Conversation;
 using Application.Ports.Services;
 
 namespace Infrastructure.Adapters.Services.Bot.Actions;
@@ -8,7 +9,7 @@ public class ListStatusesActionHandler(
 {
     public string ActionName => "list_statuses";
 
-    public async Task<string> ExecuteAsync(GroqAction action, int? contextWpId, CancellationToken ct = default)
+    public async Task<string> ExecuteAsync(GroqAction action, int? contextWpId, ConversationContext? conversationContext = null, CancellationToken ct = default)
     {
         string projName = GroqActionParams.GetStr(action.Params, "projectName", "project");
         var allStatuses = await statusOpService.Lists();

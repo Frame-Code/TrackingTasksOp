@@ -16,6 +16,7 @@ namespace Web.Controllers;
 public class AuthController(
     IRegisterLocalUserCommand registerLocalUserCommand,
     ILoginLocalUserCommand loginLocalUserCommand,
+    IUpdateApiKeyCommand updateApiKeyCommand,
     IInitializerInstanceService initializerInstanceService,
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
@@ -95,6 +96,27 @@ public class AuthController(
         return Ok(response.Data);
     }
     
+    /// <summary>
+    /// Actualiza la API key de OpenProject del usuario autenticado (ej. si la clave de
+    /// Data Protection que la cifraba se perdió y quedó indescifrable). No requiere
+    /// [AllowAnonymous]: el filtro de autorización global ya exige sesión iniciada.
+    /// </summary>
+    [HttpPut("api-key")]
+    public async Task<IActionResult> UpdateApiKeyAsync(UpdateApiKeyHttpRequest request, CancellationToken ct)
+    {
+        var commandRequest = new UpdateApiKeyRequest { ApiKey = request.ApiKey };
+        var response = await updateApiKeyCommand.ExecuteAsync(commandRequest, ct);
+        if (!response.IsSuccess)
+        {
+            return BadRequest(new
+            {
+                message = response.ErrorMessage,
+            });
+        }
+
+        return Ok(response.Data);
+    }
+
     [HttpPost("logout")]
     public async Task<IActionResult> LogoutAsync()
     {

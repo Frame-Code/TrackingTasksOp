@@ -1,3 +1,4 @@
+using Application.Dto.Conversation;
 using Application.Ports.UseCases.WorkPackages;
 
 namespace Infrastructure.Adapters.Services.Bot.Actions;
@@ -7,7 +8,7 @@ public class UpdateProgressActionHandler(
 {
     public string ActionName => "update_progress";
 
-    public async Task<string> ExecuteAsync(GroqAction action, int? contextWpId, CancellationToken ct = default)
+    public async Task<string> ExecuteAsync(GroqAction action, int? contextWpId, ConversationContext? conversationContext = null, CancellationToken ct = default)
     {
         var p = action.Params;
         int wpId = GroqActionParams.GetInt(p, "workPackageId", "id", "wpId");

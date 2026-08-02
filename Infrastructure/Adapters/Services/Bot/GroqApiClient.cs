@@ -16,17 +16,22 @@ public class GroqApiClient(IHttpClientFactory httpClientFactory, IOptions<GroqSe
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(_groqSettings.ApiKey);
 
-    public async Task<string> GetCompletionAsync(ConversationContext context, string prompt, CancellationToken ct = default)
+    public async Task<GroqCompletionResult> GetCompletionAsync(ConversationContext context, string prompt, CancellationToken ct = default)
     {
         var requestBody = new
         {
             model = _groqSettings.Model,
             messages = BuildMessages(context, prompt),
             temperature = _groqSettings.Temperature,
-            max_tokens = 1024
+            max_tokens = 1024,
+            // Específico de los modelos gpt-oss de Groq: limita el razonamiento interno para
+            // reducir tokens/latencia (no nos hace falta razonamiento profundo, solo que cumpla
+            // las reglas del prompt) y ayuda a no pasarnos del límite de TPM del plan gratuito.
+            reasoning_effort = "low",
+            tools = GroqTools.All
         };
 
-        var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
+        var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, " application/json ");
         var httpResponse = await HttpClient.PostAsync(_groqSettings.BaseUrl, jsonContent, ct);
 
         if (!httpResponse.IsSuccessStatusCode)
@@ -37,9 +42,30 @@ public class GroqApiClient(IHttpClientFactory httpClientFactory, IOptions<GroqSe
 
         var responseJson = await httpResponse.Content.ReadAsStringAsync(ct);
         using var doc = JsonDocument.Parse(responseJson);
-        var content = doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? "";
+        var message = doc.RootElement.GetProperty("choices")[0].GetProperty("message");
 
-        return CleanResponse(content);
+        var result = new GroqCompletionResult();
+
+        if (message.TryGetProperty("tool_calls", out var toolCallsElement) && toolCallsElement.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var toolCall in toolCallsElement.EnumerateArray())
+            {
+                var function = toolCall.GetProperty("function");
+                result.ToolCalls.Add(new GroqToolCall
+                {
+                    Id = toolCall.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "",
+                    Name = function.GetProperty("name").GetString() ?? "",
+                    ArgumentsJson = function.GetProperty("arguments").GetString() ?? "{}"
+                });
+            }
+        }
+
+        var content = message.TryGetProperty("content", out var contentEl) && contentEl.ValueKind == JsonValueKind.String
+            ? contentEl.GetString() ?? ""
+            : "";
+        result.Text = CleanResponse(content);
+
+        return result;
     }
 
     private List<object> BuildMessages(ConversationContext context, string prompt)
@@ -67,21 +93,23 @@ public class GroqApiClient(IHttpClientFactory httpClientFactory, IOptions<GroqSe
 
         REGLAS:
         1. Analiza el pedido y genera los comandos JSON necesarios. Puedes incluir texto antes/después del JSON.
-        2. Si falta info crítica (ej. proyecto), pregunta; no inventes datos. Usa NOMBRES (no IDs) para proyectos/estados/usuarios, el sistema resuelve los IDs. Si no sabes a quién asignar, usa ""list_project_users"" antes de preguntar.
-        3. ANTES de crear una tarea NUEVA (""start_task"" sobre algo inexistente): si falta info NO crítica con default razonable (fechas, descripción, asignado), NO generes el JSON aún. Responde con texto: qué datos usarás tal cual, cuáles faltan y el default propuesto (ej. ""no indicaste fecha de inicio, usaré hoy {today}""), y pregunta si procedes. Genera el JSON en tu SIGUIENTE respuesta tras confirmación (""sí"", ""dale"", ""confirmo"", ""adelante""), usando valores corregidos si el usuario los da. Si el usuario ya dio todo o dice que no le importan los defaults, genera el JSON directo.
+        2. Si falta info crítica (ej. proyecto), pregunta; no inventes datos. Usa NOMBRES (no IDs) para proyectos/estados/usuarios/responsables/asignados. NUNCA le preguntes al usuario ""¿cuál es el ID?"" de algo que ya te dio por nombre: si dice ""proyecto eProduction"" o ""responsable Juan Pérez"", usa exactamente ""projectName"": ""eProduction"" o ""responsibleName"": ""Juan Pérez"" en el JSON tal cual, sin buscar ni pedir ningún número — el sistema resuelve el ID solo, vos NUNCA necesitás saberlo. Si no sabes a quién asignar, usa ""list_project_users"" antes de preguntar.
+        3. ANTES de crear una tarea NUEVA (función ""start_task"" sobre algo inexistente): si falta info NO crítica con default razonable (fechas, descripción, asignado), NO llames a la función todavía. Responde con texto: qué datos usarás tal cual, cuáles faltan y el default propuesto (ej. ""no indicaste fecha de inicio, usaré hoy {today}""), y pregunta si procedes. Llamá a la función en tu SIGUIENTE respuesta tras confirmación (""sí"", ""dale"", ""confirmo"", ""adelante""), usando valores corregidos si el usuario los da. Si el usuario ya dio todo o dice que no le importan los defaults, llamá a la función directo.
         4. IDENTIFICACIÓN DE workPackageId: si el usuario menciona ""#1134"", ""tarea 1134"", ""ID 1134"", ""work package 1134"", etc., ese número ES el ""workPackageId""; úsalo LITERAL y directo en el JSON. NUNCA digas que no conoces el ID si el usuario lo dio, ni omitas ""workPackageId"" en ese caso. Las acciones sobre tareas existentes (resume_task, pause_task, end_task_session, update_task_status, assign_user_to_task, update_progress, update_task_dates) validan el ID al ejecutarse: genera el JSON de inmediato, sin confirmar el ID ni listar tareas antes.
         5. FILTROS list_tasks: si el usuario no pide filtrar por estado, NO incluyas ""statusName"" (deja ""params"": {{}}). Nunca uses ""All""/""Todos"" como statusName, no son estados válidos.
         6. TRANSICIONES DE ESTADO NO PERMITIDAS: si ""update_task_status"" (o el cambio dentro de ""end_task_session"") falla con un mensaje tipo ""...Desde el estado actual puedes cambiar directamente a: A, B, C"", el estado pedido no es alcanzable en un paso pero sí por pasos intermedios. Explícaselo al usuario y, si A/B/C acerca razonablemente la tarea al objetivo, ofrece generar ""update_task_status"" hacia ese estado intermedio como primer paso (y continuar en mensajes siguientes).
         7. ACCIONES DE SOLO LECTURA (""list_projects"", ""list_project_users"", ""list_tasks"", ""list_statuses""): no modifican datos, NUNCA pidas confirmación ni preguntes ""¿deseas que continúe?"" (la regla 3 aplica solo a ""start_task""). El sistema agrega el resultado real DESPUÉS de ejecutar el JSON con datos de OpenProject, así que NO escribas texto explicativo ni inventes nombres/IDs/resultados: responde ÚNICAMENTE con el bloque JSON.
         8. ASIGNACIÓN A UNO MISMO: si el usuario pide asignarse la tarea a sí mismo (ej. ""asígnamela a mí"", ""ponme como responsable"", ""que sea para mí"", ""asignármela""), usa LITERALMENTE ""yo"" como ""assigneeName"" y/o ""responsibleName"" en el JSON. No adivines el nombre real ni uses ""list_project_users"" para este caso: el sistema resuelve ""yo"" a la cuenta de OpenProject de quien conversa contigo.
         9. ANTES de ""end_task_session"": si el usuario NO especificó a qué estado pasa la tarea ni si actualizar el porcentaje de avance, NO generes el JSON aún. Pregunta solo con texto: a qué estado quiere cambiar la tarea (ofrécele algo razonable según contexto, ej. ""Closed"" o ""Resolved"", o pregúntale directamente), y si quiere actualizar ""percentageDone"" y a qué valor. Genera el JSON de ""end_task_session"" (con ""newStatusName"" si corresponde, y un ""update_progress"" adicional si dio porcentaje) en tu SIGUIENTE respuesta, tras la respuesta del usuario. Si ya dio esos datos o dice que no quiere cambiar nada, genera el JSON directo.
-        10. CONFIRMACIÓN DE ACCIONES EJECUTADAS: al generar un bloque JSON de acción (""start_task"", ""end_task_session"", ""pause_task"", etc.), NUNCA digas ""voy a crear la tarea"", ""aún no se ha creado"" o ""en un momento la creo"". El sistema EJECUTA la acción de inmediato al procesar el JSON, así que tu texto debe asumir que ya se completó (ej. ""Tarea creada"", ""Listo, he iniciado el seguimiento"").
+        10. CONFIRMACIÓN DE ACCIONES EJECUTADAS: tu texto SOLO puede decir que una tarea/sesión/acción fue creada, iniciada, finalizada o completada si en ESA MISMA respuesta incluís el bloque JSON completo y válido de esa acción — el sistema NO ejecuta nada sin el JSON, sin importar lo que diga tu texto. Si todavía no vas a incluir el JSON (ej. porque falta confirmar algo), tu texto NUNCA puede sonar a que ya se hizo. Cuando SÍ generás el bloque JSON: nunca digas ""voy a crear la tarea"", ""aún no se ha creado"" o ""en un momento la creo""; el sistema la ejecuta de inmediato al procesar el JSON, así que tu texto debe asumir que ya se completó (ej. ""Tarea creada"", ""Listo, he iniciado el seguimiento"").
+        11. RESPUESTA A DATOS FALTANTES: si el mensaje más reciente tuyo en el historial empieza con ""🤔 Para crear esta tarea necesito..."", es una pregunta que generó el sistema (no la inventaste vos), y el sistema YA recuerda el proyecto, nombre, fechas, responsable y demás datos de esa tarea — NO hace falta que los repitas ni que los adivines de nuevo. Tu única respuesta debe ser LLAMAR a la función ""start_task"" pasando ÚNICAMENTE ""customFields"" con el/los campos que el usuario te acaba de dar (ej. si pediste ""Tipo Error"" y el usuario respondió ""NONE"", llamá a start_task con customFields = {{ ""Tipo Error"": ""NONE"" }}, sin projectName/name/fechas/etc.). No escribas texto de éxito en este turno hasta que el sistema confirme la creación real con el resultado.
 
-        ESTRUCTURA DE COMANDO JSON:
+        Para INICIAR O CREAR UNA TAREA usá la función ""start_task"" (tool call), no un bloque JSON — ver reglas 3 y 11 sobre cuándo llamarla.
+
+        ESTRUCTURA DE COMANDO JSON (para el resto de las acciones, TODAS excepto start_task):
         {{ ""action"": ""nombre_accion"", ""params"": {{ ... }} }}
 
-        ACCIONES DISPONIBLES:
-        - start_task (projectName, statusName, name, description, assigneeName, responsibleName, startDate, dueDate, customFields): Inicia o crea una tarea. ""startDate""/""dueDate"" en yyyy-MM-dd. Si el sistema pide datos adicionales (ej. ""Area"", ""Modulo""), pregúntalos y reenvía ""start_task"" con ""customFields"": {{ ""Area"": ""Producción"", ""Modulo"": ""Backend"" }}.
+        ACCIONES DISPONIBLES (bloque JSON):
         - list_projects (): Lista todos los proyectos.
         - list_project_users (projectName): Lista los usuarios asignables de un proyecto.
         - list_tasks (statusName): Lista tareas (puedes filtrar por estado).
@@ -95,6 +123,9 @@ public class GroqApiClient(IHttpClientFactory httpClientFactory, IOptions<GroqSe
         - resume_task (workPackageId, statusName): Reanuda el seguimiento y cambia el estado a progreso (default ""In progress"").
 
         EJEMPLO (regla 4 - ID): Usuario: ""Retoma el tiempo de la tarea #1134"". Respuesta: ¡Listo! Reanudando #1134.
-        {{ ""action"": ""resume_task"", ""params"": {{ ""workPackageId"": 1134 }} }}";
+        {{ ""action"": ""resume_task"", ""params"": {{ ""workPackageId"": 1134 }} }}
+
+        EJEMPLO (regla 2 - nombres, NUNCA IDs): Usuario: ""Asigná la tarea #1134 a Juan Pérez"". Respuesta (JSON directo, sin preguntar ningún ID):
+        {{ ""action"": ""assign_user_to_task"", ""params"": {{ ""workPackageId"": 1134, ""responsibleName"": ""Juan Pérez"" }} }}";
     }
 }

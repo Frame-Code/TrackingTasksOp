@@ -1,3 +1,4 @@
+using Application.Dto.Conversation;
 using Application.Ports.UseCases.WorkPackages;
 using Infrastructure.Exceptions;
 
@@ -9,7 +10,7 @@ public class UpdateTaskStatusActionHandler(
 {
     public string ActionName => "update_task_status";
 
-    public async Task<string> ExecuteAsync(GroqAction action, int? contextWpId, CancellationToken ct = default)
+    public async Task<string> ExecuteAsync(GroqAction action, int? contextWpId, ConversationContext? conversationContext = null, CancellationToken ct = default)
     {
         var p = action.Params;
         int wpId = GroqActionParams.GetInt(p, "workPackageId", "id", "wpId");

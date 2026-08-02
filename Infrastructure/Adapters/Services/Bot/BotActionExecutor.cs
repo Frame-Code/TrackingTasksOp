@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Application.Dto.Conversation;
 using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Adapters.Services.Bot;
@@ -15,7 +16,7 @@ public class BotActionExecutor : IBotActionExecutor
         _logger = logger;
     }
 
-    public async Task<List<string>> ExecuteAllAsync(IEnumerable<string> jsonBlocks, CancellationToken ct = default)
+    public async Task<List<string>> ExecuteAllAsync(IEnumerable<string> jsonBlocks, ConversationContext conversationContext, CancellationToken ct = default)
     {
         var resultMessages = new List<string>();
         int? lastCreatedWpId = null;
@@ -27,7 +28,7 @@ public class BotActionExecutor : IBotActionExecutor
                 var actionData = JsonSerializer.Deserialize<GroqAction>(block, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 if (actionData == null) continue;
 
-                var msg = await ExecuteAction(actionData, lastCreatedWpId, ct);
+                var msg = await ExecuteAction(actionData, lastCreatedWpId, conversationContext, ct);
 
                 if (actionData.Action == "start_task" && msg.Contains("ID:"))
                 {
@@ -46,14 +47,14 @@ public class BotActionExecutor : IBotActionExecutor
         return resultMessages;
     }
 
-    private async Task<string> ExecuteAction(GroqAction action, int? contextWpId, CancellationToken ct)
+    private async Task<string> ExecuteAction(GroqAction action, int? contextWpId, ConversationContext conversationContext, CancellationToken ct)
     {
         if (!_handlers.TryGetValue(action.Action, out var handler))
             return $"⚠️ Acción '{action.Action}' no reconocida.";
 
         try
         {
-            return await handler.ExecuteAsync(action, contextWpId, ct);
+            return await handler.ExecuteAsync(action, contextWpId, conversationContext, ct);
         }
         catch (Exception ex)
         {

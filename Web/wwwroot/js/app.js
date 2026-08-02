@@ -4,7 +4,8 @@ import { store, getActiveSession, saveSession, clearSession } from './state.js';
 import { fetchProjects, fetchWorkPackages, fetchActivities, fetchTask,
          postStartSession, postEndSession, fetchStatuses,
          patchWorkPackageStatus, patchWorkPackageProgress,
-         patchWorkPackageDates, postCancelSession } from './api.js';
+         patchWorkPackageDates, postCancelSession,
+         downloadDailyTaskReport, updateApiKey } from './api.js';
 import { updateNavbar, renderProjectSelect, renderCards, renderStatusFilters,
          renderHistoryLoading, renderHistoryContent, renderHistoryError,
          renderActivitiesSelect } from './render.js';
@@ -436,6 +437,107 @@ function bindConfirmDatesButton() {
     });
 }
 
+// ── Modal: Reporte de tareas diarias ──────────────────────────────────────────
+
+function openReportModal() {
+    document.getElementById('reportFromDate').value = '';
+    document.getElementById('reportToDate').value = '';
+    document.getElementById('reportError').classList.add('d-none');
+
+    const confirmBtn = document.getElementById('confirmReportBtn');
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = '<i class="bi bi-download me-1"></i>Descargar';
+
+    new bootstrap.Modal(document.getElementById('reportModal')).show();
+}
+
+function bindReportButton() {
+    document.getElementById('reportBtn').addEventListener('click', openReportModal);
+}
+
+function bindConfirmReportButton() {
+    document.getElementById('confirmReportBtn').addEventListener('click', async () => {
+        const from = document.getElementById('reportFromDate').value;
+        const to = document.getElementById('reportToDate').value;
+        const errorBox = document.getElementById('reportError');
+        errorBox.classList.add('d-none');
+
+        if (!from || !to) {
+            errorBox.textContent = 'Debes indicar ambas fechas.';
+            errorBox.classList.remove('d-none');
+            return;
+        }
+        if (from > to) {
+            errorBox.textContent = 'La fecha "Desde" no puede ser posterior a "Hasta".';
+            errorBox.classList.remove('d-none');
+            return;
+        }
+
+        const btn = document.getElementById('confirmReportBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generando...';
+
+        try {
+            await downloadDailyTaskReport(from, to);
+            bootstrap.Modal.getInstance(document.getElementById('reportModal'))?.hide();
+            showToast('Reporte descargado correctamente.', 'success');
+        } catch (e) {
+            errorBox.textContent = `Error al generar el reporte: ${e.message}`;
+            errorBox.classList.remove('d-none');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-download me-1"></i>Descargar';
+        }
+    });
+}
+
+// ── Modal: Actualizar API key ─────────────────────────────────────────────────
+
+function openApiKeyModal() {
+    document.getElementById('apiKeyInput').value = '';
+    document.getElementById('apiKeyError').classList.add('d-none');
+
+    const confirmBtn = document.getElementById('confirmApiKeyBtn');
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Actualizar';
+
+    new bootstrap.Modal(document.getElementById('apiKeyModal')).show();
+}
+
+function bindApiKeyButton() {
+    document.getElementById('apiKeyBtn').addEventListener('click', openApiKeyModal);
+}
+
+function bindConfirmApiKeyButton() {
+    document.getElementById('confirmApiKeyBtn').addEventListener('click', async () => {
+        const apiKey = document.getElementById('apiKeyInput').value.trim();
+        const errorBox = document.getElementById('apiKeyError');
+        errorBox.classList.add('d-none');
+
+        if (!apiKey) {
+            errorBox.textContent = 'Debes indicar la API key.';
+            errorBox.classList.remove('d-none');
+            return;
+        }
+
+        const btn = document.getElementById('confirmApiKeyBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Actualizando...';
+
+        try {
+            await updateApiKey(apiKey);
+            bootstrap.Modal.getInstance(document.getElementById('apiKeyModal'))?.hide();
+            showToast('API key actualizada correctamente.', 'success');
+        } catch (e) {
+            errorBox.textContent = `Error al actualizar: ${e.message}`;
+            errorBox.classList.remove('d-none');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Actualizar';
+        }
+    });
+}
+
 function bindLoadButton() {
     document.getElementById('loadBtn').addEventListener('click', () => {
         const projectId = document.getElementById('projectSelect').value || null;
@@ -487,6 +589,10 @@ bindGridEvents();
 bindLoadButton();
 bindConfirmEndButton();
 bindConfirmDatesButton();
+bindReportButton();
+bindConfirmReportButton();
+bindApiKeyButton();
+bindConfirmApiKeyButton();
 bindStatusFilterEvents();
 bindSearchEvents();
 bindPaginationEvents();

@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Application.Dto.Conversation;
 using Application.Ports.Services;
@@ -32,10 +33,10 @@ namespace Infrastructure.Adapters.Services
             if (!groqApiClient.IsConfigured)
                 return await SaveContext(context, prompt, "⚠️ API Key de Groq no configurada.", ct);
 
-            string aiResponse;
+            GroqCompletionResult completion;
             try
             {
-                aiResponse = await groqApiClient.GetCompletionAsync(context, prompt, ct);
+                completion = await groqApiClient.GetCompletionAsync(context, prompt, ct);
             }
             catch (Exception ex)
             {
@@ -43,15 +44,22 @@ namespace Infrastructure.Adapters.Services
                 return await SaveContext(context, prompt, $"❌ Error al conectar con el servicio de IA: {ex.Message}", ct);
             }
 
-            // Procesar acciones si el modelo devolvió JSON
-            if (aiResponse.Contains("\"action\""))
+            // Tool calls nativas (ej. start_task) tienen prioridad: son estructuradas, no requieren
+            // parsear texto. El resto de las acciones siguen viniendo como JSON embebido en el texto.
+            var jsonBlocks = completion.ToolCalls.Count > 0
+                ? completion.ToolCalls.Select(BuildJsonBlockFromToolCall).ToList()
+                : (completion.Text.Contains("\"action\"") ? BotActionExecutor.ExtractJsonBlocks(completion.Text) : []);
+
+            if (jsonBlocks.Count > 0)
             {
-                var jsonBlocks = BotActionExecutor.ExtractJsonBlocks(aiResponse);
-                var resultMessages = await botActionExecutor.ExecuteAllAsync(jsonBlocks, ct);
+                var resultMessages = await botActionExecutor.ExecuteAllAsync(jsonBlocks, context, ct);
 
                 if (resultMessages.Count > 0)
                 {
-                    string textPart = Regex.Replace(aiResponse, @"\{.*\}", "", RegexOptions.Singleline).Trim();
+                    // Con tool calls el texto no trae el JSON embebido, así que no hace falta limpiarlo.
+                    string textPart = completion.ToolCalls.Count > 0
+                        ? completion.Text.Trim()
+                        : Regex.Replace(completion.Text, @"\{.*\}", "", RegexOptions.Singleline).Trim();
                     string finalResponse = string.Join("\n", resultMessages);
                     if (!string.IsNullOrWhiteSpace(textPart) && !textPart.StartsWith("{"))
                         finalResponse = $"{textPart}\n\n{finalResponse}";
@@ -60,7 +68,17 @@ namespace Infrastructure.Adapters.Services
                 }
             }
 
-            return await SaveContext(context, prompt, aiResponse, ct);
+            return await SaveContext(context, prompt, completion.Text, ct);
+        }
+
+        private static string BuildJsonBlockFromToolCall(GroqToolCall call)
+        {
+            var wrapper = new JsonObject
+            {
+                ["action"] = call.Name,
+                ["params"] = JsonNode.Parse(call.ArgumentsJson) ?? new JsonObject()
+            };
+            return wrapper.ToJsonString();
         }
 
         private async Task<string> SaveContext(ConversationContext context, string prompt, string response, CancellationToken ct)
