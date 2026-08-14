@@ -34,6 +34,15 @@ public class TaskRepositoryImpl(TrackingTasksDbContext context) : ITaskRepositor
             .FirstOrDefaultAsync(x => x.WorkPackageId == id);
     }
 
+    public async Task<Task?> GetActiveByUserAsync(string userId)
+    {
+        return await context.Tasks
+            .AsNoTracking()
+            .Include(x => x.TasksTimeDetails)
+            .FirstOrDefaultAsync(x => x.UserId == userId
+                                      && x.TasksTimeDetails.Any(d => d.EndTime == null));
+    }
+
     public async Task<Task> SaveAsync(Task entity)
     {
         return await context.AddOrUpdateAsync(entity, entity.UserId, entity.WorkPackageId);

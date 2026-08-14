@@ -29,4 +29,7 @@ public interface IConversationContextService
     /// <param name="sessionId">El identificador de la sesión a eliminar.</param>
     /// <param name="ct">Cancellation Token.</param>
     Task DeleteAsync(string sessionId, CancellationToken ct = default);
+
+    /// <summary>Chats del usuario actual, del más reciente al más antiguo.</summary>
+    Task<List<ConversationSummary>> ListAsync(CancellationToken ct = default);
 }

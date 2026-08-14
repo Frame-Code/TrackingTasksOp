@@ -28,19 +28,24 @@ public class PauseTaskCommandImpl(
 
         // Subimos a OpenProject TODAS las sesiones ya finalizadas que aún no se hayan registrado
         // (la que se acaba de pausar y cualquier otra pendiente de ciclos anteriores), para que
-        // el tiempo invertido no se pierda al pausar.
-        var pendingDetails = task.TasksTimeDetails
-            .Where(d => !d.Uploaded && d.EndTime != null && d.GetHoursWorked() is { TotalHours: > 0 })
-            .ToList();
-
-        if (pendingDetails.Count > 0)
+        // el tiempo invertido no se pierda al pausar. Si el usuario eligió guardar en local,
+        // las dejamos con Uploaded = false y se subirán al finalizar la tarea.
+        if (request.UploadNow)
         {
-            var activityId = await ResolveDefaultActivityId(request.WorkPackageId);
-            foreach (var detail in pendingDetails)
+            var pendingDetails = task.TasksTimeDetails
+                .Where(d => !d.Uploaded && d.EndTime != null && d.GetHoursWorked() is { TotalHours: > 0 })
+                .ToList();
+
+            if (pendingDetails.Count > 0)
             {
-                await addTimeEntryCommand.Execute(new AddTimeEntryRequest(
-                    request.WorkPackageId, activityId, detail.GetHoursWorked()!.Value.TotalHours, string.Empty));
-                detail.Uploaded = true;
+                var activityId = await ResolveDefaultActivityId(request.WorkPackageId);
+                foreach (var detail in pendingDetails)
+                {
+                    await addTimeEntryCommand.Execute(new AddTimeEntryRequest(
+                        request.WorkPackageId, activityId, detail.GetHoursWorked()!.Value.TotalHours, string.Empty,
+                        DateOnly.FromDateTime(detail.StartTime)));
+                    detail.Uploaded = true;
+                }
             }
         }
 

@@ -6,6 +6,10 @@ namespace Application.Dto.Conversation;
 public class ConversationContext
 {
     public string SessionId { get; set; } = string.Empty;
+
+    /// <summary>Título del chat para el listado lateral. Se deriva del primer mensaje del usuario.</summary>
+    public string Title { get; set; } = "Nuevo chat";
+
     public List<HistoryItem> History { get; set; } = [];
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime LastUpdatedAt { get; set; } = DateTime.UtcNow;
@@ -32,6 +36,10 @@ public class ConversationContext
 
     public void AddUserMessage(string message)
     {
+        // El primer mensaje del usuario da nombre al chat en el historial lateral.
+        if (History.Count == 0 && !string.IsNullOrWhiteSpace(message))
+            Title = message.Length > 60 ? message[..60].TrimEnd() + "…" : message;
+
         History.Add(new HistoryItem { Type = "user", Content = message, Timestamp = DateTime.UtcNow });
         LastUpdatedAt = DateTime.UtcNow;
     }

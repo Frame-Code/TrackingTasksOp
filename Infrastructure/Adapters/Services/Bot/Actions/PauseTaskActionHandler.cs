@@ -22,7 +22,13 @@ public class PauseTaskActionHandler(
 
         int? onHoldStatusId = await entityResolver.ResolveStatusId(statusToResolve);
 
-        await pauseTaskCommand.Execute(new PauseTaskRequest(wpId, onHoldStatusId));
-        return $"⏸️ Tarea #{wpId} pausada. El tiempo transcurrido se registró en OpenProject.";
+        // Por defecto sube el tiempo a OpenProject; el LLM manda uploadNow=false si el usuario
+        // pidió guardarlo en local para retomarlo después.
+        bool uploadNow = GroqActionParams.GetBool(p, "uploadNow", fallback: true);
+
+        await pauseTaskCommand.Execute(new PauseTaskRequest(wpId, onHoldStatusId, uploadNow));
+        return uploadNow
+            ? $"⏸️ Tarea #{wpId} pausada. El tiempo transcurrido se registró en OpenProject."
+            : $"⏸️ Tarea #{wpId} pausada. El tiempo quedó guardado en local; se subirá cuando la retomes y finalices.";
     }
 }

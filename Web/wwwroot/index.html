@@ -286,6 +286,37 @@
         </div>
     </div>
 
+    <!-- ── Modal: Pausar sesión ── -->
+    <div class="modal fade" id="pauseModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h5 class="modal-title">
+                            <i class="bi bi-pause-circle text-warning me-2"></i>Pausar sesión
+                        </h5>
+                        <p class="text-muted small mb-0 mt-1" id="pauseModalTaskName"></p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">¿Qué hacer con el tiempo registrado hasta ahora?</p>
+                    <div class="d-grid gap-2">
+                        <button type="button" id="pauseUploadBtn" class="btn btn-primary">
+                            <i class="bi bi-cloud-upload me-2"></i>Subir a OpenProject ahora
+                        </button>
+                        <button type="button" id="pauseLocalBtn" class="btn btn-outline-secondary">
+                            <i class="bi bi-device-hdd me-2"></i>Guardar localmente
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-link btn-sm text-muted" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- AI Bot Floating Button -->
     <a href="/bot.html" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
        style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; z-index: 1050;">

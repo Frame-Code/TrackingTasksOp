@@ -41,7 +41,7 @@ public class AddTimeEntryCommandImpl(
             {
                 ["raw"] = request.Comment,  
             },
-            ["spentOn"] = DateTime.Now.Date.ToString("yyyy-MM-dd"),
+            ["spentOn"] = (request.SpentOn ?? DateOnly.FromDateTime(DateTime.Now)).ToString("yyyy-MM-dd"),
             ["_links"] = new JsonObject
             {
                 ["workPackage"] = new JsonObject

@@ -170,4 +170,33 @@ public class PauseTaskCommandImplTests
         Assert.True(active.Uploaded);
         _addTimeEntryCommandMock.Verify(x => x.Execute(It.IsAny<AddTimeEntryRequest>()), Times.Once);
     }
+
+    [Fact]
+    public async Task Execute_ConUploadNowFalse_NoSubeNadaAOpenProject()
+    {
+        var active = new TaskTimeDetail { StartTime = new DateTime(2026, 6, 1, 10, 0, 0) };
+        var task = BuildTask(active);
+        _repositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(task);
+        _repositoryMock.Setup(x => x.SaveAsync(It.IsAny<TaskEntity>())).ReturnsAsync((TaskEntity t) => t);
+
+        var useCase = BuildUseCase();
+        var result = await useCase.Execute(new PauseTaskRequest(1, UploadNow: false));
+
+        _addTimeEntryCommandMock.Verify(x => x.Execute(It.IsAny<AddTimeEntryRequest>()), Times.Never);
+        Assert.All(result.TasksTimeDetails, d => Assert.False(d.Uploaded));
+    }
+
+    [Fact]
+    public async Task Execute_ConUploadNowFalse_CierraLaSesionConEndTime()
+    {
+        var active = new TaskTimeDetail { StartTime = new DateTime(2026, 6, 1, 10, 0, 0) };
+        var task = BuildTask(active);
+        _repositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(task);
+        _repositoryMock.Setup(x => x.SaveAsync(It.IsAny<TaskEntity>())).ReturnsAsync((TaskEntity t) => t);
+
+        var useCase = BuildUseCase();
+        var result = await useCase.Execute(new PauseTaskRequest(1, UploadNow: false));
+
+        Assert.All(result.TasksTimeDetails, d => Assert.NotNull(d.EndTime));
+    }
 }
