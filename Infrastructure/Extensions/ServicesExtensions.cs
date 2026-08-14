@@ -66,6 +66,7 @@ public static class ServicesExtensions
         collection.AddScoped<IProjectOpService, ProjectOpServiceImpl>();
         collection.AddScoped<IActivityOpService, ActivityOpServiceImpl>();
         collection.AddScoped<IUserOpService, UserOpServiceImpl>();
+        collection.AddScoped<ITimeEntryOpService, TimeEntryOpServiceImpl>();
         collection.AddScoped<IApiKeyEncryptorService, DataProtectionApiKeyEncryptorImpl>();
         collection.AddScoped<IApiKeyValidatorService, ApiKeyValidatorServiceImpl>();
         collection.AddScoped<IAuthAuditLogger, AuthAuditLoggerImpl>();
@@ -91,6 +92,7 @@ public static class ServicesExtensions
         collection.AddScoped<IBotActionHandler, ListTasksActionHandler>();
         collection.AddScoped<IBotActionHandler, ListStatusesActionHandler>();
         collection.AddScoped<IBotActionHandler, StartTaskActionHandler>();
+        collection.AddScoped<IBotActionHandler, CreateTaskActionHandler>();
         collection.AddScoped<IBotActionHandler, AssignUserToTaskActionHandler>();
         collection.AddScoped<IBotActionHandler, EndTaskSessionActionHandler>();
         collection.AddScoped<IBotActionHandler, UpdateTaskStatusActionHandler>();

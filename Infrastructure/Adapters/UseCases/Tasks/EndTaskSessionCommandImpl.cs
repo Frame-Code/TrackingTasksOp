@@ -44,7 +44,8 @@ public class EndTaskSessionCommandImpl
                 : await ResolveDefaultActivityId(request.WorkPackageId);
 
             var timeEntryRequest = new AddTimeEntryRequest(request.WorkPackageId, activityId,
-                lastTimeDetails.GetHoursWorked()!.Value.TotalHours, request.Comment);
+                lastTimeDetails.GetHoursWorked()!.Value.TotalHours, request.Comment,
+                DateOnly.FromDateTime(lastTimeDetails.StartTime));
 
             await addTimeEntryCommand.Execute(timeEntryRequest);
             lastTimeDetails.Uploaded = true;

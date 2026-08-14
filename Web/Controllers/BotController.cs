@@ -8,6 +8,7 @@ namespace Web.Controllers;
 public class BotController(
     IAiIntentService geminiIntentService,
     IAudioTranscriptionService audioTranscriptionService,
+    IConversationContextService conversationContextService,
     ILogger<BotController> logger) : ControllerBase
 {
     private const long MaxAudioSizeBytes = 10 * 1024 * 1024; // 10 MB
@@ -104,5 +105,31 @@ public class BotController(
         var response = await geminiIntentService.GetIntentAsync(transcript, sessionId, HttpContext.RequestAborted);
 
         return Ok(new { transcript, response });
+    }
+
+    [HttpGet("chats")]
+    public async Task<IActionResult> ListChats()
+    {
+        var chats = await conversationContextService.ListAsync(HttpContext.RequestAborted);
+        return Ok(chats);
+    }
+
+    [HttpGet("chats/{sessionId}")]
+    public async Task<IActionResult> GetChat(string sessionId)
+    {
+        var context = await conversationContextService.GetOrCreateAsync(sessionId, HttpContext.RequestAborted);
+        return Ok(new
+        {
+            sessionId = context.SessionId,
+            title = context.Title,
+            messages = context.History.Select(h => new { role = h.Type, content = h.Content, timestamp = h.Timestamp })
+        });
+    }
+
+    [HttpDelete("chats/{sessionId}")]
+    public async Task<IActionResult> DeleteChat(string sessionId)
+    {
+        await conversationContextService.DeleteAsync(sessionId, HttpContext.RequestAborted);
+        return NoContent();
     }
 }

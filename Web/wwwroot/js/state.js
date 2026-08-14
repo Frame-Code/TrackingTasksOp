@@ -25,3 +25,20 @@ export function saveSession(session) {
 export function clearSession() {
     localStorage.removeItem(SESSION_KEY);
 }
+
+const PAUSED_KEY = 'trackingPausedTasks';
+
+export function getPausedIds() {
+    try { return new Set(JSON.parse(localStorage.getItem(PAUSED_KEY) || '[]')); }
+    catch { return new Set(); }
+}
+
+export function markPaused(id) {
+    const s = getPausedIds(); s.add(id);
+    localStorage.setItem(PAUSED_KEY, JSON.stringify([...s]));
+}
+
+export function unmarkPaused(id) {
+    const s = getPausedIds(); s.delete(id);
+    localStorage.setItem(PAUSED_KEY, JSON.stringify([...s]));
+}

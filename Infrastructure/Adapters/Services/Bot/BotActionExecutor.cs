@@ -30,7 +30,7 @@ public class BotActionExecutor : IBotActionExecutor
 
                 var msg = await ExecuteAction(actionData, lastCreatedWpId, conversationContext, ct);
 
-                if (actionData.Action == "start_task" && msg.Contains("ID:"))
+                if (actionData.Action is "start_task" or "create_task" && msg.Contains("ID:"))
                 {
                     var match = Regex.Match(msg, @"ID:\s*(\d+)");
                     if (match.Success && int.TryParse(match.Groups[1].Value, out int newId))

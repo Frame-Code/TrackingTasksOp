@@ -9,6 +9,7 @@ using Application.Ports.UseCases.TimeEntry;
 using Application.Ports.UseCases.WorkPackages;
 using Domain.Entities.TrackingTasksEntities;
 using Infrastructure.Adapters.Services;
+using Infrastructure.Exceptions;
 using TaskEntity = Domain.Entities.TrackingTasksEntities.Task;
 
 namespace Infrastructure.Adapters.UseCases.Tasks;
@@ -102,7 +103,21 @@ namespace Infrastructure.Adapters.UseCases.Tasks;
             };
         }
 
-        //Cerrar la última entrada si es una nueva tarea
+        // Si no se pidió seguimiento, la tarea solo se crea/registra: sin sesión de tiempo.
+        if (!request.StartTracking)
+            return await repository.SaveAsync(task);
+
+        // Invariante: un usuario tiene como máximo UNA sesión abierta. Si hay otra tarea
+        // corriendo, no la cerramos silenciosamente (así se perdía y se corrompía el tiempo):
+        // avisamos para que el usuario decida qué hacer con ella.
+        var running = await repository.GetActiveByUserAsync(userId);
+        if (running is not null && running.WorkPackageId != task.WorkPackageId)
+        {
+            var openDetail = running.TasksTimeDetails.First(d => d.EndTime == null);
+            throw new ActiveSessionConflictException(running.WorkPackageId, running.Name, openDetail.StartTime);
+        }
+
+        //Cerrar la última entrada si quedó abierta en esta misma tarea
         var details = task.TasksTimeDetails.ToList();
         var lastDetail = details
             .OrderBy(x => x.StartTime)
@@ -123,7 +138,8 @@ namespace Infrastructure.Adapters.UseCases.Tasks;
                     lastDetail.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(20, 40));
 
                 var timeEntryRequest = new AddTimeEntryRequest(task.WorkPackageId, request.ActivityId.Value,
-                    lastDetail.GetHoursWorked()!.Value.TotalHours, request.Comment ?? string.Empty);
+                    lastDetail.GetHoursWorked()!.Value.TotalHours, request.Comment ?? string.Empty,
+                    DateOnly.FromDateTime(lastDetail.StartTime));
 
                 await addTimeEntryCommand.Execute(timeEntryRequest);
                 lastDetail.Uploaded = true;

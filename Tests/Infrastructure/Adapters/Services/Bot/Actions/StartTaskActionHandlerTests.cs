@@ -63,7 +63,7 @@ public class StartTaskActionHandlerTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_NewTaskWithoutAssignee_ShouldWarnTaskWontAppearInMyTasks()
+    public async Task ExecuteAsync_FuerzaStartTrackingTrue()
     {
         _entityResolverMock.Setup(r => r.ResolveProjectId(It.IsAny<string>())).ReturnsAsync(10);
         _entityResolverMock.Setup(r => r.ResolveStatusId(It.IsAny<string>())).ReturnsAsync(5);
@@ -86,8 +86,35 @@ public class StartTaskActionHandlerTests
         var result = await handler.ExecuteAsync(action, null);
 
         Assert.Contains("ID: 202", result);
-        Assert.Contains("sin asignado", result);
-        Assert.Contains("Mis tareas", result);
+        _startTaskCommandMock.Verify(c => c.Execute(It.Is<StarTaskRequest>(r => r.StartTracking)), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ConflictoDeSesion_DevuelveMensajeConOpciones()
+    {
+        _entityResolverMock.Setup(r => r.ResolveProjectId(It.IsAny<string>())).ReturnsAsync(10);
+        _entityResolverMock.Setup(r => r.ResolveStatusId(It.IsAny<string>())).ReturnsAsync(5);
+        _entityResolverMock.Setup(r => r.ResolveUserId(It.IsAny<string>(), It.IsAny<int?>())).ReturnsAsync((int?)null);
+        _startTaskCommandMock.Setup(c => c.Execute(It.IsAny<StarTaskRequest>()))
+            .ThrowsAsync(new global::Infrastructure.Exceptions.ActiveSessionConflictException(999, "Otra tarea", DateTime.Now.AddHours(-1)));
+
+        var action = new GroqAction
+        {
+            Action = "start_task",
+            Params = new Dictionary<string, object>
+            {
+                ["projectName"] = "MyProject",
+                ["statusName"] = "In Progress",
+                ["name"] = "New Task"
+            }
+        };
+
+        var handler = BuildHandler();
+        var result = await handler.ExecuteAsync(action, null);
+
+        Assert.Contains("#999", result);
+        Assert.Contains("Subirla ahora", result);
+        Assert.Contains("Guardarla en local", result);
     }
 
     [Fact]

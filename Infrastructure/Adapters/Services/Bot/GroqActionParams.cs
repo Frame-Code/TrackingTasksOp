@@ -36,6 +36,27 @@ public static class GroqActionParams
         return null;
     }
 
+    /// <summary>
+    /// Lee un booleano. Si la clave no viene (el LLM no lo mandó), devuelve <paramref name="fallback"/>.
+    /// </summary>
+    public static bool GetBool(Dictionary<string, object>? d, string key, bool fallback)
+    {
+        if (d == null) return fallback;
+        if (d.TryGetValue(key, out var v) && v != null)
+        {
+            if (v is JsonElement e)
+                return e.ValueKind switch
+                {
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    JsonValueKind.String => bool.TryParse(e.GetString(), out var b) ? b : fallback,
+                    _ => fallback
+                };
+            return bool.TryParse(v.ToString(), out var parsed) ? parsed : fallback;
+        }
+        return fallback;
+    }
+
     public static DateOnly? GetDate(Dictionary<string, object>? d, params string[] keys)
     {
         var raw = GetStr(d, keys);

@@ -2,7 +2,7 @@
 // no realiza llamadas API ni maneja eventos.
 
 import { escHtml, statusClass, formatDuration, formatDateTime } from './helpers.js';
-import { store, getActiveSession } from './state.js';
+import { store, getActiveSession, getPausedIds } from './state.js';
 
 // ── Navbar ────────────────────────────────────────────────────────────────────
 
@@ -220,7 +220,8 @@ function buildStatusDropdown(wp, statusTitle) {
 
 function buildCard(wp, session) {
     const isActive     = session?.workPackageId === wp.id;
-    const hasOther     = session && !isActive;
+    const isPaused     = !isActive && getPausedIds().has(wp.id);
+    const hasOther     = session && !isActive && !isPaused;
     const statusTitle  = wp._links?.status?.title  || 'Sin estado';
     const projectTitle = wp._links?.project?.title || '';
     const assignee     = wp._links?.assignee?.title || '';
@@ -252,12 +253,19 @@ function buildCard(wp, session) {
         ? `<button class="btn btn-outline-secondary btn-sm btn-cancel" data-id="${wp.id}" title="Cancelar sesión sin guardar">
                <i class="bi bi-x-circle"></i>
            </button>
+           <button class="btn btn-warning btn-sm btn-pause" data-id="${wp.id}" title="Pausar sesión">
+               <i class="bi bi-pause-circle-fill me-1"></i>Pausar
+           </button>
            <button class="btn btn-danger btn-sm btn-end" data-id="${wp.id}">
                <i class="bi bi-stop-circle-fill me-1"></i>Finalizar
            </button>`
-        : `<button class="btn btn-outline-success btn-sm btn-start" data-id="${wp.id}">
-               <i class="bi bi-play-circle me-1"></i>Iniciar
-           </button>`;
+        : isPaused
+            ? `<button class="btn btn-primary btn-sm btn-resume" data-id="${wp.id}">
+                   <i class="bi bi-play-circle-fill me-1"></i>Continuar
+               </button>`
+            : `<button class="btn btn-outline-success btn-sm btn-start" data-id="${wp.id}">
+                   <i class="bi bi-play-circle me-1"></i>Iniciar
+               </button>`;
 
     return `
         <div class="col-12 col-md-6 col-xl-4">

@@ -23,7 +23,7 @@ async function apiFetch(url, options = {}) {
         let msg = `Error ${res.status}`;
         try {
             const body = await res.json();
-            msg = body.title || body.message || body.detail || msg;
+            msg = body.detail || body.message || body.title || msg;
         } catch (_) { /* ignorar errores de parseo */ }
         throw new Error(msg);
     }
@@ -66,7 +66,8 @@ export async function postStartSession(wp) {
         projectId: extractId(wp._links?.project?.href),
         statusId: extractId(wp._links?.status?.href),
         activityId: null,
-        comment: null
+        comment: null,
+        startTracking: true
     };
     return apiFetch(`${API}/task/start_session`, {
         method: 'POST',
@@ -126,7 +127,7 @@ export async function downloadDailyTaskReport(from, to) {
         let msg = `Error ${res.status}`;
         try {
             const body = await res.json();
-            msg = body.title || body.message || body.detail || msg;
+            msg = body.detail || body.message || body.title || msg;
         } catch (_) { /* ignorar errores de parseo */ }
         throw new Error(msg);
     }
@@ -146,5 +147,19 @@ export async function updateApiKey(apiKey) {
     return apiFetch(`${API}/auth/api-key`, {
         method: 'PUT',
         body: JSON.stringify({ apiKey })
+    });
+}
+
+export async function postPauseSession(workPackageId, uploadNow = true) {
+    return apiFetch(`${API}/task/pause_session`, {
+        method: 'POST',
+        body: JSON.stringify({ workPackageId, uploadNow })
+    });
+}
+
+export async function postResumeSession(workPackageId) {
+    return apiFetch(`${API}/task/resume_session`, {
+        method: 'POST',
+        body: JSON.stringify({ workPackageId })
     });
 }

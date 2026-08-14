@@ -12,6 +12,8 @@ public class TaskController(
     IStartTaskCommand startTaskCommand,
     IEndTaskSessionCommand endTaskSessionCommand,
     ICancelTaskSessionCommand cancelTaskSessionCommand,
+    IPauseTaskCommand pauseTaskCommand,
+    IResumeTaskCommand resumeTaskCommand,
     ITaskRepository taskRepository
     ) : ControllerBase
 {
@@ -32,6 +34,18 @@ public class TaskController(
     {
         var cancelled = await cancelTaskSessionCommand.Execute(request.WorkPackageId);
         return cancelled ? NoContent() : NotFound(new { message = "No hay sesión activa para esta tarea." });
+    }
+
+    [HttpPost("pause_session")]
+    public async Task<TaskEntity> PauseSession([FromBody] PauseTaskRequest request)
+    {
+        return await pauseTaskCommand.Execute(request);
+    }
+
+    [HttpPost("resume_session")]
+    public async Task<TaskEntity> ResumeSession([FromBody] ResumeTaskRequest request)
+    {
+        return await resumeTaskCommand.Execute(request);
     }
 
     [HttpGet("{workPackageId:int}")]

@@ -1,11 +1,13 @@
 // Punto de entrada: orquesta módulos y maneja todos los eventos del usuario
 
-import { store, getActiveSession, saveSession, clearSession } from './state.js';
+import { store, getActiveSession, saveSession, clearSession,
+         markPaused, unmarkPaused } from './state.js';
 import { fetchProjects, fetchWorkPackages, fetchActivities, fetchTask,
          postStartSession, postEndSession, fetchStatuses,
          patchWorkPackageStatus, patchWorkPackageProgress,
          patchWorkPackageDates, postCancelSession,
-         downloadDailyTaskReport, updateApiKey } from './api.js';
+         downloadDailyTaskReport, updateApiKey,
+         postPauseSession, postResumeSession } from './api.js';
 import { updateNavbar, renderProjectSelect, renderCards, renderStatusFilters,
          renderHistoryLoading, renderHistoryContent, renderHistoryError,
          renderActivitiesSelect } from './render.js';
@@ -156,6 +158,62 @@ async function handleCancelSession(wpId) {
     } catch (e) {
         showToast(`Error al cancelar: ${e.message}`, 'danger');
     }
+}
+
+// ── Pausar / Continuar ────────────────────────────────────────────────────────
+
+let _pauseWpId = null;
+
+function openPauseModal(wpId) {
+    const wp = store.workPackages.find(w => w.id === wpId);
+    _pauseWpId = wpId;
+    document.getElementById('pauseModalTaskName').textContent =
+        wp ? `#${wp.id} — ${wp.subject}` : `#${wpId}`;
+    new bootstrap.Modal(document.getElementById('pauseModal')).show();
+}
+
+async function handlePauseSession(wpId, uploadNow) {
+    try {
+        await postPauseSession(wpId, uploadNow);
+        markPaused(wpId);
+        clearSession();
+        stopTimer();
+        bootstrap.Modal.getInstance(document.getElementById('pauseModal'))?.hide();
+        renderCards();
+        const msg = uploadNow ? ' Tiempo subido a OpenProject.' : ' Tiempo guardado localmente.';
+        showToast(`Sesión pausada.${msg}`, 'warning');
+    } catch (e) {
+        showToast(`Error al pausar: ${e.message}`, 'danger');
+    }
+}
+
+async function handleResumeSession(wpId) {
+    const wp = store.workPackages.find(w => w.id === wpId);
+    if (!wp) return;
+
+    const btn = document.querySelector(`.btn-resume[data-id="${wpId}"]`);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>'; }
+
+    try {
+        await postResumeSession(wpId);
+        unmarkPaused(wpId);
+        saveSession({ workPackageId: wpId, subject: wp.subject, startTime: new Date().toISOString() });
+        startTimer();
+        renderCards();
+        showToast(`Sesión reanudada: <strong>${escHtml(wp.subject)}</strong>`, 'success');
+    } catch (e) {
+        showToast(`Error al reanudar: ${e.message}`, 'danger');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-play-circle-fill me-1"></i>Continuar'; }
+    }
+}
+
+function bindPauseModalButtons() {
+    document.getElementById('pauseUploadBtn').addEventListener('click', () => {
+        if (_pauseWpId) handlePauseSession(_pauseWpId, true);
+    });
+    document.getElementById('pauseLocalBtn').addEventListener('click', () => {
+        if (_pauseWpId) handlePauseSession(_pauseWpId, false);
+    });
 }
 
 async function handleChangeProgress(wpId, pct) {
@@ -354,12 +412,16 @@ function bindGridEvents() {
         const startBtn     = e.target.closest('.btn-start');
         const endBtn       = e.target.closest('.btn-end');
         const cancelBtn    = e.target.closest('.btn-cancel');
+        const pauseBtn     = e.target.closest('.btn-pause');
+        const resumeBtn    = e.target.closest('.btn-resume');
         const historyBtn   = e.target.closest('.btn-history');
         const setStatusBtn = e.target.closest('.btn-set-status');
 
         if (startBtn)     await handleStartSession(parseInt(startBtn.dataset.id));
         if (endBtn)       openEndModal();
         if (cancelBtn)    await handleCancelSession(parseInt(cancelBtn.dataset.id));
+        if (pauseBtn)     openPauseModal(parseInt(pauseBtn.dataset.id));
+        if (resumeBtn)    await handleResumeSession(parseInt(resumeBtn.dataset.id));
         if (historyBtn)   await handleOpenHistory(parseInt(historyBtn.dataset.id));
 
         const datesBtn = e.target.closest('.btn-dates');
@@ -572,7 +634,7 @@ function bindConfirmEndButton() {
 
 function bindStorageSync() {
     window.addEventListener('storage', (e) => {
-        if (e.key !== 'trackingActiveSession') return;
+        if (e.key !== 'trackingActiveSession' && e.key !== 'trackingPausedTasks') return;
 
         if (getActiveSession()) {
             startTimer();
@@ -597,6 +659,7 @@ bindStatusFilterEvents();
 bindSearchEvents();
 bindPaginationEvents();
 bindStorageSync();
+bindPauseModalButtons();
 
 loadProjects();
 loadStatuses();
