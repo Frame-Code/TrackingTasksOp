@@ -12,5 +12,11 @@ public record CreateWorkPackageRequest(
     DateOnly? StartDate = null,
     DateOnly? DueDate = null,
     Dictionary<string, int>? CustomFieldOptionIds = null,
-    Dictionary<string, string>? CustomFieldTextValues = null
+    Dictionary<string, string>? CustomFieldTextValues = null,
+
+    /// <summary>
+    /// Horas estimadas de trabajo ("Trabajo" en OpenProject). Opcional: si es null
+    /// el campo no se envía y la tarea queda sin estimación, como hasta ahora.
+    /// </summary>
+    double? EstimatedHours = null
 );

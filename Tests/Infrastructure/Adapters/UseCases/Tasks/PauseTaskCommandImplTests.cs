@@ -6,6 +6,7 @@ using Application.Ports.UseCases.TimeEntry;
 using Application.Ports.UseCases.WorkPackages;
 using Domain.Entities.OpenProjectEntities.Activity;
 using Domain.Entities.TrackingTasksEntities;
+using Infrastructure.Adapters.Services;
 using Infrastructure.Adapters.UseCases.Tasks;
 using Infrastructure.Adapters.UseCases.WorkPackages;
 using Moq;
@@ -32,11 +33,15 @@ public class PauseTaskCommandImplTests
             .Returns(Task.CompletedTask);
     }
 
+    // Se arma un PendingTimeUploaderImpl real sobre los mismos mocks: lo que interesa verificar
+    // es qué entradas de tiempo llegan a OpenProject, no por qué colaborador pasan.
     private PauseTaskCommandImpl BuildUseCase() => new(
         _repositoryMock.Object,
         _updateWorkPackageCommandMock.Object,
-        _addTimeEntryCommandMock.Object,
-        _activityOpServiceMock.Object);
+        new PendingTimeUploaderImpl(
+            _repositoryMock.Object,
+            _addTimeEntryCommandMock.Object,
+            _activityOpServiceMock.Object));
 
     private static TaskEntity BuildTask(params TaskTimeDetail[] details) => new()
     {

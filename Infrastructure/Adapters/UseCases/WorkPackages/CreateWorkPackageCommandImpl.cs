@@ -39,6 +39,10 @@ public class CreateWorkPackageCommandImpl(
         if (request.DueDate.HasValue)
             payload["dueDate"] = request.DueDate.Value.ToString("yyyy-MM-dd");
 
+        // OpenProject espera "Trabajo" como duración ISO 8601, no como número de horas.
+        if (request.EstimatedHours is > 0)
+            payload["estimatedTime"] = ToIso8601Duration(request.EstimatedHours.Value);
+
         var links = new JsonObject();
         
         if (request.StatusId.HasValue && request.StatusId.Value > 0)
@@ -167,26 +171,56 @@ public class CreateWorkPackageCommandImpl(
     }
 
     /// <summary>
+    /// Convierte horas decimales a la duración ISO 8601 que pide OpenProject:
+    /// 1 → "PT1H", 1.5 → "PT1H30M", 0.5 → "PT30M".
+    /// Se redondea al minuto porque OpenProject no muestra segundos en "Trabajo".
+    /// </summary>
+    internal static string ToIso8601Duration(double hours)
+    {
+        var totalMinutes = (int)Math.Round(hours * 60, MidpointRounding.AwayFromZero);
+        var h = totalMinutes / 60;
+        var m = totalMinutes % 60;
+
+        if (h > 0 && m > 0) return $"PT{h}H{m}M";
+        return h > 0 ? $"PT{h}H" : $"PT{m}M";
+    }
+
+    public async Task<List<WorkPackageType>> GetTypesAsync(int projectId)
+    {
+        string url = $"/api/v3/projects/{projectId}/types";
+        var response = await _client.GetAsync(url);
+        if (!response.IsSuccessStatusCode)
+        {
+            logger.LogError("Error fetching work package types for project {ProjectId}", projectId);
+            return [];
+        }
+
+        var json = await response.Content.ReadAsStringAsync();
+        var elements = JsonNode.Parse(json)?["_embedded"]?["elements"]?.AsArray();
+        if (elements is null) return [];
+
+        return elements
+            .Select(e => new WorkPackageType(
+                e?["id"]?.GetValue<int>() ?? 0,
+                e?["name"]?.GetValue<string>() ?? ""))
+            .Where(t => t.Id > 0 && t.Name.Length > 0)
+            .ToList();
+    }
+
+    /// <summary>
     /// Resuelve un tipo de work package válido para el proyecto cuando no se especifica uno.
     /// No se puede asumir un ID fijo (ej. 1 = "Task") porque los tipos disponibles varían por proyecto;
     /// usar un ID inexistente hace que OpenProject ignore silenciosamente los campos personalizados enviados.
     /// </summary>
     private async Task<int> GetDefaultTypeIdAsync(int projectId)
     {
-        string url = $"/api/v3/projects/{projectId}/types";
-        var response = await _client.GetAsync(url);
-        if (!response.IsSuccessStatusCode) return 1;
+        var types = await GetTypesAsync(projectId);
+        if (types.Count == 0) return 1;
 
-        var json = await response.Content.ReadAsStringAsync();
-        var elements = JsonNode.Parse(json)?["_embedded"]?["elements"]?.AsArray();
-        if (elements is null || elements.Count == 0) return 1;
+        var taskType = types.FirstOrDefault(t =>
+            t.Name.Contains("Task", StringComparison.OrdinalIgnoreCase) ||
+            t.Name.Contains("Tarea", StringComparison.OrdinalIgnoreCase));
 
-        var taskType = elements.FirstOrDefault(e =>
-        {
-            var name = e?["name"]?.GetValue<string>() ?? "";
-            return name.Contains("Task", StringComparison.OrdinalIgnoreCase) || name.Contains("Tarea", StringComparison.OrdinalIgnoreCase);
-        });
-
-        return (taskType ?? elements[0])?["id"]?.GetValue<int>() ?? 1;
+        return (taskType ?? types[0]).Id;
     }
 }

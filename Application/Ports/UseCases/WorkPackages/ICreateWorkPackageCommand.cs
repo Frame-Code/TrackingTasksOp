@@ -13,4 +13,10 @@ public interface ICreateWorkPackageCommand
     /// junto con sus valores permitidos.
     /// </summary>
     Task<List<RequiredCustomField>> GetRequiredCustomFieldsAsync(int projectId, int? typeId = null);
+
+    /// <summary>
+    /// Tipos de work package habilitados en el proyecto. Se consultan en vez de asumirse
+    /// porque cada instancia de OpenProject define los suyos con nombres e IDs propios.
+    /// </summary>
+    Task<List<WorkPackageType>> GetTypesAsync(int projectId);
 }

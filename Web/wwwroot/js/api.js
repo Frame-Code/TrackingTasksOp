@@ -163,3 +163,19 @@ export async function postResumeSession(workPackageId) {
         body: JSON.stringify({ workPackageId })
     });
 }
+
+/** Registra en OpenProject las sesiones de la tarea que quedaron guardadas solo en local. */
+export async function postUploadPending(workPackageId) {
+    return apiFetch(`${API}/task/upload_pending`, {
+        method: 'POST',
+        body: JSON.stringify({ workPackageId })
+    });
+}
+
+/** Registra tiempo a mano en OpenProject (sesión que no se cronometró). */
+export async function postLogTime(payload) {
+    return apiFetch(`${API}/task/log_time`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    });
+}

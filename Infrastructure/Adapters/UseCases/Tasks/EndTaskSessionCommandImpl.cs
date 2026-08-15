@@ -13,7 +13,7 @@ using Task = Domain.Entities.TrackingTasksEntities.Task;
 namespace Infrastructure.Adapters.UseCases.Tasks;
 
 public class EndTaskSessionCommandImpl
-    (ITaskRepository repository, IAddTimeEntryCommand addTimeEntryCommand, IUpdateWorkPackageCommand updateWorkPackageCommand, IActivityOpService activityOpService): IEndTaskSessionCommand
+    (ITaskRepository repository, IPendingTimeUploader pendingTimeUploader, IUpdateWorkPackageCommand updateWorkPackageCommand): IEndTaskSessionCommand
 {
     public async Task<Task> Execute(EndTaskSessionRequest request)
     {
@@ -35,21 +35,11 @@ public class EndTaskSessionCommandImpl
                 lastTimeDetails.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(20, 40));
         }
 
-        // Si la última sesión ya fue subida (ej. porque la tarea se pausó y reanudó sin
-        // generar una nueva sesión), no volvemos a registrar el tiempo para evitar duplicados.
-        if (!lastTimeDetails.Uploaded)
-        {
-            var activityId = request.ActivityId is > 0
-                ? request.ActivityId.Value
-                : await ResolveDefaultActivityId(request.WorkPackageId);
-
-            var timeEntryRequest = new AddTimeEntryRequest(request.WorkPackageId, activityId,
-                lastTimeDetails.GetHoursWorked()!.Value.TotalHours, request.Comment,
-                DateOnly.FromDateTime(lastTimeDetails.StartTime));
-
-            await addTimeEntryCommand.Execute(timeEntryRequest);
-            lastTimeDetails.Uploaded = true;
-        }
+        // Se suben TODAS las sesiones cerradas sin registrar, no solo la última: al pausar
+        // eligiendo "guardar en local" quedan sesiones con Uploaded = false, y antes nadie las
+        // subía nunca, así que ese tiempo no llegaba a OpenProject.
+        // Las ya subidas se saltan solas, de modo que no se duplican.
+        await pendingTimeUploader.UploadPendingAsync(task, request.ActivityId, request.Comment);
 
         // Persistimos el registro de tiempo de inmediato: si el cambio de estado falla
         // después, no debe perderse ni duplicarse al reintentar.
@@ -77,15 +67,6 @@ public class EndTaskSessionCommandImpl
         }
 
         return task;
-    }
-
-    private async Task<int> ResolveDefaultActivityId(int workPackageId)
-    {
-        var activities = await activityOpService.Lists(workPackageId);
-        var defaultActivity = activities.FirstOrDefault()
-            ?? throw new Exception($"No se encontró ninguna actividad disponible para registrar el tiempo de la tarea #{workPackageId}.");
-
-        return defaultActivity.Id;
     }
 
     /// <summary>

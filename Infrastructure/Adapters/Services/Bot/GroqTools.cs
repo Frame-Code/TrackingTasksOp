@@ -27,12 +27,14 @@ internal static class GroqTools
                 {
                     ["projectName"] = new { type = "string", description = "Nombre del proyecto en OpenProject (nunca un ID)" },
                     ["statusName"] = new { type = "string", description = "Nombre del estado inicial (nunca un ID)" },
+                    ["typeName"] = new { type = "string", description = "Tipo de paquete de trabajo tal como lo nombró el usuario (ej. 'error', 'soporte técnico', 'garantía'). NO lo inventes ni asumas 'desarrollo': si el usuario no lo dijo, omití este parámetro y el sistema le mostrará los tipos disponibles del proyecto." },
                     ["name"] = new { type = "string", description = "Nombre/asunto de la tarea" },
                     ["description"] = new { type = "string" },
                     ["assigneeName"] = new { type = "string", description = "Nombre del asignado (nunca un ID), o 'yo' si el usuario pide asignarse a sí mismo" },
                     ["responsibleName"] = new { type = "string", description = "Nombre del responsable (nunca un ID), o 'yo' si el usuario pide asignarse a sí mismo" },
                     ["startDate"] = new { type = "string", description = "Fecha de inicio en formato yyyy-MM-dd" },
                     ["dueDate"] = new { type = "string", description = "Fecha de fin en formato yyyy-MM-dd" },
+                    ["estimatedHours"] = new { type = "number", description = "Horas estimadas de trabajo ('Trabajo' en OpenProject), en horas decimales: 'hora y media' = 1.5, '45 minutos' = 0.75. Opcional: omitilo si el usuario no dijo cuánto tiempo le va a dedicar, no lo inventes." },
                     ["customFields"] = new
                     {
                         type = "object",

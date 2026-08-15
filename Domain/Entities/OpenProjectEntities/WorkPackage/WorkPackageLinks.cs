@@ -16,6 +16,10 @@ public class WorkPackageLinks
     
     [JsonPropertyName("assignee")]
     public LinkObject Assignee { get; set; } = new LinkObject();
+
+    /// <summary>Responsable ("accountable" en la UI de OpenProject). Distinto del asignado.</summary>
+    [JsonPropertyName("responsible")]
+    public LinkObject Responsible { get; set; } = new LinkObject();
     
     [JsonPropertyName("project")]
     public LinkObject Project { get; set; } = new LinkObject();
