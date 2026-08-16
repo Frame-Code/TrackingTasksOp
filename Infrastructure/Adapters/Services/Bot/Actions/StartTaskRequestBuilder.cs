@@ -95,13 +95,70 @@ internal static class StartTaskRequestBuilder
         DateOnly? startDate = GroqActionParams.GetDate(p, "startDate") ?? draft?.StartDate;
         DateOnly? dueDate = GroqActionParams.GetDate(p, "dueDate") ?? draft?.DueDate;
 
+        // Estimación de trabajo. Opcional: si no viene, la tarea se crea sin estimar.
+        double? estimatedHours = GroqActionParams.GetNullableDouble(p, "estimatedHours", "estimatedTime", "workHours")
+                                 ?? draft?.EstimatedHours;
+
+        // Borrador que se persiste en Redis si falta algún dato: así el usuario solo responde
+        // lo que falta, sin repetir el resto en el siguiente turno.
+        var draftToPersist = new PendingStartTaskDraft
+        {
+            ProjectId = projId.Value,
+            StatusId = statId.Value,
+            Name = taskName,
+            Description = description,
+            AssigneeId = assigneeId,
+            ResponsibleId = responsibleId,
+            StartDate = startDate,
+            DueDate = dueDate,
+            EstimatedHours = estimatedHours
+        };
+
+        // El tipo de work package (DESARROLLO, ERROR, SOPORTE TECNICO...) determina qué campos
+        // personalizados son obligatorios, así que se resuelve ANTES de consultarlos.
+        // Solo aplica al crear: si se hace seguimiento de un WP existente, su tipo ya está fijado.
+        int? typeId = null;
+        if (wpId <= 0)
+        {
+            typeId = GroqActionParams.GetNullableInt(p, "typeId") ?? draft?.TypeId;
+            string typeName = GroqActionParams.GetStr(p, "typeName", "type", "workPackageType");
+
+            if (!typeId.HasValue || !string.IsNullOrEmpty(typeName))
+            {
+                var availableTypes = await createWorkPackageCommand.GetTypesAsync(projId.Value);
+
+                if (!string.IsNullOrEmpty(typeName))
+                    typeId = MatchType(availableTypes, typeName)?.Id ?? typeId;
+
+                // Preguntamos con los tipos reales del proyecto en vez de asumir uno. Asumir era
+                // lo que hacía que toda tarea terminara como el primer tipo de la lista.
+                if (!typeId.HasValue && availableTypes.Count > 0)
+                {
+                    if (conversationContext != null)
+                    {
+                        conversationContext.PendingTaskProjectId = projId.Value;
+                        conversationContext.PendingStartTaskDraft = draftToPersist;
+                    }
+
+                    var intro = string.IsNullOrEmpty(typeName)
+                        ? "🤔 ¿De qué **tipo** es esta tarea?"
+                        : $"🤔 No encontré el tipo «{typeName}» en este proyecto. ¿Cuál de estos es?";
+
+                    var options = string.Join("\n", availableTypes.Select(t => $"- **{t.Name}**"));
+                    return new BuildResult(null, $"{intro}\n\n{options}\n\nDime cuál y creo la tarea.", wpId);
+                }
+            }
+
+            draftToPersist.TypeId = typeId;
+        }
+
         // Si vamos a crear un work package nuevo (no a iniciar seguimiento de uno existente),
         // verificamos si el tipo de tarea del proyecto tiene campos personalizados obligatorios.
         Dictionary<string, int>? customFieldOptionIds = null;
         Dictionary<string, string>? customFieldTextValues = null;
         if (wpId <= 0)
         {
-            var requiredFields = await createWorkPackageCommand.GetRequiredCustomFieldsAsync(projId.Value);
+            var requiredFields = await createWorkPackageCommand.GetRequiredCustomFieldsAsync(projId.Value, typeId);
             if (requiredFields.Count > 0)
             {
                 // Combina lo que ya se había resuelto en un turno anterior (persistido en el
@@ -158,17 +215,7 @@ internal static class StartTaskRequestBuilder
                     {
                         conversationContext.PendingTaskProjectId = projId.Value;
                         conversationContext.PendingCustomFields = resolvedRaw;
-                        conversationContext.PendingStartTaskDraft = new PendingStartTaskDraft
-                        {
-                            ProjectId = projId.Value,
-                            StatusId = statId.Value,
-                            Name = taskName,
-                            Description = description,
-                            AssigneeId = assigneeId,
-                            ResponsibleId = responsibleId,
-                            StartDate = startDate,
-                            DueDate = dueDate
-                        };
+                        conversationContext.PendingStartTaskDraft = draftToPersist;
                     }
 
                     var msg = "🤔 Para crear esta tarea necesito que me indiques los siguientes datos:\n\n";
@@ -199,6 +246,7 @@ internal static class StartTaskRequestBuilder
         {
             ProjectId = projId.Value,
             StatusId = statId.Value,
+            TypeId = typeId,
             Name = taskName,
             WorkPackageId = wpId,
             Description = description,
@@ -208,10 +256,21 @@ internal static class StartTaskRequestBuilder
             ResponsibleId = responsibleId,
             StartDate = startDate,
             DueDate = dueDate,
+            EstimatedHours = estimatedHours,
             CustomFieldOptionIds = customFieldOptionIds,
             CustomFieldTextValues = customFieldTextValues
         };
 
         return new BuildResult(startReq, null, wpId);
     }
+
+    /// <summary>
+    /// Empareja lo que dijo el usuario ("error", "soporte") con los tipos del proyecto
+    /// ("ERROR", "SOPORTE TECNICO"). Va de más estricto a más laxo para que un nombre exacto
+    /// nunca pierda contra una coincidencia parcial de otro tipo.
+    /// </summary>
+    internal static WorkPackageType? MatchType(List<WorkPackageType> types, string name)
+        => types.FirstOrDefault(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+           ?? types.FirstOrDefault(t => t.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
+           ?? types.FirstOrDefault(t => name.Contains(t.Name, StringComparison.OrdinalIgnoreCase));
 }

@@ -65,6 +65,8 @@ public class PendingStartTaskDraft
 {
     public int ProjectId { get; set; }
     public int StatusId { get; set; }
+    public int? TypeId { get; set; }
+    public double? EstimatedHours { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public int? AssigneeId { get; set; }

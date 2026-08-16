@@ -1,4 +1,6 @@
 ﻿using Application.Dto.Tasks;
+using Application.Dto.TimeEntry;
+using Application.Ports.UseCases.TimeEntry;
 using Application.Ports.Repositories;
 using Application.Ports.UseCases.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +16,8 @@ public class TaskController(
     ICancelTaskSessionCommand cancelTaskSessionCommand,
     IPauseTaskCommand pauseTaskCommand,
     IResumeTaskCommand resumeTaskCommand,
+    IUploadPendingSessionsCommand uploadPendingSessionsCommand,
+    ILogTimeCommand logTimeCommand,
     ITaskRepository taskRepository
     ) : ControllerBase
 {
@@ -46,6 +50,28 @@ public class TaskController(
     public async Task<TaskEntity> ResumeSession([FromBody] ResumeTaskRequest request)
     {
         return await resumeTaskCommand.Execute(request);
+    }
+
+    /// <summary>
+    /// Registra en OpenProject las sesiones que quedaron guardadas solo en local.
+    /// Permite recuperar el tiempo pendiente sin tener que finalizar la tarea.
+    /// </summary>
+    [HttpPost("upload_pending")]
+    public async Task<IActionResult> UploadPending([FromBody] UploadPendingSessionsRequest request, CancellationToken ct)
+    {
+        var uploaded = await uploadPendingSessionsCommand.Execute(request.WorkPackageId, ct);
+        return Ok(new { uploaded });
+    }
+
+    /// <summary>
+    /// Registra tiempo a mano, para sesiones que no se cronometraron.
+    /// Equivale al formulario "Tiempo registrado" de OpenProject.
+    /// </summary>
+    [HttpPost("log_time")]
+    public async Task<IActionResult> LogTime([FromBody] LogTimeRequest request, CancellationToken ct)
+    {
+        var hours = await logTimeCommand.Execute(request, ct);
+        return Ok(new { hours });
     }
 
     [HttpGet("{workPackageId:int}")]

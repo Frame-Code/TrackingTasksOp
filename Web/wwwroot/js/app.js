@@ -7,13 +7,14 @@ import { fetchProjects, fetchWorkPackages, fetchActivities, fetchTask,
          patchWorkPackageStatus, patchWorkPackageProgress,
          patchWorkPackageDates, postCancelSession,
          downloadDailyTaskReport, updateApiKey,
-         postPauseSession, postResumeSession } from './api.js';
+         postPauseSession, postResumeSession, postUploadPending,
+         postLogTime } from './api.js';
 import { updateNavbar, renderProjectSelect, renderCards, renderStatusFilters,
          renderHistoryLoading, renderHistoryContent, renderHistoryError,
          renderActivitiesSelect } from './render.js';
 import { startTimer, stopTimer } from './timer.js';
 import { showToast, setLoading, showError, hideError } from './ui.js';
-import { escHtml, formatDuration, statusClass } from './helpers.js';
+import { escHtml, formatDuration, statusClass, extractId } from './helpers.js';
 
 // ── Carga de datos ────────────────────────────────────────────────────────────
 
@@ -310,6 +311,197 @@ async function handleOpenHistory(wpId) {
     }
 }
 
+// El modal de historial lo monta Bootstrap fuera de #wpGrid, así que su delegación de
+// clicks va sobre el propio modal: colgarla del grid dejaba el botón sin responder.
+function bindHistoryModalEvents() {
+    document.getElementById('historyModal').addEventListener('click', async (e) => {
+        const uploadBtn = e.target.closest('.btn-upload-pending');
+        if (uploadBtn) await handleUploadPending(parseInt(uploadBtn.dataset.id), uploadBtn);
+    });
+}
+
+async function handleUploadPending(wpId, btn) {
+    // Feedback inmediato y botón bloqueado: la subida llama a OpenProject una vez por
+    // sesión, así que puede tardar, y un doble clic dispararía entradas repetidas.
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Subiendo…';
+
+    // La subida y el refresco se manejan por separado a propósito: si el tiempo ya se
+    // registró en OpenProject y falla el refresco, decir "no se pudo subir" sería mentira
+    // y llevaría a reintentar, duplicando entradas.
+    let uploaded;
+    try {
+        ({ uploaded } = await postUploadPending(wpId));
+    } catch (e) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        setHistoryNotice('danger', 'bi-exclamation-triangle-fill',
+            `No se pudo subir: ${escHtml(e.message)}. El tiempo sigue guardado en local; puedes reintentar.`);
+        showToast(`No se pudo subir el tiempo pendiente: ${e.message}`, 'danger');
+        return;
+    }
+
+    const label = `${uploaded} sesión${uploaded !== 1 ? 'es' : ''}`;
+    const okMsg = uploaded > 0
+        ? `${label} registrada${uploaded !== 1 ? 's' : ''} en OpenProject.`
+        : 'No había sesiones pendientes por subir.';
+
+    showToast(okMsg, uploaded > 0 ? 'success' : 'info');
+    btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Subido';
+
+    try {
+        renderHistoryContent(await fetchTask(wpId));
+        setHistoryNotice('success', 'bi-cloud-check-fill', okMsg);
+    } catch {
+        // El registro sí ocurrió: se dice explícitamente para que nadie reintente.
+        setHistoryNotice('success', 'bi-cloud-check-fill',
+            `${okMsg} No se pudo refrescar la lista — vuelve a abrir el historial para verla actualizada.`);
+    }
+}
+
+/** Aviso persistente dentro del modal: el toast se desvanece y puede pasar desapercibido. */
+function setHistoryNotice(type, icon, html) {
+    const body = document.getElementById('historyBody');
+    if (!body) return;
+
+    body.querySelector('.history-notice')?.remove();
+    body.insertAdjacentHTML('afterbegin',
+        `<div class="alert alert-${type} history-notice d-flex align-items-center gap-2 py-2 mb-3" role="status">
+             <i class="bi ${icon}"></i><span>${html}</span>
+         </div>`);
+}
+
+// ── Modal: Registrar tiempo a mano ────────────────────────────────────────────
+
+let _logTimeWpId = null;
+
+async function openLogTimeModal(wpId) {
+    const wp = store.workPackages.find(w => w.id === wpId);
+    if (!wp) return;
+
+    _logTimeWpId = wpId;
+    document.getElementById('logTimeTaskName').textContent = `#${wp.id} — ${wp.subject}`;
+
+    // Por defecto hoy: el caso típico es "se me olvidó trackear lo de hoy".
+    // max evita elegir una fecha futura desde el propio control, antes de enviar.
+    const today = new Date().toISOString().slice(0, 10);
+    const dateInput = document.getElementById('logTimeDate');
+    dateInput.value = today;
+    dateInput.max = today;
+
+    ['logTimeStart', 'logTimeEnd', 'logTimeHours', 'logTimeComment']
+        .forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('logTimeHours').readOnly = false;
+    hideLogTimeError();
+
+    new bootstrap.Modal(document.getElementById('logTimeModal')).show();
+
+    // Las actividades dependen de la tarea, así que se cargan al abrir.
+    const sel = document.getElementById('logTimeActivity');
+    sel.innerHTML = '<option value="">Cargando actividades…</option>';
+    try {
+        const activities = await fetchActivities(wpId);
+        sel.innerHTML = '<option value="">Actividad por defecto</option>' +
+            activities.map(a => `<option value="${a.id}">${escHtml(a.name)}</option>`).join('');
+    } catch {
+        // Sin actividades el backend elige una por defecto: se avisa, no se bloquea el registro.
+        sel.innerHTML = '<option value="">Actividad por defecto</option>';
+    }
+}
+
+/** Si hay hora de inicio y fin, las horas se derivan de ellas y el campo pasa a solo lectura. */
+function syncHoursFromRange() {
+    const start = document.getElementById('logTimeStart').value;
+    const end   = document.getElementById('logTimeEnd').value;
+    const hours = document.getElementById('logTimeHours');
+
+    if (!start || !end) {
+        hours.readOnly = false;
+        return;
+    }
+
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    const diff = (eh * 60 + em) - (sh * 60 + sm);
+
+    if (diff <= 0) {
+        showLogTimeError('La hora de finalización debe ser posterior a la de inicio.');
+        hours.value = '';
+        hours.readOnly = false;
+        return;
+    }
+
+    hideLogTimeError();
+    hours.value = (diff / 60).toFixed(2);
+    hours.readOnly = true;
+}
+
+async function handleLogTime() {
+    const btn = document.getElementById('confirmLogTimeBtn');
+    const spentOn = document.getElementById('logTimeDate').value;
+    const hours   = parseFloat(document.getElementById('logTimeHours').value);
+    const start   = document.getElementById('logTimeStart').value;
+    const end     = document.getElementById('logTimeEnd').value;
+    const activityId = document.getElementById('logTimeActivity').value;
+
+    // Validación en el cliente para mostrar el error junto al formulario, sin viaje al
+    // servidor. El backend valida igual: esto es comodidad, no la barrera.
+    if (!spentOn) return showLogTimeError('Indica la fecha en que trabajaste.');
+    if (!hours || hours <= 0) return showLogTimeError('Indica cuántas horas trabajaste.');
+    if (hours > 24) return showLogTimeError('No se pueden registrar más de 24 horas en una entrada.');
+
+    const wp = store.workPackages.find(w => w.id === _logTimeWpId);
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Registrando…';
+    hideLogTimeError();
+
+    try {
+        const result = await postLogTime({
+            workPackageId: _logTimeWpId,
+            spentOn,
+            hours,
+            startTime: start || null,
+            endTime: end || null,
+            activityId: activityId ? parseInt(activityId) : null,
+            comment: document.getElementById('logTimeComment').value,
+            // Solo se usan si la tarea aún no está registrada localmente.
+            projectId: extractId(wp?._links?.project?.href),
+            statusId: extractId(wp?._links?.status?.href),
+            name: wp?.subject
+        });
+
+        bootstrap.Modal.getInstance(document.getElementById('logTimeModal'))?.hide();
+        showToast(
+            `${result.hours} h registradas en OpenProject para <strong>#${_logTimeWpId}</strong>`,
+            'success'
+        );
+    } catch (e) {
+        // El error se queda en el modal, junto al formulario que hay que corregir.
+        showLogTimeError(e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }
+}
+
+function showLogTimeError(msg) {
+    const el = document.getElementById('logTimeError');
+    el.textContent = msg;
+    el.classList.remove('d-none');
+}
+
+function hideLogTimeError() {
+    document.getElementById('logTimeError').classList.add('d-none');
+}
+
+function bindLogTimeModal() {
+    document.getElementById('confirmLogTimeBtn').addEventListener('click', handleLogTime);
+    ['logTimeStart', 'logTimeEnd'].forEach(id =>
+        document.getElementById(id).addEventListener('change', syncHoursFromRange));
+}
+
 // ── Modal: Finalizar sesión ───────────────────────────────────────────────────
 
 function openEndModal() {
@@ -423,6 +615,9 @@ function bindGridEvents() {
         if (pauseBtn)     openPauseModal(parseInt(pauseBtn.dataset.id));
         if (resumeBtn)    await handleResumeSession(parseInt(resumeBtn.dataset.id));
         if (historyBtn)   await handleOpenHistory(parseInt(historyBtn.dataset.id));
+
+        const logTimeBtn = e.target.closest('.btn-log-time');
+        if (logTimeBtn) await openLogTimeModal(parseInt(logTimeBtn.dataset.id));
 
         const datesBtn = e.target.closest('.btn-dates');
         if (datesBtn)     openDatesModal(parseInt(datesBtn.dataset.id), datesBtn.dataset.start, datesBtn.dataset.due);
@@ -660,6 +855,8 @@ bindSearchEvents();
 bindPaginationEvents();
 bindStorageSync();
 bindPauseModalButtons();
+bindHistoryModalEvents();
+bindLogTimeModal();
 
 loadProjects();
 loadStatuses();

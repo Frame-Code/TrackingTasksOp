@@ -16,6 +16,12 @@ public class StarTaskRequest
     public string? Description { get; init; }
     public int ProjectId { get; init; }
     public int StatusId { get; init; }
+
+    /// <summary>Tipo de work package (DESARROLLO, ERROR, etc.). Si es null, OpenProject resuelve uno por defecto.</summary>
+    public int? TypeId { get; init; }
+
+    /// <summary>Horas estimadas de trabajo. Opcional: si es null la tarea queda sin estimación.</summary>
+    public double? EstimatedHours { get; init; }
     public int? AssigneeId { get; init; }
     public int? ResponsibleId { get; init; }
     public DateOnly? StartDate { get; init; }

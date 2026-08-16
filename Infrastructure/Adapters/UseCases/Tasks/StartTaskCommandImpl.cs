@@ -77,7 +77,7 @@ namespace Infrastructure.Adapters.UseCases.Tasks;
                     request.Name,
                     request.ProjectId,
                     request.StatusId,
-                    null, // TypeId opcional
+                    request.TypeId,
                     null, // PriorityId opcional
                     request.Description,
                     request.AssigneeId,
@@ -85,7 +85,8 @@ namespace Infrastructure.Adapters.UseCases.Tasks;
                     request.StartDate,
                     request.DueDate,
                     request.CustomFieldOptionIds,
-                    request.CustomFieldTextValues
+                    request.CustomFieldTextValues,
+                    request.EstimatedHours
                 );
                 var opWorkPackage = await createWorkPackageCommand.Execute(createRequest);
                 workPackageId = opWorkPackage.Id;

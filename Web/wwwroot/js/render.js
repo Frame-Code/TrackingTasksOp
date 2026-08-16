@@ -49,10 +49,14 @@ export function renderStatusFilters() {
     section.classList.remove('d-none');
     pillsEl.innerHTML = uniqueStatuses.map(title => {
         const isActive = store.activeStatusFilters.has(title);
+        // El check da un canal no cromático: el estado se distingue aunque el usuario
+        // no perciba bien los colores. aria-pressed lo anuncia a lectores de pantalla.
         return `
             <button class="btn btn-sm status-filter-pill ${statusClass(title)}${isActive ? ' is-active' : ''}"
-                    data-status="${escHtml(title)}">
-                ${escHtml(title)}
+                    data-status="${escHtml(title)}"
+                    aria-pressed="${isActive}"
+                    title="${isActive ? 'Filtro aplicado — clic para quitarlo' : 'Clic para filtrar por este estado'}">
+                <i class="bi ${isActive ? 'bi-check2' : 'bi-plus'} me-1" aria-hidden="true"></i>${escHtml(title)}
             </button>`;
     }).join('');
 }
@@ -72,23 +76,20 @@ export function renderCards() {
         return;
     }
 
-    // Búsqueda global: ignora filtros de estado
-    // Sin búsqueda: aplica filtro de estado normalmente
+    // Búsqueda y filtros de estado se combinan (AND). Antes la búsqueda anulaba los
+    // filtros pero las pills seguían encendidas, así que la pantalla mostraba un filtro
+    // que no estaba surtiendo efecto.
     const q = store.searchQuery.trim().toLowerCase();
-    let filtered;
-    if (q) {
-        filtered = store.workPackages.filter(wp =>
-            wp.subject?.toLowerCase().includes(q) ||
-            String(wp.id).includes(q)
-        );
-    } else {
-        filtered = store.activeStatusFilters.size === 0
-            ? store.workPackages
-            : store.workPackages.filter(wp => {
-                const title = wp._links?.status?.title || 'Sin estado';
-                return store.activeStatusFilters.has(title);
-            });
-    }
+    const filtered = store.workPackages.filter(wp => {
+        const matchesQuery = !q
+            || wp.subject?.toLowerCase().includes(q)
+            || String(wp.id).includes(q);
+        if (!matchesQuery) return false;
+
+        // Sin filtros seleccionados no se filtra por estado: es "todos", no "ninguno".
+        if (store.activeStatusFilters.size === 0) return true;
+        return store.activeStatusFilters.has(wp._links?.status?.title || 'Sin estado');
+    });
 
     // Paginación
     const total     = filtered.length;
@@ -218,6 +219,24 @@ function buildStatusDropdown(wp, statusTitle) {
         </div>`;
 }
 
+/**
+ * Chip de persona con la etiqueta del rol visible. Asignado y responsable son papeles
+ * distintos en OpenProject y suelen ser personas distintas: dos íconos de persona sin
+ * texto obligarían a recordar cuál es cuál (Nielsen: reconocer antes que recordar).
+ * "Sin asignar" se muestra explícitamente en vez de omitir el dato, porque un hueco
+ * en blanco no distingue "nadie" de "no cargó".
+ */
+function buildPersonChip(icon, label, name) {
+    const value = name || 'Sin asignar';
+    const muted = name ? '' : ' fst-italic opacity-75';
+    return `
+        <small class="text-muted d-flex align-items-center gap-1" title="${label}: ${escHtml(value)}">
+            <i class="bi ${icon}"></i>
+            <span class="opacity-75">${label}:</span>
+            <span class="${muted}">${escHtml(value)}</span>
+        </small>`;
+}
+
 function buildCard(wp, session) {
     const isActive     = session?.workPackageId === wp.id;
     const isPaused     = !isActive && getPausedIds().has(wp.id);
@@ -225,6 +244,7 @@ function buildCard(wp, session) {
     const statusTitle  = wp._links?.status?.title  || 'Sin estado';
     const projectTitle = wp._links?.project?.title || '';
     const assignee     = wp._links?.assignee?.title || '';
+    const responsible  = wp._links?.responsible?.title || '';
     const pct          = wp.percentageDone ?? 0;
 
     const cardExtraClass = isActive  ? 'wp-card--active'
@@ -280,18 +300,15 @@ function buildCard(wp, session) {
                         ${buildStatusDropdown(wp, statusTitle)}
                     </div>
 
-                    <!-- Proyecto / Asignado -->
+                    <!-- Proyecto / Asignado / Responsable -->
                     <div class="d-flex flex-wrap gap-2">
                         ${projectTitle
                             ? `<small class="text-muted d-flex align-items-center gap-1">
                                    <i class="bi bi-folder2"></i>${escHtml(projectTitle)}
                                </small>`
                             : ''}
-                        ${assignee
-                            ? `<small class="text-muted d-flex align-items-center gap-1">
-                                   <i class="bi bi-person"></i>${escHtml(assignee)}
-                               </small>`
-                            : ''}
+                        ${buildPersonChip('bi-person', 'Asignado', assignee)}
+                        ${buildPersonChip('bi-person-badge', 'Responsable', responsible)}
                     </div>
 
                     <!-- Progreso con slider fill azul -->
@@ -322,6 +339,10 @@ function buildCard(wp, session) {
                             </button>
                         </div>
                         <div class="d-flex gap-2">
+                            <button class="btn btn-outline-secondary btn-sm btn-log-time"
+                                    data-id="${wp.id}" title="Registrar tiempo a mano (sin cronómetro)">
+                                <i class="bi bi-stopwatch"></i>
+                            </button>
                             <button class="btn btn-outline-secondary btn-sm btn-history"
                                     data-id="${wp.id}" title="Ver historial de sesiones">
                                 <i class="bi bi-clock-history"></i>
@@ -381,7 +402,30 @@ export function renderHistoryContent(task) {
             </tr>`;
     }).join('');
 
+    // Sesiones cerradas que siguen sin registrarse en OpenProject. Se cuentan aparte para
+    // poder ofrecer la acción de subirlas: antes el tiempo quedaba visible pero sin salida.
+    const pending = details.filter(d => d.endTime && !d.uploaded);
+    const pendingSecs = pending.reduce(
+        (acc, d) => acc + (new Date(d.endTime) - new Date(d.startTime)) / 1000, 0);
+
+    // Visibilidad del estado del sistema + control del usuario (Nielsen): se dice cuánto
+    // falta por subir y se da el botón para hacerlo, en vez de solo marcar el ícono de nube.
+    const pendingHtml = pending.length
+        ? `<div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2 py-2 mb-3">
+               <span>
+                   <i class="bi bi-cloud-slash me-1"></i>
+                   <strong>${pending.length} sesión${pending.length !== 1 ? 'es' : ''}</strong>
+                   sin registrar en OpenProject
+                   (<span class="font-monospace">${formatDuration(pendingSecs)}</span>)
+               </span>
+               <button class="btn btn-warning btn-sm btn-upload-pending" data-id="${task.workPackageId}">
+                   <i class="bi bi-cloud-arrow-up me-1"></i>Subir pendientes
+               </button>
+           </div>`
+        : '';
+
     bodyEl.innerHTML = `
+        ${pendingHtml}
         <div class="d-flex gap-2 flex-wrap mb-3">
             <span class="badge rounded-pill bg-body-secondary text-body border fs-6 fw-normal px-3 py-2">
                 <i class="bi bi-list-check me-1"></i>

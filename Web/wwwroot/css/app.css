@@ -166,24 +166,45 @@
     height: 5px;
 }
 
-/* ── Status filter pills ────────────────────────────────────────── */
+/* ── Status filter pills ────────────────────────────────────────────────────
+   Seleccionado vs no seleccionado se distingue por relleno, borde e ícono, no
+   por opacidad: un texto atenuado se lee como "deshabilitado" (no puedo tocarlo)
+   en vez de "no aplicado" (puedo activarlo), que era justo la confusión.
+   Tres canales a la vez para no depender solo del color.                      */
 .status-filter-pill {
-    opacity: 0.35;
-    border: none;
-    transition: opacity 0.15s ease, transform 0.1s ease;
+    border: 1.5px solid transparent;
+    font-weight: 500;
+    transition: background-color 0.15s ease, border-color 0.15s ease,
+                box-shadow 0.15s ease, transform 0.1s ease;
 }
 
-.status-filter-pill.is-active {
-    opacity: 1;
+/* Inactiva: contorno, sin relleno. Legible por sí sola, no atenuada. */
+.status-filter-pill:not(.is-active) {
+    background-color: transparent !important;
+    color: var(--bs-body-color) !important;
+    border-color: rgba(255, 255, 255, 0.28);
 }
 
-.status-filter-pill:hover {
-    opacity: 0.75;
+.status-filter-pill:not(.is-active):hover {
+    background-color: rgba(255, 255, 255, 0.07) !important;
+    border-color: rgba(255, 255, 255, 0.55);
     transform: translateY(-1px);
 }
 
+/* Activa: relleno sólido del estado + anillo. Inconfundible frente al hover. */
+.status-filter-pill.is-active {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
 .status-filter-pill.is-active:hover {
-    opacity: 0.85;
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+/* El foco de teclado no debe confundirse con el anillo de "activa". */
+.status-filter-pill:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
 }
 
 /* ── History table ──────────────────────────────────────────────── */

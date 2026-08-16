@@ -53,6 +53,40 @@ public class ListsWorkPackagesCommandImpl(
         return allItems;
     }
     
+    public async Task<List<WorkPackage>> GetByIdsAsync(IReadOnlyCollection<int> ids, CancellationToken ct = default)
+    {
+        var result = new List<WorkPackage>();
+        if (ids.Count == 0) return result;
+
+        // OpenProject acota el pageSize, así que se pide en tandas en vez de una sola URL enorme
+        // (que además podría exceder el largo máximo de query string).
+        const int batchSize = 100;
+        foreach (var batch in ids.Distinct().Chunk(batchSize))
+        {
+            string values = string.Join(",", batch.Select(id => $"\"{id}\""));
+            string filters = Uri.EscapeDataString($"[{{\"id\":{{\"operator\":\"=\",\"values\":[{values}]}}}}]");
+            string url = $"/api/v3/work_packages?filters={filters}&pageSize={batchSize}";
+
+            var response = await _client.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                // El reporte no debe caerse porque no se pudo enriquecer con datos de personas:
+                // se registra el fallo y esas columnas quedan vacías.
+                logger.LogError("Error fetching work packages by id: HTTP {Status}", (int)response.StatusCode);
+                continue;
+            }
+
+            string json = await response.Content.ReadAsStringAsync(ct);
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var collection = JsonSerializer.Deserialize<WorkPackageCollection>(json, options);
+
+            if (collection?.Embedded?.Elements is { Count: > 0 } elements)
+                result.AddRange(elements);
+        }
+
+        return result;
+    }
+
     private string BuildUrl(int? projectId, int offset, int pageSize, int? statusId)
     {
         string baseEndpoint = projectId.HasValue

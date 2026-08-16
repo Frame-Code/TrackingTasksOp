@@ -6,6 +6,7 @@ using Application.Ports.UseCases.TimeEntry;
 using Application.Ports.UseCases.WorkPackages;
 using Domain.Entities.OpenProjectEntities.Activity;
 using Domain.Entities.TrackingTasksEntities;
+using Infrastructure.Adapters.Services;
 using Infrastructure.Adapters.UseCases.Tasks;
 using Infrastructure.Exceptions;
 using Moq;
@@ -49,11 +50,15 @@ public class EndTaskSessionCommandTests
             .Setup(x => x.Lists(It.IsAny<int>()))
             .ReturnsAsync(new List<ActivityAllowedValue> { new() { Id = 99, Name = "Development" } });
 
+        // PendingTimeUploaderImpl real sobre los mismos mocks: lo verificado sigue siendo qué
+        // entradas de tiempo llegan a OpenProject, no por qué colaborador pasan.
         var useCase = new EndTaskSessionCommandImpl(
             repositoryMock.Object,
-            addTimeEntryMock.Object,
-            updateMock.Object,
-            activityOpServiceMock.Object);
+            new PendingTimeUploaderImpl(
+                repositoryMock.Object,
+                addTimeEntryMock.Object,
+                activityOpServiceMock.Object),
+            updateMock.Object);
 
         return (useCase, repositoryMock, addTimeEntryMock, updateMock, activityOpServiceMock);
     }
@@ -112,7 +117,7 @@ public class EndTaskSessionCommandTests
             r.IdActivity == 2 &&
             r.Comment == "done" &&
             r.Hours == 2.5)), Times.Once);
-        repoMock.Verify(x => x.SaveAsync(task), Times.Once);
+        repoMock.Verify(x => x.SaveAsync(task), Times.AtLeastOnce);
         updateMock.Verify(x => x.Execute(
             It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<int?>(),
             It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Never);
@@ -139,7 +144,7 @@ public class EndTaskSessionCommandTests
         Assert.NotNull(detail.EndTime);
         Assert.True(detail.Uploaded);
         addMock.Verify(x => x.Execute(It.IsAny<AddTimeEntryRequest>()), Times.Once);
-        repoMock.Verify(x => x.SaveAsync(task), Times.Once);
+        repoMock.Verify(x => x.SaveAsync(task), Times.AtLeastOnce);
     }
 
     [Fact]
@@ -188,7 +193,7 @@ public class EndTaskSessionCommandTests
         Assert.Equal(1, task.StatusTaskId);
         Assert.True(detail.Uploaded);
         addMock.Verify(x => x.Execute(It.IsAny<AddTimeEntryRequest>()), Times.Once);
-        repoMock.Verify(x => x.SaveAsync(task), Times.Once);
+        repoMock.Verify(x => x.SaveAsync(task), Times.AtLeastOnce);
     }
 
     [Fact]
@@ -283,7 +288,7 @@ public class EndTaskSessionCommandTests
 
         Assert.True(detail.Uploaded);
         addMock.Verify(x => x.Execute(It.IsAny<AddTimeEntryRequest>()), Times.Never);
-        repoMock.Verify(x => x.SaveAsync(task), Times.Once);
+        repoMock.Verify(x => x.SaveAsync(task), Times.AtLeastOnce);
     }
 
     [Fact]
@@ -317,9 +322,16 @@ public class EndTaskSessionCommandTests
 
         await useCase.Execute(request);
 
-        Assert.False(oldest.Uploaded);
-        Assert.False(middle.Uploaded);
+        // Al finalizar se registra TODO el tiempo pendiente, no solo la última sesión: las
+        // pausadas con "guardar en local" quedaban con Uploaded = false y nunca llegaban a
+        // OpenProject, que es justo lo que aparecía como "pendientes de subir" en el reporte.
+        Assert.True(oldest.Uploaded);
+        Assert.True(middle.Uploaded);
         Assert.True(latest.Uploaded);
-        addMock.Verify(x => x.Execute(It.Is<AddTimeEntryRequest>(r => r.Hours == 1.5)), Times.Once);
+        addMock.Verify(x => x.Execute(It.IsAny<AddTimeEntryRequest>()), Times.Exactly(3));
+
+        // La sesión más reciente se sigue identificando por StartTime, no por orden en la lista.
+        addMock.Verify(x => x.Execute(It.Is<AddTimeEntryRequest>(r =>
+            r.Hours == 1.5 && r.SpentOn == new DateOnly(2026, 5, 1))), Times.Once);
     }
 }

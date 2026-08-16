@@ -22,6 +22,11 @@ public class CreateTaskActionHandlerTests
     {
         _createWorkPackageCommandMock.Setup(c => c.GetRequiredCustomFieldsAsync(It.IsAny<int>(), It.IsAny<int?>()))
             .ReturnsAsync(new List<RequiredCustomField>());
+
+        // Sin tipos configurados el builder no pregunta por el tipo, que es lo que asumen
+        // estos casos. Los tests de resolución de tipo sobrescriben este setup.
+        _createWorkPackageCommandMock.Setup(c => c.GetTypesAsync(It.IsAny<int>()))
+            .ReturnsAsync(new List<WorkPackageType>());
         _entityResolverMock.Setup(r => r.ResolveProjectId(It.IsAny<string>())).ReturnsAsync(10);
         _entityResolverMock.Setup(r => r.ResolveStatusId(It.IsAny<string>())).ReturnsAsync(5);
         _entityResolverMock.Setup(r => r.ResolveUserId(It.IsAny<string>(), It.IsAny<int?>())).ReturnsAsync((int?)null);

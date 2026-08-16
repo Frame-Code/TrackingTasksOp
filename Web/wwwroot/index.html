@@ -167,6 +167,67 @@
         </div>
     </div>
 
+    <!-- ── Modal: Registrar tiempo a mano ── -->
+    <div class="modal fade" id="logTimeModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-stopwatch me-2 text-primary"></i>Registrar tiempo
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3" id="logTimeTaskName"></p>
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="logTimeDate" class="form-label">Fecha <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="logTimeDate">
+                        </div>
+
+                        <div class="col-6">
+                            <label for="logTimeStart" class="form-label">Hora de inicio</label>
+                            <input type="time" class="form-control" id="logTimeStart">
+                        </div>
+                        <div class="col-6">
+                            <label for="logTimeEnd" class="form-label">Hora de finalización</label>
+                            <input type="time" class="form-control" id="logTimeEnd">
+                        </div>
+
+                        <div class="col-12">
+                            <label for="logTimeHours" class="form-label">Horas <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="logTimeHours"
+                                   min="0.01" max="24" step="0.25" placeholder="Ej. 1.5">
+                            <div class="form-text">
+                                Si indicas hora de inicio y de finalización, las horas se calculan solas.
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="logTimeActivity" class="form-label">Actividad</label>
+                            <select class="form-select" id="logTimeActivity"></select>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="logTimeComment" class="form-label">Comentario</label>
+                            <textarea class="form-control" id="logTimeComment" rows="2"
+                                      placeholder="Opcional"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-danger d-none mt-3 mb-0 py-2" id="logTimeError" role="alert"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="confirmLogTimeBtn">
+                        <i class="bi bi-cloud-arrow-up me-1"></i>Registrar en OpenProject
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ── Modal: Historial ── -->
     <div class="modal fade" id="historyModal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">

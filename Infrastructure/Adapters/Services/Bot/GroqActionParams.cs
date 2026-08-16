@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 
 namespace Infrastructure.Adapters.Services.Bot;
@@ -34,6 +35,38 @@ public static class GroqActionParams
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// Lee un número decimal (horas estimadas). El LLM a veces lo manda como número y a veces
+    /// como texto ("1.5" o "1,5" según el idioma), así que se aceptan ambos y se descarta lo
+    /// que no se pueda interpretar en vez de reventar la creación de la tarea.
+    /// </summary>
+    public static double? GetNullableDouble(Dictionary<string, object>? d, params string[] keys)
+    {
+        if (d == null) return null;
+        foreach (var k in keys)
+        {
+            if (!d.TryGetValue(k, out var v) || v == null) continue;
+
+            if (v is JsonElement e)
+            {
+                if (e.ValueKind == JsonValueKind.Number) return e.GetDouble();
+                if (e.ValueKind == JsonValueKind.String) return ParseInvariant(e.GetString());
+                return null;
+            }
+
+            return v is string s ? ParseInvariant(s) : Convert.ToDouble(v);
+        }
+        return null;
+    }
+
+    private static double? ParseInvariant(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        return double.TryParse(raw.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : null;
     }
 
     /// <summary>
