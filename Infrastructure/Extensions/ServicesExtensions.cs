@@ -56,6 +56,7 @@ public static class ServicesExtensions
         collection.AddScoped<IPauseTaskCommand, PauseTaskCommandImpl>();
         collection.AddScoped<IPendingTimeUploader, PendingTimeUploaderImpl>();
         collection.AddScoped<IUploadPendingSessionsCommand, UploadPendingSessionsCommandImpl>();
+        collection.AddScoped<IGetPendingSessionsSummaryQuery, GetPendingSessionsSummaryQueryImpl>();
         collection.AddScoped<ILogTimeCommand, LogTimeCommandImpl>();
         collection.AddScoped<IResumeTaskCommand, ResumeTaskCommandImpl>();
         collection.AddScoped<IAddTimeEntryCommand, AddTimeEntryCommandImpl>();

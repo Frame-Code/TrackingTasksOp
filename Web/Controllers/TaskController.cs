@@ -17,6 +17,7 @@ public class TaskController(
     IPauseTaskCommand pauseTaskCommand,
     IResumeTaskCommand resumeTaskCommand,
     IUploadPendingSessionsCommand uploadPendingSessionsCommand,
+    IGetPendingSessionsSummaryQuery getPendingSessionsSummaryQuery,
     ILogTimeCommand logTimeCommand,
     ITaskRepository taskRepository
     ) : ControllerBase
@@ -72,6 +73,15 @@ public class TaskController(
     {
         var hours = await logTimeCommand.Execute(request, ct);
         return Ok(new { hours });
+    }
+
+    /// <summary>
+    /// Resumen de sesiones cerradas sin subir a OpenProject, para el recordatorio recurrente.
+    /// </summary>
+    [HttpGet("pending_summary")]
+    public async Task<ActionResult<PendingSessionsSummaryResponse>> GetPendingSummary(CancellationToken ct)
+    {
+        return await getPendingSessionsSummaryQuery.Execute(ct);
     }
 
     [HttpGet("{workPackageId:int}")]

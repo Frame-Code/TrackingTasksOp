@@ -12,7 +12,7 @@ import { fetchProjects, fetchWorkPackages, fetchActivities, fetchTask,
 import { updateNavbar, renderProjectSelect, renderCards, renderStatusFilters,
          renderHistoryLoading, renderHistoryContent, renderHistoryError,
          renderActivitiesSelect, renderReportPreview } from './render.js';
-import { startTimer, stopTimer } from './timer.js';
+import { startTimer, stopTimer, startPendingReminder } from './timer.js';
 import { showToast, setLoading, showError, hideError } from './ui.js';
 import { escHtml, formatDuration, statusClass, extractId } from './helpers.js';
 
@@ -75,6 +75,7 @@ async function requestNotifPermission() {
                 'Notificaciones activadas. Asegúrate de que tu navegador tenga permiso de notificaciones en la configuración de Windows.',
                 'info'
             );
+            startPendingReminder();
         } else if (result === 'denied') {
             showToast('Notificaciones bloqueadas. No podrás recibir recordatorios de sesión activa.', 'warning');
         }
@@ -916,6 +917,7 @@ bindLogTimeModal();
 
 loadProjects();
 loadStatuses();
+startPendingReminder();
 
 if (getActiveSession()) {
     startTimer();

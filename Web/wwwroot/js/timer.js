@@ -3,9 +3,11 @@
 import { getActiveSession } from './state.js';
 import { formatDuration } from './helpers.js';
 import { updateNavbar } from './render.js';
+import { fetchPendingSummary } from './api.js';
 
-let timerInterval  = null;
-let notifInterval  = null;
+let timerInterval   = null;
+let notifInterval   = null;
+let pendingInterval = null;
 
 const NOTIF_STORAGE_KEY    = 'notifIntervalMinutes';
 const DEFAULT_NOTIF_MINUTES = 15;
@@ -43,6 +45,43 @@ function stopNotifInterval() {
     if (notifInterval) {
         clearInterval(notifInterval);
         notifInterval = null;
+    }
+}
+
+async function checkPendingSessions() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+    try {
+        const summary = await fetchPendingSummary();
+        if (!summary || summary.count === 0) return;
+
+        new Notification('📤 Sesiones sin subir — TrackingTasksOp', {
+            body: `Tienes ${summary.count} sesión(es) sin enviar a OpenProject (${summary.totalHours} h en total).`,
+            icon: '/favicon.ico',
+            tag:  'pending-upload-reminder', // reemplaza la anterior en vez de apilarlas
+            renotify: true
+        });
+    } catch {
+        // Un fallo de red no debe interrumpir al usuario; se reintenta en el próximo ciclo.
+    }
+}
+
+/**
+ * Recordatorio recurrente de sesiones cerradas sin subir a OpenProject. A diferencia del
+ * de "sesión activa", corre siempre que haya permiso de notificaciones, sin depender de que
+ * haya una sesión en curso: el usuario pudo haber elegido "guardar en local" y cerrado la app.
+ */
+export function startPendingReminder() {
+    stopPendingReminder();
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    checkPendingSessions();
+    pendingInterval = setInterval(checkPendingSessions, getNotifIntervalMs());
+}
+
+function stopPendingReminder() {
+    if (pendingInterval) {
+        clearInterval(pendingInterval);
+        pendingInterval = null;
     }
 }
 
