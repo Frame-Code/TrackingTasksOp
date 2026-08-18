@@ -25,7 +25,6 @@ public static class AiModelClientFactory
                 break;
             default:
                 throw new Exception("No se reconoce el modelo de AI asegúrese de agregalo al factory");
-                break;
         }
     }
 }

@@ -27,7 +27,7 @@
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <span id="navUserEmail" class="text-muted small d-none d-md-inline"></span>
-                    <button id="reportBtn" class="btn btn-sm btn-outline-secondary" title="Descargar reporte de tareas">
+                    <button id="reportBtn" class="btn btn-sm btn-outline-secondary" title="Generar reporte de tareas (con vista previa)">
                         <i class="bi bi-file-earmark-excel me-1"></i>
                         <span class="d-none d-md-inline">Reporte</span>
                     </button>
@@ -298,21 +298,59 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted small">Descarga en Excel las tareas trabajadas por día en el rango seleccionado.</p>
-                    <div id="reportError" class="alert alert-danger py-2 small d-none"></div>
+                    <p class="text-muted small">Genera el reporte de tareas trabajadas por día. Podrás verlo antes de imprimirlo o descargarlo.</p>
+                    <div id="reportError" class="alert alert-danger py-2 small d-none" role="alert"></div>
                     <div class="mb-3">
-                        <label class="form-label fw-medium">Desde</label>
+                        <label for="reportFromDate" class="form-label fw-medium">Desde <span class="text-danger">*</span></label>
                         <input type="date" id="reportFromDate" class="form-control">
                     </div>
-                    <div>
-                        <label class="form-label fw-medium">Hasta</label>
+                    <div class="mb-3">
+                        <label for="reportToDate" class="form-label fw-medium">Hasta <span class="text-danger">*</span></label>
                         <input type="date" id="reportToDate" class="form-control">
+                    </div>
+                    <div>
+                        <label for="reportStatusSelect" class="form-label fw-medium">Estado</label>
+                        <select id="reportStatusSelect" class="form-select">
+                            <option value="">Todos los estados</option>
+                        </select>
+                        <div class="form-text">Filtra las tareas por su estado actual en OpenProject.</div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" id="confirmReportBtn" class="btn btn-success px-4">
-                        <i class="bi bi-download me-1"></i>Descargar
+                    <button type="button" id="previewReportBtn" class="btn btn-primary px-4">
+                        <i class="bi bi-eye me-1"></i>Vista previa
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Modal: Vista previa del reporte ── -->
+    <div class="modal fade" id="reportPreviewModal" tabindex="-1" aria-labelledby="reportPreviewTitle">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h5 class="modal-title" id="reportPreviewTitle">
+                            <i class="bi bi-file-earmark-text me-2 text-primary"></i>Vista previa del reporte
+                        </h5>
+                        <p class="text-muted small mb-0 mt-1" id="reportPreviewMeta"></p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body" id="reportPreviewBody"></div>
+                <div class="modal-footer border-0 pt-0">
+                    <!-- "Volver" en vez de solo cerrar: deja corregir los filtros sin re-abrir todo el flujo -->
+                    <button type="button" class="btn btn-link btn-sm text-muted" id="backToReportFiltersBtn">
+                        <i class="bi bi-arrow-left me-1"></i>Cambiar filtros
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" id="downloadReportBtn" class="btn btn-success">
+                        <i class="bi bi-file-earmark-excel me-1"></i>Descargar Excel
+                    </button>
+                    <button type="button" id="printReportBtn" class="btn btn-primary">
+                        <i class="bi bi-printer me-1"></i>Imprimir
                     </button>
                 </div>
             </div>
@@ -330,7 +368,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted small">Actualiza tu API key de OpenProject si dejó de funcionar (por ejemplo, tras un redeploy).</p>
+                    <p class="text-muted small">Actualiza tu API key de OpenProject.</p>
                     <div id="apiKeyError" class="alert alert-danger py-2 small d-none"></div>
                     <div>
                         <label class="form-label fw-medium">Nueva API key</label>
@@ -379,7 +417,7 @@
     </div>
 
     <!-- AI Bot Floating Button -->
-    <a href="/bot.html" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
+    <a href="/bot.html" aria-label="Abrir asistente de IA" title="Asistente de IA" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
        style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; z-index: 1050;">
         <i class="bi bi-robot fs-2"></i>
     </a>

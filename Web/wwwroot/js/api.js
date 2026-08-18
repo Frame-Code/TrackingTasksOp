@@ -114,8 +114,17 @@ export async function postCancelSession(workPackageId) {
     });
 }
 
-export async function downloadDailyTaskReport(from, to) {
-    const res = await fetch(`${API}/report/daily-tasks?from=${from}&to=${to}`, { credentials: 'include' });
+function reportQuery(from, to, statusId) {
+    return `from=${from}&to=${to}${statusId ? `&statusId=${statusId}` : ''}`;
+}
+
+/** Datos del reporte en JSON, para mostrarlos en pantalla antes de imprimir o descargar. */
+export async function fetchReportPreview(from, to, statusId) {
+    return apiFetch(`${API}/report/daily-tasks/preview?${reportQuery(from, to, statusId)}`);
+}
+
+export async function downloadDailyTaskReport(from, to, statusId) {
+    const res = await fetch(`${API}/report/daily-tasks?${reportQuery(from, to, statusId)}`, { credentials: 'include' });
 
     if (res.status === 401) {
         sessionStorage.removeItem('currentUser');

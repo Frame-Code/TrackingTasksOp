@@ -10,6 +10,9 @@ namespace Application.Dto.ListWorkPackages
         int? ProjectId,
         int offset,
         int pageSize,
-        int? StatusId = null
+        int? StatusId = null,
+        /// <summary>Solo tareas abiertas. El listado general trae todos los estados
+        /// (incluidas las cerradas); el bot, cuando habla de "pendientes", no debe.</summary>
+        bool OnlyOpen = false
     ){}
 }

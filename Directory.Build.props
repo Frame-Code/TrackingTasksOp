@@ -1,0 +1,14 @@
+<Project>
+
+  <PropertyGroup>
+    <!--
+      CS9057: el paquete OllamaSharp trae un source generator compilado contra Roslyn 5.0
+      (SDK .NET 10) y este repo compila con Roslyn 4.14. El analizador simplemente no corre;
+      no genera nada que este proyecto necesite, por eso la compilacion es correcta igual.
+      Se silencia aqui, a nivel de solucion, para no arrastrar 3 warnings en cada build.
+      Quitar esta linea cuando se suba el SDK o el paquete publique un analizador 4.x.
+    -->
+    <NoWarn>$(NoWarn);CS9057</NoWarn>
+  </PropertyGroup>
+
+</Project>

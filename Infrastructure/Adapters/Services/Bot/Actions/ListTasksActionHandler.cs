@@ -32,7 +32,8 @@ public class ListTasksActionHandler(
             return WorkPackageFormatter.FormatGroupedByProject(filteredWps, $"📝 **Tareas en estado '{sName}':**");
         }
 
-        var wps = await listsWorkPackagesCommand.Execute(new ListsWorkPackagesRequest(null, 0, 50));
+        // "Tareas pendientes" = abiertas. El listado general ya incluye las cerradas.
+        var wps = await listsWorkPackagesCommand.Execute(new ListsWorkPackagesRequest(null, 0, 50, OnlyOpen: true));
         if (!wps.Any()) return "✅ No tienes tareas pendientes.";
 
         return WorkPackageFormatter.FormatGroupedByProject(wps);

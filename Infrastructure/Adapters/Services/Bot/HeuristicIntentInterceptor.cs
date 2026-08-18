@@ -41,8 +41,25 @@ public class HeuristicIntentInterceptor(
         bool hasFilterQualifier = lowerPrompt.Contains("estado") || lowerPrompt.Contains("status") || lowerPrompt.Contains("proyecto");
         if (!hasFilterQualifier && (lowerPrompt == "tareas" || lowerPrompt.Contains("mis tareas") || lowerPrompt.Contains("tareas pendientes") || lowerPrompt.Contains("que tengo pendiente")))
         {
-            var wps = await listsWorkPackagesCommand.Execute(new ListsWorkPackagesRequest(null, 0, 50));
+            // "Pendiente" es lo que sigue abierto: el listado general ahora trae también
+            // las cerradas, así que aquí hay que pedir explícitamente solo las abiertas.
+            var wps = await listsWorkPackagesCommand.Execute(new ListsWorkPackagesRequest(null, 0, 50, OnlyOpen: true));
             if (!wps.Any()) return "✅ ¡Felicidades! No tienes tareas pendientes asignadas en este momento.";
+
+            // Si el usuario dijo "hoy", se responde lo de hoy — antes se listaba todo y
+            // la respuesta contradecía la pregunta.
+            if (lowerPrompt.Contains("hoy"))
+            {
+                var today = DateOnly.FromDateTime(DateTime.Today);
+                var todayWps = wps.Where(wp => IsForToday(wp, today)).ToList();
+
+                if (!todayWps.Any())
+                    return $"✅ No tienes tareas con fecha para hoy ({today:dd/MM/yyyy}).\n\n"
+                         + $"Tienes **{wps.Count}** tarea(s) abiertas en total; escribe **mis tareas** para verlas todas.";
+
+                return WorkPackageFormatter.FormatGroupedByProject(
+                    todayWps, $"📅 **Tus tareas de hoy ({today:dd/MM/yyyy}):**");
+            }
 
             return WorkPackageFormatter.FormatGroupedByProject(wps);
         }
@@ -58,4 +75,22 @@ public class HeuristicIntentInterceptor(
 
         return null;
     }
+
+    /// <summary>
+    /// Una tarea cuenta como "de hoy" si vence hoy o ya venció (sigue siendo trabajo
+    /// pendiente de hoy), si su ventana de fechas incluye hoy, o si ya arrancó y no
+    /// tiene fecha límite. Sin ninguna fecha no hay forma de saberlo, así que no entra.
+    /// </summary>
+    internal static bool IsForToday(Domain.Entities.OpenProjectEntities.WorkPackage.WorkPackage wp, DateOnly today)
+    {
+        var start = ParseDate(wp.StartDate);
+        var due = ParseDate(wp.DueDate);
+
+        if (due is not null && due <= today) return true;                    // vence hoy o vencida
+        if (start is null || start > today) return false;                    // aún no arranca
+        return due is null || today <= due;                                  // en curso hoy
+    }
+
+    private static DateOnly? ParseDate(string? value) =>
+        DateOnly.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
 }
