@@ -8,7 +8,8 @@ services:
       - "6379:6379"
     volumes:
       - redisdata:/data
-    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    mem_limit: 512m
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes --maxmemory 384mb --maxmemory-policy allkeys-lru
 
 volumes:
   redisdata:

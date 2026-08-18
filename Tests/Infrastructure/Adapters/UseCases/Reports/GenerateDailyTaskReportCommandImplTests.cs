@@ -1,6 +1,7 @@
 using ClosedXML.Excel;
 using Domain.Entities.OpenProjectEntities;
 using Domain.Entities.OpenProjectEntities.TimeEntries;
+using Application.Dto.Reports;
 using Infrastructure.Adapters.UseCases.Reports;
 
 namespace Tests.Infrastructure.Adapters.UseCases.Reports;

@@ -1,7 +1,7 @@
 // Renderizado del DOM. Solo genera HTML y actualiza elementos;
 // no realiza llamadas API ni maneja eventos.
 
-import { escHtml, statusClass, formatDuration, formatDateTime } from './helpers.js';
+import { escHtml, statusClass, typeClass, formatDuration, formatDateTime } from './helpers.js';
 import { store, getActiveSession, getPausedIds } from './state.js';
 
 // ── Navbar ────────────────────────────────────────────────────────────────────
@@ -49,14 +49,14 @@ export function renderStatusFilters() {
     section.classList.remove('d-none');
     pillsEl.innerHTML = uniqueStatuses.map(title => {
         const isActive = store.activeStatusFilters.has(title);
-        // El check da un canal no cromático: el estado se distingue aunque el usuario
-        // no perciba bien los colores. aria-pressed lo anuncia a lectores de pantalla.
+        // Solo se marca el filtro aplicado (check). El "+" del estado inactivo sugería
+        // "agregar" algo, que no es lo que hace el botón.
         return `
             <button class="btn btn-sm status-filter-pill ${statusClass(title)}${isActive ? ' is-active' : ''}"
                     data-status="${escHtml(title)}"
                     aria-pressed="${isActive}"
                     title="${isActive ? 'Filtro aplicado — clic para quitarlo' : 'Clic para filtrar por este estado'}">
-                <i class="bi ${isActive ? 'bi-check2' : 'bi-plus'} me-1" aria-hidden="true"></i>${escHtml(title)}
+                ${isActive ? '<i class="bi bi-check2 me-1" aria-hidden="true"></i>' : ''}${escHtml(title)}
             </button>`;
     }).join('');
 }
@@ -230,11 +230,11 @@ function buildPersonChip(icon, label, name) {
     const value = name || 'Sin asignar';
     const muted = name ? '' : ' fst-italic opacity-75';
     return `
-        <small class="text-muted d-flex align-items-center gap-1" title="${label}: ${escHtml(value)}">
-            <i class="bi ${icon}"></i>
+        <span class="d-inline-flex align-items-center gap-1 text-truncate" title="${label}: ${escHtml(value)}">
+            <i class="bi ${icon}" aria-hidden="true"></i>
             <span class="opacity-75">${label}:</span>
             <span class="${muted}">${escHtml(value)}</span>
-        </small>`;
+        </span>`;
 }
 
 function buildCard(wp, session) {
@@ -242,6 +242,7 @@ function buildCard(wp, session) {
     const isPaused     = !isActive && getPausedIds().has(wp.id);
     const hasOther     = session && !isActive && !isPaused;
     const statusTitle  = wp._links?.status?.title  || 'Sin estado';
+    const typeTitle    = wp._links?.type?.title    || '';
     const projectTitle = wp._links?.project?.title || '';
     const assignee     = wp._links?.assignee?.title || '';
     const responsible  = wp._links?.responsible?.title || '';
@@ -263,17 +264,16 @@ function buildCard(wp, session) {
     const startTxt = wp.startDate ? escHtml(wp.startDate) : '–';
     const dueTxt   = wp.dueDate   ? escHtml(wp.dueDate)   : '–';
     const datesDisplay = `
-        <small class="text-muted d-flex align-items-center gap-1">
-            <i class="bi bi-calendar3"></i>
-            <span>${startTxt} — ${dueTxt}</span>
-        </small>`;
+        <span class="d-inline-flex align-items-center gap-1">
+            <i class="bi bi-calendar3" aria-hidden="true"></i>${startTxt} — ${dueTxt}
+        </span>`;
 
     // ── Botones de acción ──────────────────────────────────────────────────────
     const actionBtns = isActive
-        ? `<button class="btn btn-outline-secondary btn-sm btn-cancel" data-id="${wp.id}" title="Cancelar sesión sin guardar">
+        ? `<button class="btn btn-outline-secondary btn-sm btn-cancel" data-id="${wp.id}" title="Cancelar sesión sin guardar" aria-label="Cancelar sesión sin guardar">
                <i class="bi bi-x-circle"></i>
            </button>
-           <button class="btn btn-warning btn-sm btn-pause" data-id="${wp.id}" title="Pausar sesión">
+           <button class="btn btn-warning btn-sm btn-pause" data-id="${wp.id}" title="Pausar sesión" aria-label="Pausar sesión">
                <i class="bi bi-pause-circle-fill me-1"></i>Pausar
            </button>
            <button class="btn btn-danger btn-sm btn-end" data-id="${wp.id}">
@@ -283,71 +283,88 @@ function buildCard(wp, session) {
             ? `<button class="btn btn-primary btn-sm btn-resume" data-id="${wp.id}">
                    <i class="bi bi-play-circle-fill me-1"></i>Continuar
                </button>`
-            : `<button class="btn btn-outline-success btn-sm btn-start" data-id="${wp.id}">
+            : `<button class="btn btn-success btn-sm btn-start" data-id="${wp.id}">
                    <i class="bi bi-play-circle me-1"></i>Iniciar
                </button>`;
 
+    // La tarjeta se lee en tres niveles, de mayor a menor peso visual:
+    //   1. QUÉ ES  → tipo + #id (eyebrow) y el asunto como único texto grande.
+    //   2. CONTEXTO → proyecto, personas y fechas, en micro-texto atenuado que
+    //                 se puede saltar de un vistazo.
+    //   3. ESTADO Y ACCIÓN → progreso y botones, anclados abajo en todas las
+    //                 tarjetas para que la fila de acciones sea escaneable.
+    // Antes todo compartía tamaño y color, así que nada guiaba la mirada.
     return `
         <div class="col-12 col-md-6 col-xl-4">
             <div class="card wp-card h-100 ${cardExtraClass}" data-wp-id="${wp.id}">
-                <div class="card-body d-flex flex-column gap-2 p-3">
+                <div class="card-body d-flex flex-column p-3">
 
-                    <!-- Título: ID - Nombre -->
-                    <div class="d-flex justify-content-between align-items-start gap-2">
-                        <h6 class="card-title mb-0 fw-semibold lh-sm" title="#${wp.id} — ${escHtml(wp.subject)}">
-                            <span class="text-muted fw-normal me-1">#${wp.id}</span>${escHtml(wp.subject)}
-                        </h6>
+                    <!-- ① Identidad -->
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                        <div class="d-flex align-items-center gap-2 text-truncate">
+                            ${typeTitle
+                                ? `<span class="badge wp-type-badge ${typeClass(typeTitle)}" title="Tipo de paquete de trabajo">${escHtml(typeTitle)}</span>`
+                                : ''}
+                            <span class="wp-id">#${wp.id}</span>
+                        </div>
                         ${buildStatusDropdown(wp, statusTitle)}
                     </div>
 
-                    <!-- Proyecto / Asignado / Responsable -->
-                    <div class="d-flex flex-wrap gap-2">
-                        ${projectTitle
-                            ? `<small class="text-muted d-flex align-items-center gap-1">
-                                   <i class="bi bi-folder2"></i>${escHtml(projectTitle)}
-                               </small>`
-                            : ''}
-                        ${buildPersonChip('bi-person', 'Asignado', assignee)}
-                        ${buildPersonChip('bi-person-badge', 'Responsable', responsible)}
+                    <h6 class="wp-title mb-2" title="${escHtml(wp.subject)}">${escHtml(wp.subject)}</h6>
+
+                    <!-- ② Contexto -->
+                    <div class="wp-meta mb-3">
+                        <div class="d-flex align-items-center gap-2 text-truncate">
+                            ${projectTitle
+                                ? `<span class="d-inline-flex align-items-center gap-1 text-truncate">
+                                       <i class="bi bi-folder2" aria-hidden="true"></i>${escHtml(projectTitle)}
+                                   </span>
+                                   <span class="wp-meta-sep" aria-hidden="true">·</span>`
+                                : ''}
+                            ${datesDisplay}
+                            <button class="btn btn-link btn-sm p-0 wp-meta-edit btn-dates"
+                                    data-id="${wp.id}"
+                                    data-start="${escHtml(wp.startDate || '')}"
+                                    data-due="${escHtml(wp.dueDate || '')}"
+                                    title="Editar fechas" aria-label="Editar fechas de la tarea ${wp.id}">
+                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="d-flex flex-wrap column-gap-3 row-gap-1 mt-1">
+                            ${buildPersonChip('bi-person', 'Asignado', assignee)}
+                            ${buildPersonChip('bi-person-badge', 'Responsable', responsible)}
+                        </div>
                     </div>
 
-                    <!-- Progreso con slider fill azul -->
-                    <div>
+                    ${timerHtml}
+
+                    <!-- ③ Progreso + acciones, siempre al pie -->
+                    <div class="mt-auto">
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <small class="text-muted">Progreso</small>
-                            <small class="fw-medium wp-pct-display">${pct}%</small>
+                            <small class="wp-meta">Progreso</small>
+                            <small class="fw-semibold wp-pct-display">${pct}%</small>
                         </div>
                         <input type="range" class="form-range wp-progress-input"
                                min="0" max="100" step="5"
                                value="${pct}"
                                data-wp-id="${wp.id}"
+                               aria-label="Progreso de la tarea ${wp.id}"
                                style="background: linear-gradient(to right, #0d6efd ${pct}%, rgba(255,255,255,0.15) ${pct}%)">
-                    </div>
 
-                    ${timerHtml}
-
-                    <!-- Footer: fechas + historial + acciones -->
-                    <div class="mt-auto d-flex justify-content-between align-items-center gap-2 pt-2 border-top border-subtle">
-                        <div class="d-flex align-items-center gap-2">
-                            ${datesDisplay}
-                            <button class="btn btn-link btn-sm p-0 text-muted btn-dates"
-                                    data-id="${wp.id}"
-                                    data-start="${escHtml(wp.startDate || '')}"
-                                    data-due="${escHtml(wp.dueDate || '')}"
-                                    title="Editar fechas">
-                                <i class="bi bi-pencil-square" style="font-size:.8rem"></i>
-                            </button>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-outline-secondary btn-sm btn-log-time"
-                                    data-id="${wp.id}" title="Registrar tiempo a mano (sin cronómetro)">
-                                <i class="bi bi-stopwatch"></i>
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm btn-history"
-                                    data-id="${wp.id}" title="Ver historial de sesiones">
-                                <i class="bi bi-clock-history"></i>
-                            </button>
-                            ${actionBtns}
+                        <div class="d-flex justify-content-between align-items-center gap-2 pt-2 mt-2 border-top border-subtle">
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-sm wp-icon-btn btn-log-time"
+                                        data-id="${wp.id}" title="Registrar tiempo a mano (sin cronómetro)" aria-label="Registrar tiempo a mano en la tarea ${wp.id}">
+                                    <i class="bi bi-stopwatch" aria-hidden="true"></i>
+                                </button>
+                                <button class="btn btn-sm wp-icon-btn btn-history"
+                                        data-id="${wp.id}" title="Ver historial de sesiones" aria-label="Ver historial de sesiones de la tarea ${wp.id}">
+                                    <i class="bi bi-clock-history" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="d-flex gap-2">
+                                ${actionBtns}
+                            </div>
                         </div>
                     </div>
 
@@ -487,4 +504,100 @@ export function renderActivitiesSelect(activities) {
         .find(Boolean);
 
     if (preferred) sel.value = preferred.id;
+}
+
+// ── Vista previa del reporte ──────────────────────────────────────────────────
+
+/**
+ * Muestra en pantalla exactamente lo que llevará el Excel, para que el usuario decida
+ * si imprimirlo o descargarlo (Nielsen: visibilidad del estado + control del usuario).
+ */
+export function renderReportPreview(data, { from, to, statusName }) {
+    const rows = data?.rows ?? [];
+    const pending = data?.pending ?? [];
+    const total = data?.totalHours ?? 0;
+
+    document.getElementById('reportPreviewMeta').innerHTML = `
+        <span class="me-3"><i class="bi bi-calendar-range me-1"></i>${escHtml(from)} — ${escHtml(to)}</span>
+        <span class="me-3"><i class="bi bi-funnel me-1"></i>Estado: ${escHtml(statusName || 'Todos')}</span>
+        <span><i class="bi bi-clock me-1"></i>Total: <strong>${total} h</strong></span>`;
+
+    const body = document.getElementById('reportPreviewBody');
+
+    if (!rows.length && !pending.length) {
+        body.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox display-6 d-block mb-2 opacity-25"></i>
+                <p class="mb-0">No hay horas registradas con esos filtros.</p>
+                <p class="small mb-0">Prueba con otro rango de fechas o quitando el filtro de estado.</p>
+            </div>`;
+        return;
+    }
+
+    body.innerHTML = `
+        ${rows.length ? reportTable(rows, total) : ''}
+        ${pending.length ? pendingTable(pending) : ''}`;
+}
+
+function reportTable(rows, total) {
+    return `
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-4">
+                <thead>
+                    <tr>
+                        <th>Fecha</th><th>Proyecto</th><th>ID</th><th>Tipo</th>
+                        <th>Tarea</th><th>Estado</th><th>Actividad</th>
+                        <th>Asignado</th><th>Responsable</th><th class="text-end">Horas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows.map(r => `
+                        <tr>
+                            <td class="text-nowrap">${escHtml(r.date)}</td>
+                            <td>${escHtml(r.projectName)}</td>
+                            <td>#${r.workPackageId}</td>
+                            <td>${escHtml(r.type || '–')}</td>
+                            <td>${escHtml(r.taskName)}</td>
+                            <td>${escHtml(r.status || '–')}</td>
+                            <td>${escHtml(r.activityName)}</td>
+                            <td>${escHtml(r.assignee || '–')}</td>
+                            <td>${escHtml(r.responsible || '–')}</td>
+                            <td class="text-end font-monospace">${r.hours}</td>
+                        </tr>`).join('')}
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold border-top">
+                        <td colspan="9" class="text-end">Total</td>
+                        <td class="text-end font-monospace">${total}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>`;
+}
+
+function pendingTable(pending) {
+    return `
+        <h6 class="mt-2"><i class="bi bi-cloud-slash me-1 text-warning"></i>Pendientes de subir a OpenProject</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Fecha</th><th>Proyecto</th><th>ID</th><th>Tipo</th>
+                        <th>Tarea</th><th>Estado</th><th class="text-end">Horas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${pending.map(p => `
+                        <tr>
+                            <td class="text-nowrap">${escHtml(p.date)}</td>
+                            <td>${escHtml(p.projectName)}</td>
+                            <td>#${p.workPackageId}</td>
+                            <td>${escHtml(p.type || '–')}</td>
+                            <td>${escHtml(p.taskName)}</td>
+                            <td>${escHtml(p.status || '–')}</td>
+                            <td class="text-end font-monospace">${p.hours}</td>
+                        </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>`;
 }
