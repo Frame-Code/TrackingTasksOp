@@ -3,6 +3,7 @@ using Application.Ports.Repositories;
 using Application.Ports.Services;
 using Application.Ports.UseCases.Auth;
 using Application.Ports.UseCases.Reports;
+using Application.Ports.UseCases.Settings;
 using Application.Ports.UseCases.Tasks;
 using Application.Ports.UseCases.TimeEntry;
 using Application.Ports.UseCases.WorkPackages;
@@ -15,6 +16,7 @@ using Infrastructure.Adapters.Services.Bot.Actions;
 using Infrastructure.Adapters.UseCases;
 using Infrastructure.Adapters.UseCases.Auth;
 using Infrastructure.Adapters.UseCases.Reports;
+using Infrastructure.Adapters.UseCases.Settings;
 using Infrastructure.Adapters.UseCases.Tasks;
 using Infrastructure.Adapters.UseCases.TimeEntry;
 using Infrastructure.Adapters.UseCases.WorkPackages;
@@ -64,6 +66,9 @@ public static class ServicesExtensions
         collection.AddScoped<ILoginLocalUserCommand, LoginLocalUserCommandImpl>();
         collection.AddScoped<IUpdateApiKeyCommand, UpdateApiKeyCommandImpl>();
         collection.AddScoped<IGenerateDailyTaskReportCommand, GenerateDailyTaskReportCommandImpl>();
+        collection.AddScoped<IGetUserSettingsQuery, GetUserSettingsQueryImpl>();
+        collection.AddScoped<IUpdateNotificationSettingCommand, UpdateNotificationSettingCommandImpl>();
+        collection.AddScoped<IUpdateTaskPreferencesCommand, UpdateTaskPreferencesCommandImpl>();
 
         //Services
         collection.AddScoped<IStatusOpService, StatusOpServiceImpl>();

@@ -26,15 +26,20 @@ check(/`\$\{API\}\/task\/pending_summary`/.test(api), 'fetchPendingSummary llama
 
 check(/export function startPendingReminder/.test(timer), 'timer.js expone startPendingReminder');
 check(/import \{ fetchPendingSummary \} from '\.\/api\.js'/.test(timer), 'timer.js importa fetchPendingSummary');
+check(/NOTIFICATION_TYPES/.test(timer) && /from '\.\/state\.js'/.test(timer), 'timer.js usa NOTIFICATION_TYPES de state.js');
 
 const pendingBlock = timer.slice(timer.indexOf('async function checkPendingSessions'), timer.indexOf('export function startPendingReminder'));
-check(/tag:\s*'pending-upload-reminder'/.test(pendingBlock), 'la notificación de pendientes usa un tag propio (no pisa la de sesión activa)');
-check(pendingBlock.indexOf("tag:  'session-reminder'") === -1, 'no reutiliza el tag de la notificación de sesión activa');
+check(/tag:\s*NOTIFICATION_TYPES\.PENDING_UPLOAD_REMINDER/.test(pendingBlock), 'la notificación de pendientes usa un tag propio (no pisa la de sesión activa)');
+check(pendingBlock.indexOf('NOTIFICATION_TYPES.SESSION_REMINDER') === -1, 'no reutiliza el tag de la notificación de sesión activa');
 
-// El recordatorio de pendientes debe arrancar en el init general, no solo cuando hay sesión activa.
+// El recordatorio de pendientes debe arrancar en el init general, no solo cuando hay sesión activa,
+// y debe esperar a que carguen las preferencias del usuario (loadUserSettings) para no arrancar
+// con los valores por defecto y tener que reiniciarse un instante después.
 const initBlock = app.slice(app.lastIndexOf('loadProjects();'));
-check(/^startPendingReminder\(\);$/m.test(initBlock), 'startPendingReminder() se invoca en el arranque de la app');
-const activeSessionGuard = initBlock.slice(initBlock.indexOf('if (getActiveSession())'));
+const settingsLoadBlock = initBlock.slice(initBlock.indexOf('loadUserSettings()'));
+check(/loadUserSettings\(\)\.then\(/.test(initBlock), 'espera a loadUserSettings() antes de arrancar los recordatorios');
+check(/^\s*startPendingReminder\(\);\s*$/m.test(settingsLoadBlock), 'startPendingReminder() se invoca en el arranque de la app');
+const activeSessionGuard = settingsLoadBlock.slice(settingsLoadBlock.indexOf('if (getActiveSession())'));
 check(!/startPendingReminder/.test(activeSessionGuard), 'startPendingReminder() no depende de que haya sesión activa');
 
 check(/startPendingReminder\(\);/.test(app) &&

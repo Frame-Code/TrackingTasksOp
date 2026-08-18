@@ -1,5 +1,6 @@
 using Application.Dto.Tasks;
 using Application.Dto.TimeEntry;
+using Application.Ports.Auth;
 using Application.Ports.Repositories;
 using Application.Ports.Services;
 using Application.Ports.UseCases.TimeEntry;
@@ -8,7 +9,9 @@ using Domain.Entities.OpenProjectEntities.Activity;
 using Domain.Entities.TrackingTasksEntities;
 using Infrastructure.Adapters.Services;
 using Infrastructure.Adapters.UseCases.Tasks;
+using Infrastructure.DataAccess.Entities;
 using Infrastructure.Exceptions;
+using Microsoft.AspNetCore.Identity;
 using Moq;
 using Task = System.Threading.Tasks.Task;
 using TaskEntity = Domain.Entities.TrackingTasksEntities.Task;
@@ -17,12 +20,33 @@ namespace Tests.Infrastructure.Adapters.UseCases.Tasks;
 
 public class EndTaskSessionCommandTests
 {
+    private class FakeCurrentUser : CurrentUser
+    {
+        public override string? UserId => "user-1";
+        public override bool IsAuthenticated => true;
+        public override string? OpenProjectInstanceUrl => "http://op.example.com";
+        public override int? OpenProjectInstanceId => 2;
+        public override int? OpenProjectUserId => 7;
+    }
+
+    private static Mock<UserManager<ApplicationUser>> BuildUserManagerMock(bool addRandomSlackTime)
+    {
+        var store = new Mock<IUserStore<ApplicationUser>>();
+#pragma warning disable CS8625
+        var mock = new Mock<UserManager<ApplicationUser>>(
+            store.Object, null, null, null, null, null, null, null, null);
+#pragma warning restore CS8625
+        mock.Setup(x => x.FindByIdAsync("user-1"))
+            .ReturnsAsync(new ApplicationUser { Id = "user-1", AddRandomSlackTime = addRandomSlackTime });
+        return mock;
+    }
+
     private static (EndTaskSessionCommandImpl useCase,
                     Mock<ITaskRepository> repositoryMock,
                     Mock<IAddTimeEntryCommand> addTimeEntryMock,
                     Mock<IUpdateWorkPackageCommand> updateMock,
                     Mock<IActivityOpService> activityOpServiceMock)
-        BuildUseCase(TaskEntity? taskFromRepo)
+        BuildUseCase(TaskEntity? taskFromRepo, bool addRandomSlackTime = true)
     {
         var repositoryMock = new Mock<ITaskRepository>();
         repositoryMock
@@ -58,7 +82,9 @@ public class EndTaskSessionCommandTests
                 repositoryMock.Object,
                 addTimeEntryMock.Object,
                 activityOpServiceMock.Object),
-            updateMock.Object);
+            updateMock.Object,
+            BuildUserManagerMock(addRandomSlackTime).Object,
+            new FakeCurrentUser());
 
         return (useCase, repositoryMock, addTimeEntryMock, updateMock, activityOpServiceMock);
     }
@@ -145,6 +171,39 @@ public class EndTaskSessionCommandTests
         Assert.True(detail.Uploaded);
         addMock.Verify(x => x.Execute(It.IsAny<AddTimeEntryRequest>()), Times.Once);
         repoMock.Verify(x => x.SaveAsync(task), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task Execute_AddRandomSlackTimeEnabled_PushesEndTimeForward()
+    {
+        // 30 min trabajados -> cae en la rama de holgura de 10-20 min extra.
+        var detail = new TaskTimeDetail { Id = 1, StartTime = DateTime.Now.AddMinutes(-30), EndTime = null };
+        var task = BuildTask(detail);
+        var (useCase, _, _, _, _) = BuildUseCase(task, addRandomSlackTime: true);
+        var request = new EndTaskSessionRequest(1, 2, "con holgura");
+        var before = DateTime.Now;
+
+        await useCase.Execute(request);
+
+        // Sin holgura, EndTime quedaría pegado a "before"; con holgura activada se le suman
+        // entre 10 y 20 minutos más sobre "ahora".
+        Assert.True(detail.EndTime > before.AddMinutes(9));
+    }
+
+    [Fact]
+    public async Task Execute_AddRandomSlackTimeDisabled_UsesExactTrackedTime()
+    {
+        var detail = new TaskTimeDetail { Id = 1, StartTime = DateTime.Now.AddMinutes(-30), EndTime = null };
+        var task = BuildTask(detail);
+        var (useCase, _, _, _, _) = BuildUseCase(task, addRandomSlackTime: false);
+        var request = new EndTaskSessionRequest(1, 2, "sin holgura");
+        var before = DateTime.Now;
+
+        await useCase.Execute(request);
+
+        // Sin la holgura, EndTime debe quedar pegado al momento real de la llamada, no
+        // desplazado varios minutos hacia adelante.
+        Assert.True(detail.EndTime <= before.AddSeconds(5));
     }
 
     [Fact]

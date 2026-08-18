@@ -1,6 +1,6 @@
 // Manejo del temporizador de sesión activa
 
-import { getActiveSession } from './state.js';
+import { getActiveSession, store, NOTIFICATION_TYPES } from './state.js';
 import { formatDuration } from './helpers.js';
 import { updateNavbar } from './render.js';
 import { fetchPendingSummary } from './api.js';
@@ -9,17 +9,21 @@ let timerInterval   = null;
 let notifInterval   = null;
 let pendingInterval = null;
 
-const NOTIF_STORAGE_KEY    = 'notifIntervalMinutes';
 const DEFAULT_NOTIF_MINUTES = 15;
 
-function getNotifIntervalMs() {
-    const saved = parseInt(localStorage.getItem(NOTIF_STORAGE_KEY));
-    const minutes = (!isNaN(saved) && saved > 0) ? saved : DEFAULT_NOTIF_MINUTES;
-    return minutes * 60 * 1000;
+/**
+ * Preferencia guardada para un tipo de notificación, o el default (activada, 15 min) si
+ * store.userSettings todavía no cargó o el usuario nunca la cambió — así un fallo de red al
+ * pedir /settings no deja a nadie sin recordatorios.
+ */
+function getNotifPref(typeCode) {
+    const saved = store.userSettings?.notifications?.[typeCode];
+    return saved ?? { enabled: true, intervalMinutes: DEFAULT_NOTIF_MINUTES };
 }
 
 function fireSessionNotification() {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (!getNotifPref(NOTIFICATION_TYPES.SESSION_REMINDER).enabled) return;
 
     const session = getActiveSession();
     if (!session) return;
@@ -30,7 +34,7 @@ function fireSessionNotification() {
     new Notification('⏱ Sesión activa — TrackingTasksOp', {
         body: `Llevas ${elapsed} trabajando en:\n"${session.subject}"`,
         icon: '/favicon.ico',
-        tag:  'session-reminder',   // reemplaza la anterior en vez de apilarlas
+        tag:  NOTIFICATION_TYPES.SESSION_REMINDER,   // reemplaza la anterior en vez de apilarlas
         renotify: true
     });
 }
@@ -38,7 +42,9 @@ function fireSessionNotification() {
 function startNotifInterval() {
     stopNotifInterval();
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    notifInterval = setInterval(fireSessionNotification, getNotifIntervalMs());
+    const pref = getNotifPref(NOTIFICATION_TYPES.SESSION_REMINDER);
+    if (!pref.enabled) return;
+    notifInterval = setInterval(fireSessionNotification, pref.intervalMinutes * 60 * 1000);
 }
 
 function stopNotifInterval() {
@@ -50,6 +56,7 @@ function stopNotifInterval() {
 
 async function checkPendingSessions() {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (!getNotifPref(NOTIFICATION_TYPES.PENDING_UPLOAD_REMINDER).enabled) return;
 
     try {
         const summary = await fetchPendingSummary();
@@ -58,7 +65,7 @@ async function checkPendingSessions() {
         new Notification('📤 Sesiones sin subir — TrackingTasksOp', {
             body: `Tienes ${summary.count} sesión(es) sin enviar a OpenProject (${summary.totalHours} h en total).`,
             icon: '/favicon.ico',
-            tag:  'pending-upload-reminder', // reemplaza la anterior en vez de apilarlas
+            tag:  NOTIFICATION_TYPES.PENDING_UPLOAD_REMINDER, // reemplaza la anterior en vez de apilarlas
             renotify: true
         });
     } catch {
@@ -74,8 +81,10 @@ async function checkPendingSessions() {
 export function startPendingReminder() {
     stopPendingReminder();
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const pref = getNotifPref(NOTIFICATION_TYPES.PENDING_UPLOAD_REMINDER);
+    if (!pref.enabled) return;
     checkPendingSessions();
-    pendingInterval = setInterval(checkPendingSessions, getNotifIntervalMs());
+    pendingInterval = setInterval(checkPendingSessions, pref.intervalMinutes * 60 * 1000);
 }
 
 function stopPendingReminder() {
@@ -83,6 +92,16 @@ function stopPendingReminder() {
         clearInterval(pendingInterval);
         pendingInterval = null;
     }
+}
+
+/**
+ * Reaplica las preferencias de notificación vigentes (llamado desde el sidebar tras guardar
+ * un cambio). El recordatorio de sesión activa solo se reinicia si hay una sesión en curso;
+ * el de pendientes siempre, porque no depende de eso.
+ */
+export function refreshNotificationTimers() {
+    if (getActiveSession()) startNotifInterval();
+    startPendingReminder();
 }
 
 export function startTimer() {

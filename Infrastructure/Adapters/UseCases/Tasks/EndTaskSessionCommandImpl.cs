@@ -1,19 +1,26 @@
 using System.Text.Json;
 using Application.Dto.Tasks;
 using Application.Dto.TimeEntry;
+using Application.Ports.Auth;
 using Application.Ports.Repositories;
 using Application.Ports.Services;
 using Application.Ports.UseCases.Tasks;
 using Application.Ports.UseCases.TimeEntry;
 using Application.Ports.UseCases.WorkPackages;
 using Infrastructure.Adapters.Services;
+using Infrastructure.DataAccess.Entities;
 using Infrastructure.Exceptions;
+using Microsoft.AspNetCore.Identity;
 using Task = Domain.Entities.TrackingTasksEntities.Task;
 
 namespace Infrastructure.Adapters.UseCases.Tasks;
 
-public class EndTaskSessionCommandImpl
-    (ITaskRepository repository, IPendingTimeUploader pendingTimeUploader, IUpdateWorkPackageCommand updateWorkPackageCommand): IEndTaskSessionCommand
+public class EndTaskSessionCommandImpl(
+    ITaskRepository repository,
+    IPendingTimeUploader pendingTimeUploader,
+    IUpdateWorkPackageCommand updateWorkPackageCommand,
+    UserManager<ApplicationUser> userManager,
+    CurrentUser currentUser) : IEndTaskSessionCommand
 {
     public async Task<Task> Execute(EndTaskSessionRequest request)
     {
@@ -27,12 +34,16 @@ public class EndTaskSessionCommandImpl
         {
             lastTimeDetails.EndTime = DateTime.Now;
 
-            //Agregando más tiempo de holgura ._. (Lógica de main)
-            var time = lastTimeDetails.GetHoursWorked()!.Value.Minutes;
-            if (time is >= 10 and <= 60)
-                lastTimeDetails.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(10, 20));
-            else if (time >= 60)
-                lastTimeDetails.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(20, 40));
+            // Holgura aleatoria: parametrizada desde el sidebar ("Comportamiento de tareas").
+            // Desactivada, se registran los minutos exactos trackeados.
+            if (await ShouldAddRandomSlackTime())
+            {
+                var time = lastTimeDetails.GetHoursWorked()!.Value.Minutes;
+                if (time is >= 10 and <= 60)
+                    lastTimeDetails.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(10, 20));
+                else if (time >= 60)
+                    lastTimeDetails.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(20, 40));
+            }
         }
 
         // Se suben TODAS las sesiones cerradas sin registrar, no solo la última: al pausar
@@ -89,5 +100,18 @@ public class EndTaskSessionCommandImpl
         }
 
         return exceptionMessage;
+    }
+
+    /// <summary>
+    /// Default true: preserva el comportamiento histórico si el usuario no tiene la
+    /// preferencia guardada o no se pudo resolver quién está autenticado.
+    /// </summary>
+    private async System.Threading.Tasks.Task<bool> ShouldAddRandomSlackTime()
+    {
+        var userId = currentUser.UserId;
+        if (userId is null) return true;
+
+        var appUser = await userManager.FindByIdAsync(userId);
+        return appUser?.AddRandomSlackTime ?? true;
     }
 }
