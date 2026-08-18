@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Application.Dto.Reports;
 using Application.Ports.Auth;
 using Application.Ports.Repositories;
 using Application.Ports.Services;
@@ -9,15 +10,10 @@ using Domain.Entities.OpenProjectEntities.TimeEntries;
 
 namespace Infrastructure.Adapters.UseCases.Reports;
 
-public record DailyTaskReportRow(DateOnly Date, string ProjectName, int WorkPackageId, string TaskName, string ActivityName, double Hours, string Assignee = "", string Responsible = "");
-
-/// <summary>Sesión cerrada en local que todavía no se registró en OpenProject.</summary>
-public record PendingSessionRow(DateOnly Date, string ProjectName, int WorkPackageId, string TaskName, double Hours, string Assignee = "", string Responsible = "");
-
-/// <summary>Asignado y responsable de un work package, tal como los nombra OpenProject.</summary>
-public record WorkPackagePeople(string Assignee, string Responsible)
+/// <summary>Datos del work package que no vienen en las entradas de tiempo.</summary>
+public record WorkPackageInfo(string Assignee, string Responsible, int StatusId, string Status, string Type)
 {
-    public static readonly WorkPackagePeople Unknown = new("", "");
+    public static readonly WorkPackageInfo Unknown = new("", "", 0, "", "");
 }
 
 /// <summary>
@@ -33,7 +29,13 @@ public class GenerateDailyTaskReportCommandImpl(
     IListsWorkPackagesCommand listsWorkPackagesCommand,
     CurrentUser currentUser) : IGenerateDailyTaskReportCommand
 {
-    public async System.Threading.Tasks.Task<byte[]> Execute(DateOnly from, DateOnly to)
+    public async System.Threading.Tasks.Task<byte[]> Execute(DateOnly from, DateOnly to, int? statusId = null)
+    {
+        var data = await Build(from, to, statusId);
+        return BuildWorkbook(data.Rows, data.Pending);
+    }
+
+    public async System.Threading.Tasks.Task<DailyTaskReportData> Build(DateOnly from, DateOnly to, int? statusId = null)
     {
         if (from > to)
             throw new ValidationException("La fecha 'from' no puede ser posterior a 'to'.");
@@ -46,27 +48,31 @@ public class GenerateDailyTaskReportCommandImpl(
         var rows = BuildReportRows(entries);
         var pending = await BuildPendingRows(userId, from, to);
 
-        // Asignado y responsable no vienen en las entradas de tiempo, así que se resuelven
-        // consultando los work packages involucrados en una sola tanda.
-        var people = await ResolvePeople(rows.Select(r => r.WorkPackageId)
+        // Asignado, responsable, estado y tipo no vienen en las entradas de tiempo, así que se
+        // resuelven consultando los work packages involucrados en una sola tanda.
+        var info = await ResolveInfo(rows.Select(r => r.WorkPackageId)
             .Concat(pending.Select(p => p.WorkPackageId)));
 
-        rows = rows.Select(r => r with
-        {
-            Assignee = people.GetValueOrDefault(r.WorkPackageId, WorkPackagePeople.Unknown).Assignee,
-            Responsible = people.GetValueOrDefault(r.WorkPackageId, WorkPackagePeople.Unknown).Responsible
-        }).ToList();
+        rows = rows.Select(r => Enrich(r, info.GetValueOrDefault(r.WorkPackageId, WorkPackageInfo.Unknown))).ToList();
+        pending = pending.Select(p => Enrich(p, info.GetValueOrDefault(p.WorkPackageId, WorkPackageInfo.Unknown))).ToList();
 
-        pending = pending.Select(p => p with
+        if (statusId is > 0)
         {
-            Assignee = people.GetValueOrDefault(p.WorkPackageId, WorkPackagePeople.Unknown).Assignee,
-            Responsible = people.GetValueOrDefault(p.WorkPackageId, WorkPackagePeople.Unknown).Responsible
-        }).ToList();
+            // Se filtra por el estado ACTUAL del work package, que es lo que el usuario ve en la UI.
+            rows = rows.Where(r => info.GetValueOrDefault(r.WorkPackageId, WorkPackageInfo.Unknown).StatusId == statusId).ToList();
+            pending = pending.Where(p => info.GetValueOrDefault(p.WorkPackageId, WorkPackageInfo.Unknown).StatusId == statusId).ToList();
+        }
 
-        return BuildWorkbook(rows, pending);
+        return new DailyTaskReportData(rows, pending);
     }
 
-    private async System.Threading.Tasks.Task<Dictionary<int, WorkPackagePeople>> ResolvePeople(IEnumerable<int> workPackageIds)
+    private static DailyTaskReportRow Enrich(DailyTaskReportRow r, WorkPackageInfo i) =>
+        r with { Assignee = i.Assignee, Responsible = i.Responsible, Status = i.Status, Type = i.Type };
+
+    private static PendingSessionRow Enrich(PendingSessionRow p, WorkPackageInfo i) =>
+        p with { Assignee = i.Assignee, Responsible = i.Responsible, Status = i.Status, Type = i.Type };
+
+    private async System.Threading.Tasks.Task<Dictionary<int, WorkPackageInfo>> ResolveInfo(IEnumerable<int> workPackageIds)
     {
         var ids = workPackageIds.Where(id => id > 0).Distinct().ToList();
         if (ids.Count == 0) return [];
@@ -75,8 +81,17 @@ public class GenerateDailyTaskReportCommandImpl(
 
         return workPackages.ToDictionary(
             wp => wp.Id,
-            wp => new WorkPackagePeople(wp.Links.Assignee.Title, wp.Links.Responsible.Title));
+            wp => new WorkPackageInfo(
+                wp.Links.Assignee.Title,
+                wp.Links.Responsible.Title,
+                ExtractId(wp.Links.Status.Href),
+                wp.Links.Status.Title,
+                wp.Links.Type.Title));
     }
+
+    /// <summary>Último segmento numérico de un href tipo "/api/v3/statuses/7". 0 si no se puede leer.</summary>
+    internal static int ExtractId(string? href) =>
+        int.TryParse(href?.TrimEnd('/').Split('/').LastOrDefault(), out var id) ? id : 0;
 
     internal static List<DailyTaskReportRow> BuildReportRows(IEnumerable<OpTimeEntry> entries)
     {
@@ -132,7 +147,7 @@ public class GenerateDailyTaskReportCommandImpl(
         using var workbook = new XLWorkbook();
 
         var ws = workbook.Worksheets.Add("Reporte");
-        WriteHeaders(ws, ["Fecha", "Proyecto", "ID Tarea", "Nombre", "Actividad", "Asignado", "Responsable", "Horas"]);
+        WriteHeaders(ws, ["Fecha", "Proyecto", "ID Tarea", "Tipo", "Nombre", "Estado", "Actividad", "Asignado", "Responsable", "Horas"]);
 
         var row = 2;
         foreach (var r in rows)
@@ -140,22 +155,24 @@ public class GenerateDailyTaskReportCommandImpl(
             ws.Cell(row, 1).Value = r.Date.ToString("yyyy-MM-dd");
             ws.Cell(row, 2).Value = r.ProjectName;
             ws.Cell(row, 3).Value = r.WorkPackageId;
-            ws.Cell(row, 4).Value = r.TaskName;
-            ws.Cell(row, 5).Value = r.ActivityName;
-            ws.Cell(row, 6).Value = r.Assignee;
-            ws.Cell(row, 7).Value = r.Responsible;
-            ws.Cell(row, 8).Value = r.Hours;
+            ws.Cell(row, 4).Value = r.Type;
+            ws.Cell(row, 5).Value = r.TaskName;
+            ws.Cell(row, 6).Value = r.Status;
+            ws.Cell(row, 7).Value = r.ActivityName;
+            ws.Cell(row, 8).Value = r.Assignee;
+            ws.Cell(row, 9).Value = r.Responsible;
+            ws.Cell(row, 10).Value = r.Hours;
             row++;
         }
 
-        ws.Cell(row, 7).Value = "Total";
-        ws.Cell(row, 7).Style.Font.Bold = true;
-        ws.Cell(row, 8).Value = Math.Round(rows.Sum(r => r.Hours), 2);
-        ws.Cell(row, 8).Style.Font.Bold = true;
+        ws.Cell(row, 9).Value = "Total";
+        ws.Cell(row, 9).Style.Font.Bold = true;
+        ws.Cell(row, 10).Value = Math.Round(rows.Sum(r => r.Hours), 2);
+        ws.Cell(row, 10).Style.Font.Bold = true;
         ws.Columns().AdjustToContents();
 
         var wsPending = workbook.Worksheets.Add("Pendientes de subir");
-        WriteHeaders(wsPending, ["Fecha", "Proyecto", "ID Tarea", "Nombre", "Asignado", "Responsable", "Horas sin registrar"]);
+        WriteHeaders(wsPending, ["Fecha", "Proyecto", "ID Tarea", "Tipo", "Nombre", "Estado", "Asignado", "Responsable", "Horas sin registrar"]);
 
         var pendingRow = 2;
         foreach (var pr in pending)
@@ -163,10 +180,12 @@ public class GenerateDailyTaskReportCommandImpl(
             wsPending.Cell(pendingRow, 1).Value = pr.Date.ToString("yyyy-MM-dd");
             wsPending.Cell(pendingRow, 2).Value = pr.ProjectName;
             wsPending.Cell(pendingRow, 3).Value = pr.WorkPackageId;
-            wsPending.Cell(pendingRow, 4).Value = pr.TaskName;
-            wsPending.Cell(pendingRow, 5).Value = pr.Assignee;
-            wsPending.Cell(pendingRow, 6).Value = pr.Responsible;
-            wsPending.Cell(pendingRow, 7).Value = pr.Hours;
+            wsPending.Cell(pendingRow, 4).Value = pr.Type;
+            wsPending.Cell(pendingRow, 5).Value = pr.TaskName;
+            wsPending.Cell(pendingRow, 6).Value = pr.Status;
+            wsPending.Cell(pendingRow, 7).Value = pr.Assignee;
+            wsPending.Cell(pendingRow, 8).Value = pr.Responsible;
+            wsPending.Cell(pendingRow, 9).Value = pr.Hours;
             pendingRow++;
         }
         wsPending.Columns().AdjustToContents();

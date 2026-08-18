@@ -19,14 +19,17 @@ public class ListsWorkPackagesCommandImpl(
     public async Task<List<WorkPackage>> Execute(ListsWorkPackagesRequest request)
     {
         int pageSize = request.pageSize > 50 ? 50 : request.pageSize;
-        int offset = request.offset <= 0 ? 1 : request.offset;
+        // En OpenProject `offset` es el NUMERO DE PAGINA, no un desplazamiento de elementos.
+        // Antes se avanzaba de a pageSize (1, 51, 101...) y se saltaban paginas enteras,
+        // asi que faltaban tareas cuando habia mas de una pagina.
+        int page = request.offset <= 0 ? 1 : request.offset;
         var allItems = new List<WorkPackage>();
         int total;
         
-        logger.LogInformation("Executing ListsWorkPackagesCommand, offset={Offset}, pageSize={PageSize}", offset, pageSize);   
+        logger.LogInformation("Executing ListsWorkPackagesCommand, page={Page}, pageSize={PageSize}", page, pageSize);   
         do
         {
-            string url = BuildUrl(request.ProjectId, offset, pageSize, request.StatusId);
+            string url = BuildUrl(request.ProjectId, page, pageSize, request.StatusId, request.OnlyOpen);
             HttpResponseMessage  response = await _client.GetAsync(url);
 
             if (response.StatusCode == HttpStatusCode.NotFound)
@@ -47,7 +50,7 @@ public class ListsWorkPackagesCommandImpl(
             
             allItems.AddRange(collection!.Embedded!.Elements);
             total = collection.Total;
-            offset += pageSize;
+            page++;
         } while (allItems.Count < total);
 
         return allItems;
@@ -87,17 +90,21 @@ public class ListsWorkPackagesCommandImpl(
         return result;
     }
 
-    private string BuildUrl(int? projectId, int offset, int pageSize, int? statusId)
+    private string BuildUrl(int? projectId, int page, int pageSize, int? statusId, bool onlyOpen = false)
     {
         string baseEndpoint = projectId.HasValue
             ? $"/api/v3/projects/{projectId}/work_packages"
             : $"/api/v3/work_packages";
 
+        // "=" un estado concreto, "o" solo abiertas, "*" todos.
+        // El default es "*": con "o" OpenProject omitia las tareas cerradas y faltaban en la UI.
         string statusFilter = statusId.HasValue
             ? $"{{\"status\":{{\"operator\":\"=\",\"values\":[\"{statusId.Value}\"]}}}}"
-            : "{\"status\":{\"operator\":\"o\",\"values\":[]}}";
+            : onlyOpen
+                ? "{\"status\":{\"operator\":\"o\",\"values\":[]}}"
+                : "{\"status\":{\"operator\":\"*\",\"values\":[]}}";
         string filters = Uri.EscapeDataString($"[{{\"assignee\":{{\"operator\":\"=\",\"values\":[\"me\"]}}}},{statusFilter}]");
         string sortBy = Uri.EscapeDataString("[[\"createdAt\",\"desc\"]]");
-        return $"{baseEndpoint}?filters={filters}&offset={offset}&pageSize={pageSize}&sortBy={sortBy}";
+        return $"{baseEndpoint}?filters={filters}&offset={page}&pageSize={pageSize}&sortBy={sortBy}";
     }
 }

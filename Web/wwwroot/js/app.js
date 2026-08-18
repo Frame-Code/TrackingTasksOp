@@ -6,12 +6,12 @@ import { fetchProjects, fetchWorkPackages, fetchActivities, fetchTask,
          postStartSession, postEndSession, fetchStatuses,
          patchWorkPackageStatus, patchWorkPackageProgress,
          patchWorkPackageDates, postCancelSession,
-         downloadDailyTaskReport, updateApiKey,
+         downloadDailyTaskReport, fetchReportPreview, updateApiKey,
          postPauseSession, postResumeSession, postUploadPending,
          postLogTime } from './api.js';
 import { updateNavbar, renderProjectSelect, renderCards, renderStatusFilters,
          renderHistoryLoading, renderHistoryContent, renderHistoryError,
-         renderActivitiesSelect } from './render.js';
+         renderActivitiesSelect, renderReportPreview } from './render.js';
 import { startTimer, stopTimer, startPendingReminder } from './timer.js';
 import { showToast, setLoading, showError, hideError } from './ui.js';
 import { escHtml, formatDuration, statusClass, extractId } from './helpers.js';
@@ -29,11 +29,10 @@ async function loadProjects() {
     }
 }
 
-const DEFAULT_STATUSES = ['new', 'nuevo', 'in progress', 'en progreso'];
-
 async function loadStatuses() {
     try {
         store.statuses = await fetchStatuses();
+        renderReportStatusSelect();
         // Si ya hay tarjetas renderizadas, refrescarlas para mostrar los dropdowns
         if (store.workPackages.length) renderCards();
     } catch (e) {
@@ -52,7 +51,10 @@ async function loadWorkPackages(projectId) {
         if (searchInput) { searchInput.value = ''; }
         const clearBtn = document.getElementById('clearSearchBtn');
         if (clearBtn) clearBtn.classList.add('d-none');
-        initDefaultStatusFilters();
+        // Sin filtros preseleccionados: la vista muestra TODAS las tareas que llegaron de
+        // OpenProject. Antes se encendían solo "nuevo"/"en progreso" y las demás quedaban
+        // ocultas, así que la UI enseñaba menos tareas de las que el usuario tiene.
+        store.activeStatusFilters.clear();
         renderStatusFilters();
         renderCards();
     } catch (e) {
@@ -60,16 +62,6 @@ async function loadWorkPackages(projectId) {
     } finally {
         setLoading(false);
     }
-}
-
-function initDefaultStatusFilters() {
-    store.activeStatusFilters.clear();
-    store.workPackages.forEach(wp => {
-        const title = wp._links?.status?.title || 'Sin estado';
-        if (DEFAULT_STATUSES.some(d => title.toLowerCase().includes(d))) {
-            store.activeStatusFilters.add(title);
-        }
-    });
 }
 
 // ── Acciones de sesión ────────────────────────────────────────────────────────
@@ -151,6 +143,13 @@ async function handleChangeStatus(wpId, statusId, statusName) {
 }
 
 async function handleCancelSession(wpId) {
+    // Prevención de errores (Nielsen): cancelar descarta el tiempo de la sesión y no hay
+    // deshacer, así que se pide confirmación explícita antes de perderlo.
+    const wp = store.workPackages.find(w => w.id === wpId);
+    const name = wp ? `#${wp.id} — ${wp.subject}` : `#${wpId}`;
+    if (!confirm(`Se descartará el tiempo trabajado en ${name} sin registrarlo en OpenProject.\n\nEsta acción no se puede deshacer. ¿Continuar?`))
+        return;
+
     try {
         await postCancelSession(wpId);
         clearSession();
@@ -697,14 +696,26 @@ function bindConfirmDatesButton() {
 
 // ── Modal: Reporte de tareas diarias ──────────────────────────────────────────
 
+// Filtros con los que se generó la vista previa; se reusan al imprimir o descargar
+// para que el Excel sea exactamente lo que el usuario está viendo.
+let _reportFilters = null;
+
+function renderReportStatusSelect() {
+    const sel = document.getElementById('reportStatusSelect');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Todos los estados</option>' +
+        store.statuses.map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
+}
+
 function openReportModal() {
     document.getElementById('reportFromDate').value = '';
     document.getElementById('reportToDate').value = '';
+    document.getElementById('reportStatusSelect').value = '';
     document.getElementById('reportError').classList.add('d-none');
 
-    const confirmBtn = document.getElementById('confirmReportBtn');
-    confirmBtn.disabled = false;
-    confirmBtn.innerHTML = '<i class="bi bi-download me-1"></i>Descargar';
+    const btn = document.getElementById('previewReportBtn');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-eye me-1"></i>Vista previa';
 
     new bootstrap.Modal(document.getElementById('reportModal')).show();
 }
@@ -713,38 +724,82 @@ function bindReportButton() {
     document.getElementById('reportBtn').addEventListener('click', openReportModal);
 }
 
-function bindConfirmReportButton() {
-    document.getElementById('confirmReportBtn').addEventListener('click', async () => {
-        const from = document.getElementById('reportFromDate').value;
-        const to = document.getElementById('reportToDate').value;
-        const errorBox = document.getElementById('reportError');
-        errorBox.classList.add('d-none');
+function readReportFilters() {
+    const from = document.getElementById('reportFromDate').value;
+    const to = document.getElementById('reportToDate').value;
+    const statusSel = document.getElementById('reportStatusSelect');
+    const errorBox = document.getElementById('reportError');
+    errorBox.classList.add('d-none');
 
-        if (!from || !to) {
-            errorBox.textContent = 'Debes indicar ambas fechas.';
-            errorBox.classList.remove('d-none');
-            return;
-        }
-        if (from > to) {
-            errorBox.textContent = 'La fecha "Desde" no puede ser posterior a "Hasta".';
-            errorBox.classList.remove('d-none');
-            return;
-        }
+    const fail = (msg) => {
+        errorBox.textContent = msg;
+        errorBox.classList.remove('d-none');
+        return null;
+    };
 
-        const btn = document.getElementById('confirmReportBtn');
+    if (!from || !to) return fail('Debes indicar ambas fechas.');
+    if (from > to) return fail('La fecha "Desde" no puede ser posterior a "Hasta".');
+
+    return {
+        from,
+        to,
+        statusId: statusSel.value || null,
+        statusName: statusSel.value ? statusSel.options[statusSel.selectedIndex].text : 'Todos'
+    };
+}
+
+function bindPreviewReportButton() {
+    document.getElementById('previewReportBtn').addEventListener('click', async () => {
+        const filters = readReportFilters();
+        if (!filters) return;
+
+        const btn = document.getElementById('previewReportBtn');
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generando...';
 
         try {
-            await downloadDailyTaskReport(from, to);
+            const data = await fetchReportPreview(filters.from, filters.to, filters.statusId);
+            _reportFilters = filters;
+            renderReportPreview(data, filters);
             bootstrap.Modal.getInstance(document.getElementById('reportModal'))?.hide();
-            showToast('Reporte descargado correctamente.', 'success');
+            new bootstrap.Modal(document.getElementById('reportPreviewModal')).show();
         } catch (e) {
+            const errorBox = document.getElementById('reportError');
             errorBox.textContent = `Error al generar el reporte: ${e.message}`;
             errorBox.classList.remove('d-none');
         } finally {
             btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-download me-1"></i>Descargar';
+            btn.innerHTML = '<i class="bi bi-eye me-1"></i>Vista previa';
+        }
+    });
+}
+
+function bindReportPreviewButtons() {
+    // ponytail: window.print() nativo + reglas @media print. El navegador ya trae su propia
+    // previsualización de impresión; una librería JS solo agregaría peso para lo mismo.
+    document.getElementById('printReportBtn').addEventListener('click', () => window.print());
+
+    document.getElementById('backToReportFiltersBtn').addEventListener('click', () => {
+        bootstrap.Modal.getInstance(document.getElementById('reportPreviewModal'))?.hide();
+        new bootstrap.Modal(document.getElementById('reportModal')).show();
+    });
+
+    document.getElementById('downloadReportBtn').addEventListener('click', async () => {
+        if (!_reportFilters) return;
+
+        const btn = document.getElementById('downloadReportBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Descargando...';
+
+        try {
+            const { from, to, statusId } = _reportFilters;
+            await downloadDailyTaskReport(from, to, statusId);
+            showToast('Reporte descargado correctamente.', 'success');
+        } catch (e) {
+            showToast(`Error al descargar el reporte: ${e.message}`, 'danger');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-file-earmark-excel me-1"></i>Descargar Excel';
         }
     });
 }
@@ -848,7 +903,8 @@ bindLoadButton();
 bindConfirmEndButton();
 bindConfirmDatesButton();
 bindReportButton();
-bindConfirmReportButton();
+bindPreviewReportButton();
+bindReportPreviewButtons();
 bindApiKeyButton();
 bindConfirmApiKeyButton();
 bindStatusFilterEvents();

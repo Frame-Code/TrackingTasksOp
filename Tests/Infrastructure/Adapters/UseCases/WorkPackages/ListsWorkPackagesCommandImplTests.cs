@@ -60,13 +60,13 @@ public class ListsWorkPackagesCommandImplTests
     }
 
     [Fact]
-    public async Task Execute_WithoutStatusId_ShouldBuildUrlWithOpenStatusFilter()
+    public async Task Execute_WithoutStatusId_ShouldBuildUrlWithAllStatusesFilter()
     {
         var (command, getUri) = BuildCommand();
 
         await command.Execute(new ListsWorkPackagesRequest(null, 0, 50));
 
         var filters = HttpUtility.UrlDecode(HttpUtility.ParseQueryString(getUri()!.Query)["filters"]);
-        Assert.Contains("\"status\":{\"operator\":\"o\",\"values\":[]}", filters);
+        Assert.Contains("\"status\":{\"operator\":\"*\",\"values\":[]}", filters);
     }
 }
