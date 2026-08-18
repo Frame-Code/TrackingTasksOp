@@ -179,3 +179,8 @@ export async function postLogTime(payload) {
         body: JSON.stringify(payload)
     });
 }
+
+/** Resumen de sesiones cerradas sin subir a OpenProject: { count, totalHours }. */
+export async function fetchPendingSummary() {
+    return apiFetch(`${API}/task/pending_summary`);
+}

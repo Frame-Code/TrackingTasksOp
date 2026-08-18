@@ -35,11 +35,11 @@ El proyecto sigue **Arquitectura Hexagonal (Ports & Adapters)** distribuida en *
   - `Infrastructure/DataAccess/` — `TrackingTasksDbContext` y `Configurations/`
   - `Infrastructure/Migrations/` — migraciones EF Core
   - `Infrastructure/Settings/` — clases POCO para `IOptions<T>` (`OpenProjectSettings`, `RedisSettings`, `GeminiSettings`, `OllamaSettings`, `GroqSettings`)
-  - `Infrastructure/Extensions/` — métodos de extensión de DI (`ServicesExtensions`, `HttpClientExtensions`, `DbContextExtensions`, `DatabaseExtensions`, `GoogleClientsExtensions`, `TimeExtensions`)
+  - `Infrastructure/Extensions/` — métodos de extensión de DI (`ServicesExtensions`, `HttpClientExtensions`, `DbContextExtensions`, `DatabaseExtensions`, `GoogleClientsExtensions`, `TimeExtensions`, `DataProtectionExtensions`)
 - **Web** — Referencia a los tres anteriores. Es la única capa con dependencia HTTP (`Microsoft.NET.Sdk.Web`). Contiene únicamente:
   - `Web/Controllers/`
   - `Web/Middleware/` — `GlobalExceptionHandler`
-  - `Web/Extensions/` — extensiones puramente HTTP (`CorsExtensions`, `InitializeExtensions`)
+  - `Web/Extensions/` — extensiones puramente HTTP (`CorsExtensions`, `InitializeExtensions`, `IdentityExtensions`)
   - `Web/Program.cs`
 
 ### Flujo de dependencias
@@ -85,7 +85,7 @@ El sistema integra con una instancia de OpenProject (por defecto `http://localho
 - Crear y actualizar work packages
 - Publicar time entries
 
-La autenticación actual es Basic Auth con API key, configurada en `appsettings.json` bajo `OpenProjectSettings`. El `HttpClient` nombrado se registra en `Infrastructure/Extensions/HttpClientExtensions.cs`. **Nota:** la implementación de autenticación está siendo rediseñada — ver `AUTH_DESIGN.md` para el plan de migración a auth multi-usuario (Identity local + OAuth).
+La autenticación es **multi-usuario y multi-tenant**: cada `ApplicationUser` está asociado a una `OpenProjectInstance` (URL propia). El `HttpClient` nombrado `OpenProjectHttpClient` se registra en `Infrastructure/Extensions/HttpClientExtensions.cs` con un `BaseAddress` placeholder; el `DelegatingHandler` `OpenProjectAuthHandler` (`Infrastructure/Adapters/Http/OpenProjectHttpHandler.cs`) reescribe la URL con la instancia del usuario autenticado y agrega `Authorization: Basic apikey:<key>` desencriptando su `LocalCredential` al vuelo vía `IApiKeyEncryptorService`. Ya no queda Basic Auth estático en `appsettings.json`. Método local (Identity + API key) implementado end-to-end; **OAuth 2.0 contra OpenProject está modelado (`OAuthCredential`) pero el flujo de login/callback aún no está implementado** — ver `AUTH_DESIGN.md`.
 
 ### Bot e integración con LLMs
 
@@ -103,15 +103,17 @@ El proyecto tiene un `BotController` (en `Web/Controllers/`) que delega en servi
 
 ### Registro de dependencias
 
-Todo el DI se configura mediante **métodos de extensión expuestos por `Infrastructure`** que `Web/Program.cs` invoca:
+Todo el DI se configura mediante **métodos de extensión** que `Web/Program.cs` invoca, en este orden: `AddTrackingDataProtection` → `AddIdentityAndAuth` → `AddHttpClients` → `AddServices` → `AddDbContext` → `ConfigureCors`.
 
 - `Infrastructure/Extensions/ServicesExtensions.cs` — `AddServices()` registra Settings, casos de uso, servicios y repositorios (todos `Scoped`); inicializa el cliente Redis como `Singleton`
 - `Infrastructure/Extensions/DbContextExtensions.cs` — `AddDbContext()` registra EF Core
-- `Infrastructure/Extensions/HttpClientExtensions.cs` — `AddHttpClients()` registra el `HttpClient` de OpenProject (con Basic Auth) y el de Groq (con Bearer)
+- `Infrastructure/Extensions/HttpClientExtensions.cs` — `AddHttpClients()` registra el `HttpClient` de OpenProject (`OpenProjectAuthHandler` inyecta Basic Auth por usuario) y el de Groq (con Bearer)
+- `Infrastructure/Extensions/DataProtectionExtensions.cs` — `AddTrackingDataProtection()` persiste el key ring en `Web/Keys/` (ver `Docs/DataProtection.md`)
 - `Infrastructure/Extensions/DatabaseExtensions.cs` — utilidades de inicialización/migración
 - `Infrastructure/Extensions/GoogleClientsExtensions.cs` — opcional, inyecta clientes de Google Cloud (actualmente comentado)
-- `Web/Extensions/CorsExtensions.cs` — `ConfigureCors()` (esta sí vive en Web porque es puramente HTTP)
-- `Web/Extensions/InitializeExtensions.cs` — `InitializeAsync()` corre setup en el arranque
+- `Web/Extensions/CorsExtensions.cs` — `ConfigureCors()` (vive en Web porque es puramente HTTP)
+- `Web/Extensions/IdentityExtensions.cs` — `AddIdentityAndAuth()` configura ASP.NET Core Identity (`ApplicationUser`, políticas de password/lockout desde `IdentitySettings`), el `ClaimsPrincipalFactory` y la cookie de auth (`CookieSettings`). Vive en Web, no en Infrastructure, junto con Cors por el mismo criterio ("puramente HTTP": esquema de cookie/auth pipeline).
+- `Web/Extensions/InitializeExtensions.cs` — `InitializeAsync()` corre migraciones y arma el pipeline HTTP en el arranque
 
 ### Manejo de errores
 
@@ -119,7 +121,8 @@ Middleware global en `Web/Middleware/GlobalExceptionHandler.cs`, devuelve respue
 
 ## Entidades de dominio clave
 
-- **Task** — entidad central; `WorkPackageId` es la PK actualmente (no identity, viene de OpenProject); tiene método `GetTotalHoursWorked()`. **Nota:** ver `AUTH_DESIGN.md` — al introducir multi-usuario, la PK pasará a ser compuesta `(UserId, WorkPackageId)`.
+- **Task** — entidad central; PK compuesta `(UserId, WorkPackageId)` (`WorkPackageId` no es identity, viene de OpenProject; `UserId` la aísla por usuario/tenant); también tiene `OpenProjectInstanceId` para scoping multi-tenant en sus relaciones con `Project`/`StatusTask`; tiene método `GetTotalHoursWorked()`.
+- **OpenProjectInstance** — representa la instancia/organización de OpenProject a la que pertenece un usuario/tarea (soporte multi-tenant, ver `AUTH_DESIGN.md`).
 - **TaskTimeDetail** — registra intervalos de tiempo (`StartTime`/`EndTime`) por tarea; `Uploaded` indica si ya fue enviado a OpenProject
 - **StatusTask** — estado de la tarea; `IsClosed` controla si acepta nuevas sesiones
 - **Project** — proyecto local (cache de OpenProject)
@@ -135,4 +138,8 @@ Software que permite comenzar y terminar sesiones de trabajo a una tarea especí
 
 ## Documentos relacionados
 
-- `AUTH_DESIGN.md` — diseño detallado del sistema de autenticación (Identity local + OAuth contra OpenProject), modelo de datos, flujos, middleware de invalidación de API key, y roadmap de implementación en 4 fases.
+- `AUTH_DESIGN.md` — diseño y estado real del sistema de autenticación (Identity local + OAuth contra OpenProject), modelo de datos, flujos, middleware de invalidación de API key, y qué falta (OAuth) del roadmap original en 4 fases.
+- `Docs/DataProtection.md` — cómo y dónde se cifran las API keys de OpenProject (Data Protection API), por qué el key ring vive en `Web/Keys/`, y qué hacer si se pierde.
+- `Docs/OpenProjectEntities.md` — mapeo de las respuestas JSON de la API de OpenProject a las entidades de `Domain/Entities/OpenProjectEntities/`.
+- `Docs/Bot.md` — diseño del bot conversacional (intents, adapters de LLM, acciones).
+- `Docs/OpenProjectDockerBackup.md` — backup/restore de la instancia de OpenProject (servidor de testing) contra la que corre esta app en desarrollo, incluyendo migración completa servidor → máquina local.
