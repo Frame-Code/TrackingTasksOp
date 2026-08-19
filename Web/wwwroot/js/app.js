@@ -190,16 +190,41 @@ async function handleChangeStatus(wpId, statusId, statusName) {
     }
 }
 
-async function handleCancelSession(wpId) {
-    // Prevención de errores (Nielsen): cancelar descarta el tiempo de la sesión y no hay
-    // deshacer, así que se pide confirmación explícita antes de perderlo — salvo que el
-    // usuario haya desactivado este aviso desde el sidebar.
-    const wp = store.workPackages.find(w => w.id === wpId);
-    const name = wp ? `#${wp.id} — ${wp.subject}` : `#${wpId}`;
-    if (!store.userSettings?.skipCancelConfirmation &&
-        !confirm(`Se descartará el tiempo trabajado en ${name} sin registrarlo en OpenProject.\n\nEsta acción no se puede deshacer. ¿Continuar?`))
-        return;
+let _cancelWpId = null;
 
+/**
+ * Prevención de errores (Nielsen): cancelar descarta el tiempo de la sesión y no hay
+ * deshacer, así que se confirma antes — salvo que el usuario haya desactivado el aviso
+ * desde el sidebar. Se usa un modal propio y no confirm(): el nativo no se puede estilar,
+ * antepone el host de la página y sus botones ("OK/Cancel") no dicen qué hace cada uno.
+ */
+function handleCancelSession(wpId) {
+    if (store.userSettings?.skipCancelConfirmation) return doCancelSession(wpId);
+
+    const wp = store.workPackages.find(w => w.id === wpId);
+    _cancelWpId = wpId;
+
+    document.getElementById('cancelSessionTaskName').textContent =
+        wp ? `#${wp.id} — ${wp.subject}` : `#${wpId}`;
+
+    // El tiempo real que se va a perder, no una advertencia genérica: ver "00:23:41"
+    // pesa distinto que leer "se perderá el tiempo trabajado".
+    const session = getActiveSession();
+    const secs = session ? (Date.now() - new Date(session.startTime)) / 1000 : 0;
+    document.getElementById('cancelSessionElapsed').textContent = formatDuration(Math.max(0, secs));
+
+    new bootstrap.Modal(document.getElementById('cancelSessionModal')).show();
+}
+
+function bindCancelSessionModal() {
+    document.getElementById('confirmCancelSessionBtn').addEventListener('click', () => {
+        bootstrap.Modal.getInstance(document.getElementById('cancelSessionModal'))?.hide();
+        if (_cancelWpId) doCancelSession(_cancelWpId);
+        _cancelWpId = null;
+    });
+}
+
+async function doCancelSession(wpId) {
     try {
         await postCancelSession(wpId);
         clearSession();
@@ -972,6 +997,7 @@ bindSearchEvents();
 bindPaginationEvents();
 bindStorageSync();
 bindPauseModalButtons();
+bindCancelSessionModal();
 bindHistoryModalEvents();
 bindLogTimeModal();
 initSidebar();
