@@ -478,6 +478,21 @@ html.sidebar-collapsed .sidebar-account-btn { justify-content: center; }
 .status-dropdown-menu {
     min-width: 160px;
     font-size: .85rem;
+    /* El max-height real lo pone app.js al abrirlo (alto de la tarjeta contenedora);
+       este es el tope de respaldo si el JS no llegara a correr. */
+    max-height: 260px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* La tarjeta con el menú de estados abierto tiene que pintarse por encima de las de
+   abajo. `.wp-card:hover` aplica `transform`, y `transform` crea un contexto de
+   apilamiento que encierra el z-index del menú dentro de la tarjeta: sin esto, las
+   tarjetas siguientes (posteriores en el DOM) lo tapaban y los estados de más abajo
+   no se podían ni ver ni clickear. */
+.wp-card:has(.dropdown-menu.show) {
+    position: relative;
+    z-index: 5;
 }
 
 .status-dropdown-menu .dropdown-item {

@@ -591,7 +591,9 @@
          qué hace y el destructivo va en rojo. -->
     <div class="modal fade" id="cancelSessionModal" tabindex="-1" data-bs-backdrop="static"
          aria-labelledby="cancelSessionTitle">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
+        <!-- Sin modal-sm: a 300 px los dos botones no caben en una linea y "Descartar"
+             (el destructivo) quedaba solo abajo, leyendose como la accion principal. -->
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header border-0 pb-0">
                     <div>
@@ -616,11 +618,11 @@
                         <strong>Pausar</strong> o <strong>Finalizar</strong>.
                     </p>
                 </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <div class="modal-footer border-0 pt-0 flex-nowrap">
+                    <button type="button" class="btn btn-secondary text-nowrap" data-bs-dismiss="modal">
                         Seguir trabajando
                     </button>
-                    <button type="button" id="confirmCancelSessionBtn" class="btn btn-danger">
+                    <button type="button" id="confirmCancelSessionBtn" class="btn btn-danger text-nowrap">
                         <i class="bi bi-trash3 me-1"></i>Descartar
                     </button>
                 </div>
