@@ -34,6 +34,10 @@ async function loadStatuses() {
     try {
         store.statuses = await fetchStatuses();
         renderReportStatusSelect();
+        // Las píldoras de filtro salen de este catálogo, no de las tareas cargadas: si los
+        // estados llegan después de la primera página, hay que pintarlas ahora o no
+        // aparecen nunca.
+        renderStatusFilters();
         // Si ya hay tarjetas renderizadas, refrescarlas para mostrar los dropdowns
         if (store.workPackages.length) renderCards();
     } catch (e) {
@@ -55,21 +59,26 @@ async function loadUserSettings() {
     }
 }
 
-async function loadWorkPackages(projectId) {
+/**
+ * Trae UNA página desde el servidor, con los filtros resueltos en OpenProject.
+ * Se llama en cada cambio de página, búsqueda o filtro: cada uno es una consulta nueva,
+ * no un recorte de una lista completa en memoria.
+ */
+async function reloadPage() {
     setLoading(true);
     hideError();
     try {
-        store.workPackages = await fetchWorkPackages(projectId);
-        store.currentPage  = 1;
-        store.searchQuery  = '';
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) { searchInput.value = ''; }
-        const clearBtn = document.getElementById('clearSearchBtn');
-        if (clearBtn) clearBtn.classList.add('d-none');
-        // Sin filtros preseleccionados: la vista muestra TODAS las tareas que llegaron de
-        // OpenProject. Antes se encendían solo "nuevo"/"en progreso" y las demás quedaban
-        // ocultas, así que la UI enseñaba menos tareas de las que el usuario tiene.
-        store.activeStatusFilters.clear();
+        const data = await fetchWorkPackages({
+            projectId: store.projectId,
+            page:      store.currentPage,
+            pageSize:  store.pageSize,
+            search:    store.searchQuery,
+            statusIds: [...store.activeStatusFilters]
+        });
+
+        store.workPackages = data?.items ?? [];
+        store.total        = data?.total ?? 0;
+
         renderStatusFilters();
         renderCards();
     } catch (e) {
@@ -77,6 +86,24 @@ async function loadWorkPackages(projectId) {
     } finally {
         setLoading(false);
     }
+}
+
+/** Carga desde cero: proyecto nuevo, filtros y búsqueda en blanco. */
+async function loadWorkPackages(projectId) {
+    store.projectId   = projectId;
+    store.currentPage = 1;
+    store.searchQuery = '';
+    // Sin filtros preseleccionados: se muestran TODOS los estados. Antes se encendían
+    // solo "nuevo"/"en progreso" y las demás tareas quedaban ocultas, así que la UI
+    // enseñaba menos tareas de las que el usuario tiene.
+    store.activeStatusFilters.clear();
+
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = '';
+    const clearBtn = document.getElementById('clearSearchBtn');
+    if (clearBtn) clearBtn.classList.add('d-none');
+
+    await reloadPage();
 }
 
 // ── Acciones de sesión ────────────────────────────────────────────────────────
@@ -145,9 +172,15 @@ async function handleChangeStatus(wpId, statusId, statusName) {
             wp._links.status.href  = `/api/v3/statuses/${statusId}`;
         }
 
-        renderStatusFilters();
-        renderCards();
         showToast(`Estado cambiado a <strong>${escHtml(statusName)}</strong>`, 'success');
+
+        // Con filtro de estado activo la tarea puede haber dejado de pertenecer a la
+        // página: se vuelve a pedir para no mostrar algo que ya no cumple el filtro.
+        if (store.activeStatusFilters.size) {
+            await reloadPage();
+        } else {
+            renderCards();
+        }
     } catch (e) {
         showToast(`Error al cambiar estado: ${e.message}`, 'danger');
         if (badgeBtn) {
@@ -570,16 +603,16 @@ function bindStatusFilterEvents() {
         const pill = e.target.closest('.status-filter-pill');
         if (!pill) return;
 
-        const status = pill.dataset.status;
-        if (store.activeStatusFilters.has(status)) {
-            store.activeStatusFilters.delete(status);
-            pill.classList.remove('is-active');
+        // Los filtros son IDs de estado y viajan a OpenProject, que devuelve solo las
+        // tareas que coinciden. Filtrar aquí obligaría a traerlas todas otra vez.
+        const statusId = Number(pill.dataset.statusId);
+        if (store.activeStatusFilters.has(statusId)) {
+            store.activeStatusFilters.delete(statusId);
         } else {
-            store.activeStatusFilters.add(status);
-            pill.classList.add('is-active');
+            store.activeStatusFilters.add(statusId);
         }
         store.currentPage = 1;
-        renderCards();
+        reloadPage();
     });
 }
 
@@ -592,21 +625,23 @@ function bindSearchEvents() {
     const input    = document.getElementById('searchInput');
     const clearBtn = document.getElementById('clearSearchBtn');
 
+    // Cada tecleo dispara una consulta a OpenProject, así que el debounce sube de 250 a
+    // 400 ms: se busca sobre TODAS las tareas, no solo sobre las que están en pantalla.
     const onInput = debounce(() => {
-        store.searchQuery  = input.value;
-        store.currentPage  = 1;
+        store.searchQuery = input.value;
+        store.currentPage = 1;
         clearBtn.classList.toggle('d-none', !input.value);
-        if (store.workPackages.length) renderCards();
-    }, 250);
+        reloadPage();
+    }, 400);
 
     input.addEventListener('input', onInput);
 
     clearBtn.addEventListener('click', () => {
-        input.value        = '';
-        store.searchQuery  = '';
-        store.currentPage  = 1;
+        input.value       = '';
+        store.searchQuery = '';
+        store.currentPage = 1;
         clearBtn.classList.add('d-none');
-        if (store.workPackages.length) renderCards();
+        reloadPage();
         input.focus();
     });
 }
@@ -616,7 +651,7 @@ function bindPaginationEvents() {
         const btn = e.target.closest('[data-page]');
         if (!btn || btn.closest('.disabled')) return;
         store.currentPage = parseInt(btn.dataset.page);
-        renderCards();
+        reloadPage();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 }
@@ -940,6 +975,13 @@ bindPauseModalButtons();
 bindHistoryModalEvents();
 bindLogTimeModal();
 initSidebar();
+
+// El sidebar avisa cuando cambia algo que altera qué tareas trae la página (por ahora,
+// el tamaño de página). Vuelve a la primera para no quedar en una página inexistente.
+document.addEventListener('tasks:reload', () => {
+    store.currentPage = 1;
+    reloadPage();
+});
 
 loadProjects();
 loadStatuses();

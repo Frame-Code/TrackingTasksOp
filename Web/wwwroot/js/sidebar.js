@@ -5,7 +5,6 @@
 import { store, NOTIFICATION_TYPES, getTheme, setTheme, setPageSize,
          getSidebarCollapsed, setSidebarCollapsed } from './state.js';
 import { updateNotificationSetting, updateTaskPreferences } from './api.js';
-import { renderCards } from './render.js';
 import { refreshNotificationTimers } from './timer.js';
 
 function showSidebarError(msg) {
@@ -135,7 +134,10 @@ function bindAppearanceFields() {
 
     document.getElementById('pageSizeSelect').addEventListener('change', (e) => {
         setPageSize(parseInt(e.target.value));
-        if (store.workPackages.length) renderCards();
+        // La paginación la resuelve el servidor: cambiar el tamaño cambia QUÉ tareas trae
+        // la página, no solo cómo se recortan las que ya están en memoria. Se usa un evento
+        // para no importar app.js desde aquí (app.js ya importa este módulo).
+        document.dispatchEvent(new CustomEvent('tasks:reload'));
     });
 }
 

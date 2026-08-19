@@ -12,14 +12,29 @@ public class WorkPackageController(
     IListsWorkPackagesCommand listCommand,
     IUpdateWorkPackageCommand updateCommand) : ControllerBase
 {
+    /// <summary>
+    /// Una página de tareas. El estado y la búsqueda se filtran en OpenProject: traer las
+    /// ~200 tareas para mostrar 12 costaba ~9 s, porque OpenProject cobra por cada work
+    /// package que serializa.
+    /// </summary>
     [HttpGet]
-    public async Task<ActionResult<List<WorkPackage>>> GetAllWorkPackages(
+    public async Task<ActionResult<PagedWorkPackages<WorkPackage>>> GetAllWorkPackages(
         [FromQuery] int? projectId,
-        [FromQuery] int offset,
-        [FromQuery] int pageSize)
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 12,
+        [FromQuery] string? search = null,
+        [FromQuery] string? statusIds = null)
     {
-        var request = new ListsWorkPackagesRequest(projectId, offset, pageSize);
-        return await listCommand.Execute(request);
+        var ids = (statusIds ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => int.TryParse(s, out var id) ? id : 0)
+            .Where(id => id > 0)
+            .ToArray();
+
+        var request = new ListsWorkPackagesRequest(
+            projectId, page, pageSize, StatusIds: ids, Search: search);
+
+        return await listCommand.ExecutePageAsync(request);
     }
 
     [HttpPatch("{id:int}/status")]
