@@ -19,6 +19,7 @@ public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> opt
     public DbSet<LocalCredential> LocalCredentials { get; set; } = null!;
     public DbSet<OAuthCredential> OAuthCredentials { get; set; } = null!;
     public DbSet<AuthAuditLog> AuthAuditLogs { get; set; } = null!;
+    public DbSet<UserNotificationSetting> UserNotificationSettings { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

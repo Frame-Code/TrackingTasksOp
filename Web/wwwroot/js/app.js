@@ -8,11 +8,12 @@ import { fetchProjects, fetchWorkPackages, fetchActivities, fetchTask,
          patchWorkPackageDates, postCancelSession,
          downloadDailyTaskReport, fetchReportPreview, updateApiKey,
          postPauseSession, postResumeSession, postUploadPending,
-         postLogTime } from './api.js';
+         postLogTime, fetchUserSettings } from './api.js';
 import { updateNavbar, renderProjectSelect, renderCards, renderStatusFilters,
          renderHistoryLoading, renderHistoryContent, renderHistoryError,
          renderActivitiesSelect, renderReportPreview } from './render.js';
 import { startTimer, stopTimer, startPendingReminder } from './timer.js';
+import { initSidebar, renderSidebarFields } from './sidebar.js';
 import { showToast, setLoading, showError, hideError } from './ui.js';
 import { escHtml, formatDuration, statusClass, extractId } from './helpers.js';
 
@@ -37,6 +38,20 @@ async function loadStatuses() {
         if (store.workPackages.length) renderCards();
     } catch (e) {
         console.warn('No se pudieron cargar los estados de OpenProject:', e.message);
+    }
+}
+
+async function loadUserSettings() {
+    try {
+        const settings = await fetchUserSettings();
+        store.userSettings = {
+            ...settings,
+            notifications: Object.fromEntries(settings.notifications.map(n => [n.typeCode, n]))
+        };
+    } catch (e) {
+        // store.userSettings queda null: timer.js y el sidebar caen a sus propios defaults
+        // (notificaciones activadas cada 15 min) para no dejar a nadie sin recordatorios.
+        console.warn('No se pudieron cargar las preferencias del usuario:', e.message);
     }
 }
 
@@ -144,10 +159,12 @@ async function handleChangeStatus(wpId, statusId, statusName) {
 
 async function handleCancelSession(wpId) {
     // Prevención de errores (Nielsen): cancelar descarta el tiempo de la sesión y no hay
-    // deshacer, así que se pide confirmación explícita antes de perderlo.
+    // deshacer, así que se pide confirmación explícita antes de perderlo — salvo que el
+    // usuario haya desactivado este aviso desde el sidebar.
     const wp = store.workPackages.find(w => w.id === wpId);
     const name = wp ? `#${wp.id} — ${wp.subject}` : `#${wpId}`;
-    if (!confirm(`Se descartará el tiempo trabajado en ${name} sin registrarlo en OpenProject.\n\nEsta acción no se puede deshacer. ¿Continuar?`))
+    if (!store.userSettings?.skipCancelConfirmation &&
+        !confirm(`Se descartará el tiempo trabajado en ${name} sin registrarlo en OpenProject.\n\nEsta acción no se puede deshacer. ¿Continuar?`))
         return;
 
     try {
@@ -164,6 +181,14 @@ async function handleCancelSession(wpId) {
 // ── Pausar / Continuar ────────────────────────────────────────────────────────
 
 let _pauseWpId = null;
+
+/** Respeta la preferencia "Al pausar una tarea" del sidebar: si no es "Ask", pausa directo. */
+async function handlePauseClick(wpId) {
+    const behavior = store.userSettings?.pauseDefaultBehavior;
+    if (behavior === 'UploadNow') return handlePauseSession(wpId, true);
+    if (behavior === 'SaveLocal') return handlePauseSession(wpId, false);
+    openPauseModal(wpId);
+}
 
 function openPauseModal(wpId) {
     const wp = store.workPackages.find(w => w.id === wpId);
@@ -612,7 +637,7 @@ function bindGridEvents() {
         if (startBtn)     await handleStartSession(parseInt(startBtn.dataset.id));
         if (endBtn)       openEndModal();
         if (cancelBtn)    await handleCancelSession(parseInt(cancelBtn.dataset.id));
-        if (pauseBtn)     openPauseModal(parseInt(pauseBtn.dataset.id));
+        if (pauseBtn)     await handlePauseClick(parseInt(pauseBtn.dataset.id));
         if (resumeBtn)    await handleResumeSession(parseInt(resumeBtn.dataset.id));
         if (historyBtn)   await handleOpenHistory(parseInt(historyBtn.dataset.id));
 
@@ -914,11 +939,16 @@ bindStorageSync();
 bindPauseModalButtons();
 bindHistoryModalEvents();
 bindLogTimeModal();
+initSidebar();
 
 loadProjects();
 loadStatuses();
-startPendingReminder();
 
-if (getActiveSession()) {
-    startTimer();
-}
+// Los recordatorios dependen de las preferencias guardadas (intervalo, activado/desactivado
+// por tipo): hay que esperar a que carguen para no arrancarlos con los valores por defecto
+// y tener que reiniciarlos un instante después.
+loadUserSettings().then(() => {
+    renderSidebarFields();
+    startPendingReminder();
+    if (getActiveSession()) startTimer();
+});

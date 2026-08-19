@@ -1,8 +1,258 @@
-/* ── Navbar ────────────────────────────────────────────────────── */
-#mainNav {
-    background: rgba(13, 17, 23, 0.92);
+/* ── Sidebar (rail colapsable / expandido) ──────────────────────────────────
+   Patrón basado en https://uxplanet.org/case-study-research-sidebar-navigation:
+   un rail angosto de solo íconos que se expande a íconos+texto. El ancho vive
+   en variables para que JS solo necesite alternar una clase en <html>. */
+:root {
+    --sidebar-width-expanded: 272px;
+    --sidebar-width-rail: 68px;
+}
+
+.app-sidebar {
+    width: var(--sidebar-width-expanded);
+    flex-shrink: 0;
+    /* rgb + alpha (no el hex fijo de antes) para que el fondo respete el tema activo:
+       claro y oscuro tienen --bs-tertiary-bg-rgb distintos, definidos por Bootstrap. */
+    background: rgba(var(--bs-tertiary-bg-rgb), 0.92);
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    border-right: 1px solid var(--bs-border-color-translucent);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: width 0.2s ease;
+    z-index: 1030;
+}
+
+html.sidebar-collapsed .app-sidebar {
+    width: var(--sidebar-width-rail);
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: 1rem;
+    min-height: 64px;
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+    flex-shrink: 0;
+}
+
+.sidebar-toggle-btn {
+    background: none;
+    border: 0;
+    color: var(--bs-primary);
+    font-size: 1.35rem;
+    padding: 0;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+/* En rail, el logo es el único elemento clicable del header: expande. */
+html.sidebar-collapsed .sidebar-toggle-btn { cursor: pointer; }
+html:not(.sidebar-collapsed) .sidebar-toggle-btn { cursor: default; }
+
+.sidebar-brand-text {
+    overflow: hidden;
+    white-space: nowrap;
+    flex-grow: 1;
+}
+
+.sidebar-collapse-chevron {
+    background: none;
+    border: 0;
+    color: var(--bs-secondary-color);
+    flex-shrink: 0;
+    padding: .25rem;
+}
+
+.sidebar-collapse-chevron:hover { color: var(--bs-body-color); }
+
+html.sidebar-collapsed .sidebar-brand-text,
+html.sidebar-collapsed .sidebar-collapse-chevron {
+    display: none;
+}
+
+html.sidebar-collapsed .sidebar-header {
+    justify-content: center;
+}
+
+/* ── Sesión activa ───────────────────────────────────────────────────────── */
+.sidebar-session-badge {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin: .75rem;
+    padding: .5rem .75rem;
+    border-radius: .5rem;
+    background: rgba(25, 135, 84, 0.15);
+    border: 1px solid rgba(25, 135, 84, 0.3);
+    flex-shrink: 0;
+}
+
+.sidebar-session-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.sidebar-session-name {
+    font-size: .78rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-session-timer {
+    font-family: var(--bs-font-monospace, monospace);
+    font-weight: 700;
+    font-size: .85rem;
+    color: #20c997;
+}
+
+html.sidebar-collapsed .sidebar-session-info { display: none; }
+html.sidebar-collapsed .sidebar-session-badge { justify-content: center; margin: .75rem .5rem; }
+
+/* ── Grupos (acordeón) ───────────────────────────────────────────────────── */
+.sidebar-nav { padding: .5rem 0; }
+
+/* Ítem de nav suelto (ej. Reporte): mismo look que un header de grupo, pero sin
+   chevron porque no abre nada — es una acción directa, no una sección. */
+.sidebar-nav-item { cursor: pointer; }
+
+.sidebar-nav-divider {
+    margin: .4rem 1rem;
+    border: 0;
+    border-top: 1px solid var(--bs-border-color-translucent);
+}
+
+html.sidebar-collapsed .sidebar-nav-divider { margin: .4rem .75rem; }
+
+.sidebar-group-header {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    width: 100%;
+    padding: .65rem 1rem;
+    background: none;
+    border: 0;
+    color: var(--bs-body-color);
+    text-align: left;
+    font-size: .875rem;
+    font-weight: 500;
+}
+
+.sidebar-group-header:hover { background: rgba(var(--bs-body-color-rgb), 0.05); }
+
+.sidebar-group-icon {
+    font-size: 1.05rem;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+    color: var(--bs-secondary-color);
+}
+
+.sidebar-group-header[aria-expanded="true"] .sidebar-group-icon { color: var(--bs-primary); }
+
+.sidebar-group-label {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar-group-chevron {
+    font-size: .7rem;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.sidebar-group-header[aria-expanded="true"] .sidebar-group-chevron { transform: rotate(180deg); }
+
+.sidebar-group-body { padding: .25rem 1rem 1rem 2.5rem; }
+
+html.sidebar-collapsed .sidebar-group-label,
+html.sidebar-collapsed .sidebar-group-chevron {
+    display: none;
+}
+
+html.sidebar-collapsed .sidebar-group-header {
+    justify-content: center;
+    padding: .65rem;
+}
+
+/* Red de seguridad: si un grupo quedó abierto antes de colapsar a rail, su contenido
+   (switches, inputs con texto) no tiene espacio para mostrarse angosto — se oculta sin
+   depender de que el JS alcance a cerrarlo primero. */
+html.sidebar-collapsed .sidebar-group-body {
+    display: none;
+}
+
+/* ── Cuenta (footer) ─────────────────────────────────────────────────────── */
+.sidebar-footer {
+    border-top: 1px solid var(--bs-border-color-translucent);
+    padding: .5rem;
+    flex-shrink: 0;
+}
+
+.sidebar-account-btn {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    width: 100%;
+    padding: .5rem;
+    background: none;
+    border: 0;
+    border-radius: .5rem;
+    color: var(--bs-body-color);
+}
+
+.sidebar-account-btn:hover { background: rgba(var(--bs-body-color-rgb), 0.05); }
+
+.sidebar-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--bs-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: .8rem;
+    flex-shrink: 0;
+}
+
+.sidebar-account-info {
+    overflow: hidden;
+    text-align: left;
+}
+
+.sidebar-account-email {
+    font-size: .78rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+html.sidebar-collapsed .sidebar-account-info { display: none; }
+html.sidebar-collapsed .sidebar-account-btn { justify-content: center; }
+
+/* ── Responsive: bajo el breakpoint md, el sidebar expandido flota encima
+   del contenido en vez de empujarlo (como el offcanvas que reemplaza). ───── */
+@media (max-width: 767.98px) {
+    .app-sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+    }
+
+    html:not(.sidebar-collapsed) .app-sidebar {
+        box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5);
+    }
 }
 
 /* ── Active session pulse dot ───────────────────────────────────── */
@@ -294,8 +544,8 @@
 }
 
 .auth-card {
-    background: rgba(22, 27, 34, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    background: rgba(var(--bs-tertiary-bg-rgb), 0.9);
+    border: 1px solid var(--bs-border-color-translucent) !important;
     backdrop-filter: blur(12px);
 }
 

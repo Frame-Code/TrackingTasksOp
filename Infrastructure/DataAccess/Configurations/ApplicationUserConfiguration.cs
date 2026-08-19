@@ -26,6 +26,17 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
             .IsRequired()
             .HasColumnType("datetime");
 
+        builder.Property(u => u.PauseDefaultBehavior)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(20);
+
+        builder.Property(u => u.SkipCancelConfirmation)
+            .IsRequired();
+
+        builder.Property(u => u.AddRandomSlackTime)
+            .IsRequired();
+
         builder.HasIndex(u => u.OpenProjectUserId);
 
         builder.HasOne(u => u.OpenProjectInstance)

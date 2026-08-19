@@ -193,3 +193,22 @@ export async function postLogTime(payload) {
 export async function fetchPendingSummary() {
     return apiFetch(`${API}/task/pending_summary`);
 }
+
+/** Preferencias del usuario: notificaciones por tipo, actividad por defecto, etc. */
+export async function fetchUserSettings() {
+    return apiFetch(`${API}/settings`);
+}
+
+export async function updateNotificationSetting(typeCode, enabled, intervalMinutes) {
+    return apiFetch(`${API}/settings/notifications`, {
+        method: 'PUT',
+        body: JSON.stringify({ typeCode, enabled, intervalMinutes })
+    });
+}
+
+export async function updateTaskPreferences(pauseDefaultBehavior, skipCancelConfirmation, addRandomSlackTime) {
+    return apiFetch(`${API}/settings/task-preferences`, {
+        method: 'PUT',
+        body: JSON.stringify({ pauseDefaultBehavior, skipCancelConfirmation, addRandomSlackTime })
+    });
+}
