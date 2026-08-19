@@ -5,6 +5,14 @@ import { extractId } from './helpers.js';
 
 const API = '/api/v1';
 
+// Caché en memoria de las páginas de tareas. Cada página cuesta ~1 s contra OpenProject y
+// volver a una que ya se vio (paginar hacia atrás, apagar un filtro, cambiar de proyecto y
+// regresar) no debería pagar ese viaje otra vez.
+// ponytail: Map de la pestaña, se pierde con F5. Si hace falta que sobreviva a la recarga o
+// se comparta entre pestañas/dispositivos, el siguiente escalón es cachear en Redis.
+const wpCache = new Map();
+const WP_CACHE_TTL = 60_000;
+
 async function apiFetch(url, options = {}) {
     const res = await fetch(url, {
         credentials: 'include',
@@ -28,6 +36,10 @@ async function apiFetch(url, options = {}) {
         throw new Error(msg);
     }
 
+    // Cualquier mutación invalida las páginas cacheadas: el estado, el progreso o las fechas
+    // que acaban de cambiar tienen que verse en la próxima consulta.
+    if (options.method && options.method !== 'GET') wpCache.clear();
+
     if (res.status === 204) return null;
     return res.json();
 }
@@ -50,13 +62,19 @@ export async function fetchProjects() {
  * El filtro de estado y la búsqueda van al servidor porque es lo que permite NO traer
  * las ~200 tareas para mostrar 12.
  */
-export async function fetchWorkPackages({ projectId, page = 1, pageSize = 12, search = '', statusIds = [] } = {}) {
+export async function fetchWorkPackages({ projectId, page = 1, pageSize = 12, search = '', statusIds = [], force = false } = {}) {
     const qs = new URLSearchParams({ page, pageSize });
     if (projectId) qs.set('projectId', projectId);
     if (search?.trim()) qs.set('search', search.trim());
     if (statusIds.length) qs.set('statusIds', statusIds.join(','));
 
-    return apiFetch(`${API}/workpackage?${qs}`);
+    const key = qs.toString();
+    const cached = wpCache.get(key);
+    if (!force && cached && Date.now() - cached.at < WP_CACHE_TTL) return cached.data;
+
+    const data = await apiFetch(`${API}/workpackage?${qs}`);
+    if (data) wpCache.set(key, { at: Date.now(), data });
+    return data;
 }
 
 export async function fetchActivities(workPackageId) {
