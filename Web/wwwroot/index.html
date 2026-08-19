@@ -584,6 +584,50 @@
         </div>
     </div>
 
+    <!-- ── Modal: Cancelar sesión ── -->
+    <!-- Reemplaza al confirm() nativo: el del navegador no se puede estilar, muestra el
+         host ("darslab.trackingtask.local:5000 says") y ofrece "OK/Cancel" genéricos, donde
+         "Cancel" es ambiguo — ¿cancelo la sesión o cancelo la acción? Aquí cada botón dice
+         qué hace y el destructivo va en rojo. -->
+    <div class="modal fade" id="cancelSessionModal" tabindex="-1" data-bs-backdrop="static"
+         aria-labelledby="cancelSessionTitle">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h5 class="modal-title" id="cancelSessionTitle">
+                            <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Descartar sesión
+                        </h5>
+                        <p class="text-muted small mb-0 mt-1" id="cancelSessionTaskName"></p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger d-flex align-items-start gap-2 py-2 mb-2">
+                        <i class="bi bi-stopwatch flex-shrink-0 mt-1"></i>
+                        <span>
+                            Se perderá el tiempo trabajado
+                            (<strong id="cancelSessionElapsed" class="font-monospace">00:00:00</strong>)
+                            sin registrarlo en OpenProject.
+                        </span>
+                    </div>
+                    <p class="small text-muted mb-0">
+                        Esta acción no se puede deshacer. Si quieres conservar el tiempo, usa
+                        <strong>Pausar</strong> o <strong>Finalizar</strong>.
+                    </p>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Seguir trabajando
+                    </button>
+                    <button type="button" id="confirmCancelSessionBtn" class="btn btn-danger">
+                        <i class="bi bi-trash3 me-1"></i>Descartar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- AI Bot Floating Button -->
     <a href="/bot.html" aria-label="Abrir asistente de IA" title="Asistente de IA" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
        style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; z-index: 1050;">
