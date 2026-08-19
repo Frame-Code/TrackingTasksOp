@@ -1,10 +1,6 @@
 using System.Net.Http.Headers;
-using System.Text;
 using Application.Ports.Auth;
-using Infrastructure.DataAccess;
-using Infrastructure.DataAccess.Entities;
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure.Adapters.Http;
@@ -15,9 +11,8 @@ public class OpenProjectAuthHandler(IHttpContextAccessor httpContextAccessor) : 
     {
         var services = httpContextAccessor.HttpContext!.RequestServices;
         var currentUser = services.GetRequiredService<CurrentUser>();
-        var context = services.GetRequiredService<TrackingTasksDbContext>();
-        var encryptor = services.GetRequiredService<IApiKeyEncryptorService>();
 
+        // La instancia sale de los claims, sin tocar la BD.
         var instanceUrl = currentUser.OpenProjectInstanceUrl
             ?? throw new InvalidOperationException("El usuario autenticado no tiene una instancia de OpenProject asociada.");
 
@@ -25,13 +20,11 @@ public class OpenProjectAuthHandler(IHttpContextAccessor httpContextAccessor) : 
         var relativePath = request.RequestUri?.PathAndQuery ?? "/";
         request.RequestUri = new Uri($"{instanceUrl.TrimEnd('/')}{relativePath}");
 
-        // Obtener y desencriptar la API key del usuario
-        var credential = await context.Set<LocalCredential>()
-            .FirstOrDefaultAsync(x => x.UserId == currentUser.UserId, ct)
-            ?? throw new InvalidOperationException($"No se encontró credencial local para el usuario {currentUser.UserId}.");
-
-        var apiKey = encryptor.UnProtect(credential.EncryptedApiKey);
-        var encoded = Convert.ToBase64String(Encoding.UTF8.GetBytes($"apikey:{apiKey}"));
+        // La credencial se resuelve una sola vez por request: si el request dispara
+        // varias llamadas en paralelo, consultar la BD aquí rompía el DbContext scoped
+        // ("A second operation was started on this context instance...").
+        var headerProvider = services.GetRequiredService<OpenProjectAuthHeaderProvider>();
+        var encoded = await headerProvider.GetBasicHeaderAsync();
         request.Headers.Authorization = new AuthenticationHeaderValue("Basic", encoded);
 
         return await base.SendAsync(request, ct);

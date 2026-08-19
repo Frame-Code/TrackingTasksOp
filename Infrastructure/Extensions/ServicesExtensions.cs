@@ -77,6 +77,10 @@ public static class ServicesExtensions
         collection.AddScoped<IUserOpService, UserOpServiceImpl>();
         collection.AddScoped<ITimeEntryOpService, TimeEntryOpServiceImpl>();
         collection.AddScoped<IApiKeyEncryptorService, DataProtectionApiKeyEncryptorImpl>();
+        // Scoped: memoiza la credencial de OpenProject por request (ver la clase).
+        collection.AddScoped<Infrastructure.Adapters.Http.OpenProjectAuthHeaderProvider>();
+        // Scoped: acumula los tiempos del request para la cabecera Server-Timing.
+        collection.AddScoped<Infrastructure.Adapters.Http.RequestTimings>();
         collection.AddScoped<IApiKeyValidatorService, ApiKeyValidatorServiceImpl>();
         collection.AddScoped<IAuthAuditLogger, AuthAuditLoggerImpl>();
         collection.AddScoped<IInitializerInstanceService, InitializerInstanceServiceImpl>();

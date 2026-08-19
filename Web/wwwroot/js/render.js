@@ -34,29 +34,25 @@ export function renderStatusFilters() {
     const section = document.getElementById('statusFilterSection');
     const pillsEl = document.getElementById('statusFilterPills');
 
-    const uniqueStatuses = [...new Map(
-        store.workPackages.map(wp => {
-            const title = wp._links?.status?.title || 'Sin estado';
-            return [title, title];
-        })
-    ).values()].sort();
-
-    if (!uniqueStatuses.length) {
+    // Las píldoras salen del catálogo completo de estados de OpenProject, no de la página
+    // que se está mostrando: con paginación en servidor la página trae 12 tareas y no
+    // representa qué estados existen.
+    if (!store.statuses.length) {
         section.classList.add('d-none');
         return;
     }
 
     section.classList.remove('d-none');
-    pillsEl.innerHTML = uniqueStatuses.map(title => {
-        const isActive = store.activeStatusFilters.has(title);
+    pillsEl.innerHTML = store.statuses.map(s => {
+        const isActive = store.activeStatusFilters.has(s.id);
         // Solo se marca el filtro aplicado (check). El "+" del estado inactivo sugería
         // "agregar" algo, que no es lo que hace el botón.
         return `
-            <button class="btn btn-sm status-filter-pill ${statusClass(title)}${isActive ? ' is-active' : ''}"
-                    data-status="${escHtml(title)}"
+            <button class="btn btn-sm status-filter-pill ${statusClass(s.name)}${isActive ? ' is-active' : ''}"
+                    data-status-id="${s.id}"
                     aria-pressed="${isActive}"
                     title="${isActive ? 'Filtro aplicado — clic para quitarlo' : 'Clic para filtrar por este estado'}">
-                ${isActive ? '<i class="bi bi-check2 me-1" aria-hidden="true"></i>' : ''}${escHtml(title)}
+                ${isActive ? '<i class="bi bi-check2 me-1" aria-hidden="true"></i>' : ''}${escHtml(s.name)}
             </button>`;
     }).join('');
 }
@@ -68,51 +64,15 @@ export function renderCards() {
     const empty      = document.getElementById('emptyState');
     const countBadge = document.getElementById('wpCount');
 
-    if (!store.workPackages.length) {
-        grid.innerHTML = '';
-        empty.classList.remove('d-none');
-        countBadge.classList.add('d-none');
-        renderPagination(0, 0);
-        return;
-    }
+    // El servidor ya devolvió filtrada y paginada la lista: aquí solo se pinta.
+    // Filtrar o recortar de nuevo aquí obligaría a traer todas las tareas, que es
+    // justo lo que hacía que la carga tardara ~9 s.
+    const q         = store.searchQuery.trim();
+    const total     = store.total;
+    const pageCount = Math.max(1, Math.ceil(total / store.pageSize));
+    const session   = getActiveSession();
 
-    // Búsqueda y filtros de estado se combinan (AND). Antes la búsqueda anulaba los
-    // filtros pero las pills seguían encendidas, así que la pantalla mostraba un filtro
-    // que no estaba surtiendo efecto.
-    const q = store.searchQuery.trim().toLowerCase();
-    const filtered = store.workPackages.filter(wp => {
-        const matchesQuery = !q
-            || wp.subject?.toLowerCase().includes(q)
-            || String(wp.id).includes(q);
-        if (!matchesQuery) return false;
-
-        // Sin filtros seleccionados no se filtra por estado: es "todos", no "ninguno".
-        if (store.activeStatusFilters.size === 0) return true;
-        return store.activeStatusFilters.has(wp._links?.status?.title || 'Sin estado');
-    });
-
-    // Paginación
-    const total     = filtered.length;
-    const pageSize  = store.pageSize;
-    const pageCount = Math.max(1, Math.ceil(total / pageSize));
-    if (store.currentPage > pageCount) store.currentPage = pageCount;
-    const start   = (store.currentPage - 1) * pageSize;
-    const visible = filtered.slice(start, start + pageSize);
-
-    const session = getActiveSession();
-    empty.classList.add('d-none');
-
-    if (q) {
-        countBadge.textContent = total
-            ? `${total} resultado${total !== 1 ? 's' : ''}`
-            : 'Sin resultados';
-    } else {
-        countBadge.textContent =
-            `${filtered.length} de ${store.workPackages.length} tarea${store.workPackages.length !== 1 ? 's' : ''}`;
-    }
-    countBadge.classList.remove('d-none');
-
-    if (!visible.length) {
+    if (!total) {
         grid.innerHTML = `
             <div class="col-12 text-center py-4 text-muted">
                 <i class="bi bi-${q ? 'search' : 'funnel'} display-6 d-block mb-2 opacity-25"></i>
@@ -120,11 +80,22 @@ export function renderCards() {
                     ? `Sin resultados para <strong>"${escHtml(q)}"</strong>`
                     : 'Ninguna tarea coincide con los filtros seleccionados.'}</p>
             </div>`;
+        empty.classList.add('d-none');
+        countBadge.classList.add('d-none');
         renderPagination(0, 0);
         return;
     }
 
-    grid.innerHTML = visible.map(wp => buildCard(wp, session)).join('');
+    empty.classList.add('d-none');
+
+    const from = (store.currentPage - 1) * store.pageSize + 1;
+    const to   = Math.min(from + store.workPackages.length - 1, total);
+    countBadge.textContent = q
+        ? `${total} resultado${total !== 1 ? 's' : ''}`
+        : `${from}–${to} de ${total} tarea${total !== 1 ? 's' : ''}`;
+    countBadge.classList.remove('d-none');
+
+    grid.innerHTML = store.workPackages.map(wp => buildCard(wp, session)).join('');
     renderPagination(total, pageCount);
 }
 
@@ -269,22 +240,24 @@ function buildCard(wp, session) {
         </span>`;
 
     // ── Botones de acción ──────────────────────────────────────────────────────
+    // Todos con texto además del ícono y con altura de toque cómoda: un ícono suelto
+    // de 12px obliga a adivinar qué hace y es difícil de acertar con el dedo o el ratón.
     const actionBtns = isActive
-        ? `<button class="btn btn-outline-secondary btn-sm btn-cancel" data-id="${wp.id}" title="Cancelar sesión sin guardar" aria-label="Cancelar sesión sin guardar">
-               <i class="bi bi-x-circle"></i>
+        ? `<button class="btn btn-outline-secondary flex-fill btn-cancel" data-id="${wp.id}" title="Cancelar la sesión sin guardar el tiempo">
+               <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Cancelar
            </button>
-           <button class="btn btn-warning btn-sm btn-pause" data-id="${wp.id}" title="Pausar sesión" aria-label="Pausar sesión">
-               <i class="bi bi-pause-circle-fill me-1"></i>Pausar
+           <button class="btn btn-warning flex-fill btn-pause" data-id="${wp.id}" title="Pausar la sesión">
+               <i class="bi bi-pause-circle-fill me-1" aria-hidden="true"></i>Pausar
            </button>
-           <button class="btn btn-danger btn-sm btn-end" data-id="${wp.id}">
-               <i class="bi bi-stop-circle-fill me-1"></i>Finalizar
+           <button class="btn btn-danger flex-fill btn-end" data-id="${wp.id}" title="Finalizar y registrar el tiempo">
+               <i class="bi bi-stop-circle-fill me-1" aria-hidden="true"></i>Finalizar
            </button>`
         : isPaused
-            ? `<button class="btn btn-primary btn-sm btn-resume" data-id="${wp.id}">
-                   <i class="bi bi-play-circle-fill me-1"></i>Continuar
+            ? `<button class="btn btn-primary w-100 btn-resume" data-id="${wp.id}">
+                   <i class="bi bi-play-circle-fill me-1" aria-hidden="true"></i>Continuar sesión
                </button>`
-            : `<button class="btn btn-success btn-sm btn-start" data-id="${wp.id}">
-                   <i class="bi bi-play-circle me-1"></i>Iniciar
+            : `<button class="btn btn-success w-100 btn-start" data-id="${wp.id}">
+                   <i class="bi bi-play-circle me-1" aria-hidden="true"></i>Iniciar sesión
                </button>`;
 
     // La tarjeta se lee en tres niveles, de mayor a menor peso visual:
@@ -322,13 +295,6 @@ function buildCard(wp, session) {
                                    <span class="wp-meta-sep" aria-hidden="true">·</span>`
                                 : ''}
                             ${datesDisplay}
-                            <button class="btn btn-link btn-sm p-0 wp-meta-edit btn-dates"
-                                    data-id="${wp.id}"
-                                    data-start="${escHtml(wp.startDate || '')}"
-                                    data-due="${escHtml(wp.dueDate || '')}"
-                                    title="Editar fechas" aria-label="Editar fechas de la tarea ${wp.id}">
-                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                            </button>
                         </div>
                         <div class="d-flex flex-wrap column-gap-3 row-gap-1 mt-1">
                             ${buildPersonChip('bi-person', 'Asignado', assignee)}
@@ -351,15 +317,22 @@ function buildCard(wp, session) {
                                aria-label="Progreso de la tarea ${wp.id}"
                                style="background: linear-gradient(to right, #0d6efd ${pct}%, rgba(255,255,255,0.15) ${pct}%)">
 
-                        <div class="d-flex justify-content-between align-items-center gap-2 pt-2 mt-2 border-top border-subtle">
-                            <div class="d-flex gap-1">
-                                <button class="btn btn-sm wp-icon-btn btn-log-time"
-                                        data-id="${wp.id}" title="Registrar tiempo a mano (sin cronómetro)" aria-label="Registrar tiempo a mano en la tarea ${wp.id}">
-                                    <i class="bi bi-stopwatch" aria-hidden="true"></i>
+                        <div class="wp-actions pt-3 mt-2 border-top border-subtle">
+                            <div class="d-flex gap-2 mb-2">
+                                <button class="btn btn-outline-secondary flex-fill btn-log-time"
+                                        data-id="${wp.id}" title="Registrar tiempo trabajado a mano, sin usar el cronómetro">
+                                    <i class="bi bi-stopwatch me-1" aria-hidden="true"></i>Tiempo
                                 </button>
-                                <button class="btn btn-sm wp-icon-btn btn-history"
-                                        data-id="${wp.id}" title="Ver historial de sesiones" aria-label="Ver historial de sesiones de la tarea ${wp.id}">
-                                    <i class="bi bi-clock-history" aria-hidden="true"></i>
+                                <button class="btn btn-outline-secondary flex-fill btn-history"
+                                        data-id="${wp.id}" title="Ver el historial de sesiones de esta tarea">
+                                    <i class="bi bi-clock-history me-1" aria-hidden="true"></i>Historial
+                                </button>
+                                <button class="btn btn-outline-secondary flex-fill btn-dates"
+                                        data-id="${wp.id}"
+                                        data-start="${escHtml(wp.startDate || '')}"
+                                        data-due="${escHtml(wp.dueDate || '')}"
+                                        title="Cambiar la fecha de inicio y la fecha límite">
+                                    <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>Fechas
                                 </button>
                             </div>
                             <div class="d-flex gap-2">

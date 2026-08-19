@@ -18,10 +18,13 @@ function getStoredPageSize() {
 
 export const store = {
     projects: [],
+    // Solo la página que se está mostrando; el resto se queda en OpenProject.
     workPackages: [],
+    total: 0,                        // total de tareas que cumplen los filtros actuales
     statuses: [],                    // estados de OpenProject
-    activeStatusFilters: new Set(),  // vacío = mostrar todos
+    activeStatusFilters: new Set(),  // IDs de estado; vacío = todos
     searchQuery: '',
+    projectId: null,
     currentPage: 1,
     pageSize: getStoredPageSize(),
     userSettings: null               // null hasta que loadUserSettings() resuelva (ver app.js)

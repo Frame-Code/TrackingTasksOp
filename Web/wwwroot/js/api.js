@@ -45,8 +45,17 @@ export async function fetchProjects() {
     return apiFetch(`${API}/project`);
 }
 
-export async function fetchWorkPackages(projectId) {
-    const qs = `offset=0&pageSize=50${projectId ? `&projectId=${projectId}` : ''}`;
+/**
+ * Una página de tareas: { items, total, page, pageSize }.
+ * El filtro de estado y la búsqueda van al servidor porque es lo que permite NO traer
+ * las ~200 tareas para mostrar 12.
+ */
+export async function fetchWorkPackages({ projectId, page = 1, pageSize = 12, search = '', statusIds = [] } = {}) {
+    const qs = new URLSearchParams({ page, pageSize });
+    if (projectId) qs.set('projectId', projectId);
+    if (search?.trim()) qs.set('search', search.trim());
+    if (statusIds.length) qs.set('statusIds', statusIds.join(','));
+
     return apiFetch(`${API}/workpackage?${qs}`);
 }
 

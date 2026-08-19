@@ -8,6 +8,8 @@ public static class InitializeExtensions
     public static async Task<WebApplication> InitializeAsync(this WebApplication app)
     {
         await app.Services.MigrateAsync();
+        // Primero de todo: mide el request completo y publica Server-Timing (DevTools > Network > Timing).
+        app.UseMiddleware<Web.Middleware.ServerTimingMiddleware>();
         app.UseCors();
         app.UseExceptionHandler();
 
