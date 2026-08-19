@@ -34,6 +34,10 @@ async function loadStatuses() {
     try {
         store.statuses = await fetchStatuses();
         renderReportStatusSelect();
+        // Las píldoras de filtro salen de este catálogo, no de las tareas cargadas: si los
+        // estados llegan después de la primera página, hay que pintarlas ahora o no
+        // aparecen nunca.
+        renderStatusFilters();
         // Si ya hay tarjetas renderizadas, refrescarlas para mostrar los dropdowns
         if (store.workPackages.length) renderCards();
     } catch (e) {
