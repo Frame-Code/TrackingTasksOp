@@ -1,5 +1,6 @@
 ﻿using Application.Dto.Tasks;
 using Application.Dto.TimeEntry;
+using Application.Ports.Auth;
 using Application.Ports.UseCases.TimeEntry;
 using Application.Ports.Repositories;
 using Application.Ports.UseCases.Tasks;
@@ -19,7 +20,8 @@ public class TaskController(
     IUploadPendingSessionsCommand uploadPendingSessionsCommand,
     IGetPendingSessionsSummaryQuery getPendingSessionsSummaryQuery,
     ILogTimeCommand logTimeCommand,
-    ITaskRepository taskRepository
+    ITaskRepository taskRepository,
+    CurrentUser currentUser
     ) : ControllerBase
 {
     [HttpPost("start_session")]
@@ -87,7 +89,10 @@ public class TaskController(
     [HttpGet("{workPackageId:int}")]
     public async Task<ActionResult<TaskEntity>> GetTask(int workPackageId)
     {
-        var task = await taskRepository.GetByIdAsync(workPackageId);
+        var userId = currentUser.UserId
+            ?? throw new UnauthorizedAccessException("Usuario no autenticado.");
+
+        var task = await taskRepository.GetByIdForUserAsync(workPackageId, userId);
         if (task is null) return NotFound();
         return task;
     }

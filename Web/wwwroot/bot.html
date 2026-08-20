@@ -335,7 +335,7 @@
     </div>
 
     <script type="module">
-        import { requireAuth } from '/js/auth-guard.js';
+        import { requireAuth, getCurrentUser } from '/js/auth-guard.js';
         import { fetchTask } from '/js/api.js';
         import { escHtml } from '/js/helpers.js';
         import { getActiveSession, saveSession, clearSession } from '/js/state.js';
@@ -350,8 +350,12 @@
         const chatList     = document.getElementById('chat-list');
         const newChatBtn   = document.getElementById('new-chat-btn');
 
-        let sessionId = localStorage.getItem('chat_session_id') || genId();
-        localStorage.setItem('chat_session_id', sessionId);
+        // Clave por usuario, no global: una sola clave compartida hacía que el último usuario
+        // en abrir el bot en este navegador pisara el "chat actualmente abierto" del anterior
+        // (mismo patrón que trackingActiveSession en state.js).
+        const CHAT_SESSION_STORAGE_KEY = `chat_session_id:${getCurrentUser()?.userId}`;
+        let sessionId = localStorage.getItem(CHAT_SESSION_STORAGE_KEY) || genId();
+        localStorage.setItem(CHAT_SESSION_STORAGE_KEY, sessionId);
 
         let currentAbortController = null;
 
@@ -398,7 +402,7 @@
 
         async function switchSession(sid) {
             sessionId = sid;
-            localStorage.setItem('chat_session_id', sid);
+            localStorage.setItem(CHAT_SESSION_STORAGE_KEY, sid);
             document.querySelectorAll('.chat-item').forEach(el =>
                 el.classList.toggle('active', el.dataset.sid === sid));
             chatMessages.innerHTML = '';
@@ -419,7 +423,7 @@
 
         function newChat() {
             sessionId = genId();
-            localStorage.setItem('chat_session_id', sessionId);
+            localStorage.setItem(CHAT_SESSION_STORAGE_KEY, sessionId);
             chatMessages.innerHTML = '';
             showWelcome();
             document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));

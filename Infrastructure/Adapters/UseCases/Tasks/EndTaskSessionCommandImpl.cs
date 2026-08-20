@@ -24,7 +24,10 @@ public class EndTaskSessionCommandImpl(
 {
     public async Task<Task> Execute(EndTaskSessionRequest request)
     {
-        var task = await repository.GetByIdAsync(request.WorkPackageId)
+        var userId = currentUser.UserId
+            ?? throw new UnauthorizedAccessException("Usuario no autenticado.");
+
+        var task = await repository.GetByIdForUserAsync(request.WorkPackageId, userId)
             ?? throw new ArgumentException($"Task with OpenProjectId {request.WorkPackageId} does not exist");
 
         var lastTimeDetails = task.TasksTimeDetails.OrderBy(x => x.StartTime).LastOrDefault()

@@ -53,7 +53,7 @@ public class ResumeTaskCommandImplTests
     {
         var detail = new TaskTimeDetail { StartTime = new DateTime(2026, 6, 1, 10, 0, 0) };
         var task = BuildTask(detail);
-        _repositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(task);
+        _repositoryMock.Setup(x => x.GetByIdForUserAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(task);
 
         var useCase = BuildUseCase();
 
@@ -69,7 +69,7 @@ public class ResumeTaskCommandImplTests
             EndTime = new DateTime(2026, 6, 1, 11, 0, 0)
         };
         var task = BuildTask(detail);
-        _repositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(task);
+        _repositoryMock.Setup(x => x.GetByIdForUserAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(task);
         _repositoryMock.Setup(x => x.SaveAsync(It.IsAny<TaskEntity>())).ReturnsAsync((TaskEntity t) => t);
 
         var useCase = BuildUseCase();
@@ -93,7 +93,7 @@ public class ResumeTaskCommandImplTests
         };
         var task = BuildTask(detail);
         task.StatusTaskId = 4;
-        _repositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(task);
+        _repositoryMock.Setup(x => x.GetByIdForUserAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(task);
         _repositoryMock.Setup(x => x.SaveAsync(It.IsAny<TaskEntity>())).ReturnsAsync((TaskEntity t) => t);
 
         var useCase = BuildUseCase();
@@ -108,7 +108,7 @@ public class ResumeTaskCommandImplTests
     [Fact]
     public async Task Execute_TaskNotFoundLocally_CreatesFromOpenProjectAndStartsSession()
     {
-        _repositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync((TaskEntity?)null);
+        _repositoryMock.Setup(x => x.GetByIdForUserAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync((TaskEntity?)null);
         _repositoryMock.Setup(x => x.SaveAsync(It.IsAny<TaskEntity>())).ReturnsAsync((TaskEntity t) => t);
 
         _getWorkPackageCommandMock.Setup(x => x.Execute(1134)).ReturnsAsync(new WorkPackage
@@ -122,7 +122,7 @@ public class ResumeTaskCommandImplTests
             }
         });
 
-        _projectRepositoryMock.Setup(x => x.GetByIdAsync(4, false)).ReturnsAsync((Project?)null);
+        _projectRepositoryMock.Setup(x => x.GetByIdForInstanceAsync(4, 2, false)).ReturnsAsync((Project?)null);
         _projectOpServiceMock.Setup(x => x.Lists()).ReturnsAsync(new List<Domain.Entities.OpenProjectEntities.Project.Project>
         {
             new() { Id = 4, Name = "eProduction", Identifier = "eproduction", IsActive = true }
@@ -147,11 +147,31 @@ public class ResumeTaskCommandImplTests
     [Fact]
     public async Task Execute_TaskNotFoundLocallyOrInOpenProject_ThrowsArgumentException()
     {
-        _repositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync((TaskEntity?)null);
+        _repositoryMock.Setup(x => x.GetByIdForUserAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync((TaskEntity?)null);
         _getWorkPackageCommandMock.Setup(x => x.Execute(1134)).ReturnsAsync((WorkPackage?)null);
 
         var useCase = BuildUseCase();
 
         await Assert.ThrowsAsync<ArgumentException>(() => useCase.Execute(new ResumeTaskRequest(1134)));
+    }
+
+    [Fact]
+    public async Task Execute_BuscaLaTareaAcotadaAlUsuarioActual_NoSoloPorWorkPackageId()
+    {
+        // La PK real es (UserId, WorkPackageId): buscar solo por WorkPackageId podía traer
+        // la tarea de OTRO tenant con el mismo id numérico.
+        var detail = new TaskTimeDetail
+        {
+            StartTime = new DateTime(2026, 6, 1, 10, 0, 0),
+            EndTime = new DateTime(2026, 6, 1, 11, 0, 0)
+        };
+        var task = BuildTask(detail);
+        _repositoryMock.Setup(x => x.GetByIdForUserAsync(1, "user-1", It.IsAny<bool>())).ReturnsAsync(task);
+        _repositoryMock.Setup(x => x.SaveAsync(It.IsAny<TaskEntity>())).ReturnsAsync((TaskEntity t) => t);
+
+        var useCase = BuildUseCase();
+        await useCase.Execute(new ResumeTaskRequest(1));
+
+        _repositoryMock.Verify(x => x.GetByIdForUserAsync(1, "user-1", It.IsAny<bool>()), Times.Once);
     }
 }

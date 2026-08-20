@@ -22,7 +22,7 @@ public class ResumeTaskCommandImpl(
         var userId = currentUser.UserId
             ?? throw new Exception("No se pudo determinar el usuario actual.");
 
-        var task = await repository.GetByIdAsync(request.WorkPackageId);
+        var task = await repository.GetByIdForUserAsync(request.WorkPackageId, userId);
 
         if (task is null)
         {
@@ -66,7 +66,7 @@ public class ResumeTaskCommandImpl(
         if (projectId <= 0)
             throw new Exception($"No se pudo determinar el proyecto del work package #{request.WorkPackageId}.");
 
-        if (await projectRepository.GetByIdAsync(projectId) is null)
+        if (await projectRepository.GetByIdForInstanceAsync(projectId, openProjectInstanceId) is null)
         {
             var opProject = (await projectOpService.Lists()).FirstOrDefault(p => p.Id == projectId);
             if (opProject != null)

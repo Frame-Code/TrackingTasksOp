@@ -7,7 +7,10 @@ using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Adapters.Services.Bot;
 
-public class GroqApiClient(IHttpClientFactory httpClientFactory, IOptions<GroqSettings> groqSettings) : IGroqApiClient
+public class GroqApiClient(
+    IHttpClientFactory httpClientFactory,
+    IOptions<GroqSettings> groqSettings,
+    GroqAuthHeaderProvider authHeaderProvider) : IGroqApiClient
 {
     private readonly GroqSettings _groqSettings = groqSettings.Value;
     private HttpClient? _httpClient;
@@ -32,7 +35,11 @@ public class GroqApiClient(IHttpClientFactory httpClientFactory, IOptions<GroqSe
         };
 
         var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
-        var httpResponse = await HttpClient.PostAsync(_groqSettings.BaseUrl, jsonContent, ct);
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, _groqSettings.BaseUrl) { Content = jsonContent };
+        // Bearer por request: la key propia del usuario si la configuró, si no la compartida
+        // del servidor (sobreescribe el default horneado en el HttpClient nombrado).
+        httpRequest.Headers.Authorization = await authHeaderProvider.GetAuthorizationHeaderAsync();
+        var httpResponse = await HttpClient.SendAsync(httpRequest, ct);
 
         if (!httpResponse.IsSuccessStatusCode)
         {

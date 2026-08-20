@@ -8,4 +8,7 @@ public class UserSettingsResponse
     public string PauseDefaultBehavior { get; init; } = null!;
     public bool SkipCancelConfirmation { get; init; }
     public bool AddRandomSlackTime { get; init; }
+
+    /// <summary>true = usa su propia key de Groq (sin límite diario); false = key compartida (con límite).</summary>
+    public bool HasCustomAiApiKey { get; init; }
 }

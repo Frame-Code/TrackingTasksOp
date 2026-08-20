@@ -4,7 +4,7 @@
 
 import { store, NOTIFICATION_TYPES, getTheme, setTheme, setPageSize,
          getSidebarCollapsed, setSidebarCollapsed } from './state.js';
-import { updateNotificationSetting, updateTaskPreferences } from './api.js';
+import { updateNotificationSetting, updateTaskPreferences, updateAiApiKey } from './api.js';
 import { refreshNotificationTimers } from './timer.js';
 
 function showSidebarError(msg) {
@@ -180,6 +180,52 @@ function bindTaskBehaviorFields() {
     document.getElementById('addRandomSlackTimeSwitch').addEventListener('change', saveTaskPreferences);
 }
 
+// ── IA (bot) ─────────────────────────────────────────────────────────────────────
+
+function renderAiFields() {
+    const hasCustomKey = store.userSettings?.hasCustomAiApiKey ?? false;
+    document.getElementById('aiKeyStatus').textContent = hasCustomKey
+        ? 'Usando tu propia API key (sin límite diario).'
+        : 'Usando la key compartida (con límite diario de mensajes).';
+    // Nunca se muestra la key guardada (ni cifrada llega al cliente): el campo queda
+    // siempre vacío, listo para pegar una nueva o dejarlo así para no tocar la actual.
+    document.getElementById('aiApiKeyInput').value = '';
+}
+
+async function saveAiApiKey() {
+    const input = document.getElementById('aiApiKeyInput');
+    const apiKey = input.value.trim();
+    if (!apiKey) {
+        showSidebarError('Pega tu API key de Groq, o usa "Quitar" para volver a la compartida.');
+        return;
+    }
+
+    hideSidebarError();
+    try {
+        await updateAiApiKey(apiKey);
+        store.userSettings = { ...store.userSettings, hasCustomAiApiKey: true };
+        renderAiFields();
+    } catch (e) {
+        showSidebarError(`No se pudo guardar: ${e.message}`);
+    }
+}
+
+async function clearAiApiKey() {
+    hideSidebarError();
+    try {
+        await updateAiApiKey(null);
+        store.userSettings = { ...store.userSettings, hasCustomAiApiKey: false };
+        renderAiFields();
+    } catch (e) {
+        showSidebarError(`No se pudo quitar la key: ${e.message}`);
+    }
+}
+
+function bindAiFields() {
+    document.getElementById('saveAiApiKeyBtn').addEventListener('click', saveAiApiKey);
+    document.getElementById('clearAiApiKeyBtn').addEventListener('click', clearAiApiKey);
+}
+
 // ── OpenProject / Cuenta ────────────────────────────────────────────────────────────
 
 function initials(email) {
@@ -209,6 +255,7 @@ export function renderSidebarFields() {
     renderNotificationFields();
     renderAppearanceFields();
     renderTaskBehaviorFields();
+    renderAiFields();
     renderAccountFields();
 }
 
@@ -218,5 +265,6 @@ export function initSidebar() {
     bindNotificationFields();
     bindAppearanceFields();
     bindTaskBehaviorFields();
+    bindAiFields();
     renderSidebarFields();
 }

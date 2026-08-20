@@ -38,12 +38,12 @@ public class StartTaskCommandImplTests
     private static StartTaskCommandImpl BuildUseCase(TaskEntity? existingTask = null, TaskEntity? activeTask = null)
     {
         var repo = new Mock<ITaskRepository>();
-        repo.Setup(r => r.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(existingTask);
+        repo.Setup(r => r.GetByIdForUserAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(existingTask);
         repo.Setup(r => r.GetActiveByUserAsync(It.IsAny<string>())).ReturnsAsync(activeTask);
         repo.Setup(r => r.SaveAsync(It.IsAny<TaskEntity>())).ReturnsAsync((TaskEntity t) => t);
 
         var projectRepo = new Mock<IProjectRepository>();
-        projectRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>()))
+        projectRepo.Setup(r => r.GetByIdForInstanceAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>()))
             .ReturnsAsync(new Project { Id = 1, Name = "Proyecto", Identifier = "p", IsActive = true, OpenProjectInstanceId = 1 });
 
         return new StartTaskCommandImpl(
@@ -112,5 +112,30 @@ public class StartTaskCommandImplTests
         var result = await command.Execute(Request(1134, startTracking: false));
 
         Assert.Empty(result.TasksTimeDetails);
+    }
+
+    [Fact]
+    public async Task Execute_BuscaTareaYProyectoAcotadosAlTenantActual()
+    {
+        // Sin scope, dos tenants con el mismo WorkPackageId/ProjectId numérico podían
+        // pisarse la tarea entre sí.
+        var repo = new Mock<ITaskRepository>();
+        repo.Setup(r => r.GetByIdForUserAsync(1134, "user-1", It.IsAny<bool>())).ReturnsAsync(BuildTask(1134));
+        repo.Setup(r => r.GetActiveByUserAsync(It.IsAny<string>())).ReturnsAsync((TaskEntity?)null);
+        repo.Setup(r => r.SaveAsync(It.IsAny<TaskEntity>())).ReturnsAsync((TaskEntity t) => t);
+
+        var projectRepo = new Mock<IProjectRepository>();
+        projectRepo.Setup(r => r.GetByIdForInstanceAsync(1, 1, It.IsAny<bool>()))
+            .ReturnsAsync(new Project { Id = 1, Name = "Proyecto", Identifier = "p", IsActive = true, OpenProjectInstanceId = 1 });
+
+        var command = new StartTaskCommandImpl(
+            repo.Object, projectRepo.Object,
+            new Mock<IAddTimeEntryCommand>().Object, new Mock<ICreateWorkPackageCommand>().Object,
+            new Mock<IProjectOpService>().Object, new FakeCurrentUser());
+
+        await command.Execute(Request(1134, startTracking: false));
+
+        repo.Verify(r => r.GetByIdForUserAsync(1134, "user-1", It.IsAny<bool>()), Times.Once);
+        projectRepo.Verify(r => r.GetByIdForInstanceAsync(1, 1, It.IsAny<bool>()), Times.Once);
     }
 }

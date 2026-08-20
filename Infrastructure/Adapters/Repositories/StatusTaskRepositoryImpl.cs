@@ -23,6 +23,12 @@ public class StatusTaskRepositoryImpl(TrackingTasksDbContext context) : IStatusT
         return await query.FirstOrDefaultAsync(x => x.Id == id);
     }
 
+    public async Task<StatusTask?> GetByIdForInstanceAsync(int id, int openProjectInstanceId, bool tracking = false)
+    {
+        var query = tracking? context.StatusTasks.AsQueryable() : context.StatusTasks.AsNoTracking().AsQueryable();
+        return await query.FirstOrDefaultAsync(x => x.Id == id && x.OpenProjectInstanceId == openProjectInstanceId);
+    }
+
     public async Task<StatusTask> SaveAsync(StatusTask entity)
     {
         return await context.AddOrUpdateAsync(entity, entity.Id, entity.OpenProjectInstanceId);

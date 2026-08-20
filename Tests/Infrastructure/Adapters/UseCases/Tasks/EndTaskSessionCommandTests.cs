@@ -50,7 +50,7 @@ public class EndTaskSessionCommandTests
     {
         var repositoryMock = new Mock<ITaskRepository>();
         repositoryMock
-            .Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>()))
+            .Setup(x => x.GetByIdForUserAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>()))
             .ReturnsAsync(taskFromRepo);
 
         repositoryMock
@@ -392,5 +392,26 @@ public class EndTaskSessionCommandTests
         // La sesión más reciente se sigue identificando por StartTime, no por orden en la lista.
         addMock.Verify(x => x.Execute(It.Is<AddTimeEntryRequest>(r =>
             r.Hours == 1.5 && r.SpentOn == new DateOnly(2026, 5, 1))), Times.Once);
+    }
+
+    [Fact]
+    public async Task Execute_BuscaLaTareaAcotadaAlUsuarioActual_NoSoloPorWorkPackageId()
+    {
+        // La PK real es (UserId, WorkPackageId): buscar solo por WorkPackageId podía finalizar
+        // la sesión de OTRO tenant con el mismo id numérico.
+        var detail = new TaskTimeDetail
+        {
+            Id = 1,
+            StartTime = new DateTime(2026, 5, 1, 10, 0, 0),
+            EndTime = new DateTime(2026, 5, 1, 11, 0, 0),
+            Uploaded = false
+        };
+        var task = BuildTask(detail);
+        var (useCase, repoMock, _, _, _) = BuildUseCase(task);
+        var request = new EndTaskSessionRequest(1, 2, "scoped");
+
+        await useCase.Execute(request);
+
+        repoMock.Verify(x => x.GetByIdForUserAsync(1, "user-1", It.IsAny<bool>()), Times.Once);
     }
 }

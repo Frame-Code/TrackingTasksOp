@@ -221,3 +221,11 @@ export async function updateTaskPreferences(pauseDefaultBehavior, skipCancelConf
         body: JSON.stringify({ pauseDefaultBehavior, skipCancelConfirmation, addRandomSlackTime })
     });
 }
+
+/** apiKey vacío/null quita la key propia y vuelve a la compartida (con límite diario). */
+export async function updateAiApiKey(apiKey) {
+    return apiFetch(`${API}/settings/ai-api-key`, {
+        method: 'PUT',
+        body: JSON.stringify({ apiKey })
+    });
+}

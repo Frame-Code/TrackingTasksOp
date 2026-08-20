@@ -30,7 +30,7 @@ public class LogTimeCommandImpl(
 
         // La tarea debe existir en local para poder guardar el detalle. StartTracking = false
         // solo la registra: no abre ninguna sesión de cronómetro.
-        var task = await repository.GetByIdAsync(request.WorkPackageId)
+        var task = await repository.GetByIdForUserAsync(request.WorkPackageId, userId)
                    ?? await RegisterTaskLocally(request);
 
         var activityId = request.ActivityId is > 0

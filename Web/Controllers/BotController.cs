@@ -1,4 +1,5 @@
-﻿using Application.Ports.Services;
+﻿using Application.Ports.Auth;
+using Application.Ports.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Web.Controllers;
@@ -9,8 +10,26 @@ public class BotController(
     IAiIntentService geminiIntentService,
     IAudioTranscriptionService audioTranscriptionService,
     IConversationContextService conversationContextService,
+    IAiUsageLimiter aiUsageLimiter,
+    CurrentUser currentUser,
     ILogger<BotController> logger) : ControllerBase
 {
+    private const string UsageLimitMessage =
+        "Alcanzaste el límite diario de uso del asistente con la key compartida. " +
+        "Volvé a intentar mañana, o configura tu propia API key de Groq en el sidebar para usarlo sin límite.";
+
+    /// <summary>
+    /// Cuenta contra el límite diario de la key COMPARTIDA (sin límite si el usuario
+    /// configuró su propia key de Groq — ver IAiUsageLimiter). 429 = límite alcanzado.
+    /// </summary>
+    private async Task<IActionResult?> CheckUsageLimitAsync(CancellationToken ct)
+    {
+        var userId = currentUser.UserId;
+        if (userId is null) return Unauthorized();
+
+        var allowed = await aiUsageLimiter.TryConsumeAsync(userId, ct);
+        return allowed ? null : StatusCode(StatusCodes.Status429TooManyRequests, new { message = UsageLimitMessage });
+    }
     private const long MaxAudioSizeBytes = 10 * 1024 * 1024; // 10 MB
 
     private static readonly HashSet<string> AllowedAudioContentTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -38,6 +57,9 @@ public class BotController(
         {
             return BadRequest("El ID de sesión no puede estar vacío.");
         }
+
+        if (await CheckUsageLimitAsync(HttpContext.RequestAborted) is { } limitResult)
+            return limitResult;
 
         logger.LogInformation("Processing chat request for session {SessionId}", sessionId);
         var response = await geminiIntentService.GetIntentAsync(request.Prompt, sessionId, HttpContext.RequestAborted);
@@ -82,6 +104,10 @@ public class BotController(
         {
             return Ok(new { transcript = "", response = "⚠️ La transcripción de audio no está configurada." });
         }
+
+        // La transcripción TAMBIÉN golpea la API de Groq, así que cuenta contra el mismo límite.
+        if (await CheckUsageLimitAsync(HttpContext.RequestAborted) is { } limitResult)
+            return limitResult;
 
         logger.LogInformation("Processing voice request for session {SessionId}", sessionId);
 

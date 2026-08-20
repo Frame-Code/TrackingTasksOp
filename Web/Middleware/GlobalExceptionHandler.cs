@@ -18,6 +18,7 @@ public class GlobalExceptionHandler(
             ValidationException            => (StatusCodes.Status400BadRequest,          "Bad Request"),
             ArgumentNullException          => (StatusCodes.Status400BadRequest,          "Bad Request"),
             InvalidApiKeyException         => (StatusCodes.Status400BadRequest,          "Bad Request"),
+            SsrfBlockedException           => (StatusCodes.Status400BadRequest,          "Bad Request"),
             OpenProjectRequestException    => (StatusCodes.Status400BadRequest,          "Bad Request"),
             InitializerInstanceException   => (StatusCodes.Status400BadRequest,          "Bad Request"),
             ActiveSessionConflictException => (StatusCodes.Status409Conflict,            "Conflict"),

@@ -23,6 +23,12 @@ public class ProjectRepositoryImpl(TrackingTasksDbContext context) : IProjectRep
         return await query.FirstOrDefaultAsync(x => x.Id == id);
     }
 
+    public async Task<Project?> GetByIdForInstanceAsync(int id, int openProjectInstanceId, bool tracking = false)
+    {
+        var query = tracking? context.Projects.AsQueryable() : context.Projects.AsNoTracking().AsQueryable();
+        return await query.FirstOrDefaultAsync(x => x.Id == id && x.OpenProjectInstanceId == openProjectInstanceId);
+    }
+
     public async Task<Project> SaveAsync(Project entity)
     {
         return await context.AddOrUpdateAsync(entity, entity.Id, entity.OpenProjectInstanceId);

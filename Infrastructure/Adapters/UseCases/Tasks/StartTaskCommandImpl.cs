@@ -32,7 +32,7 @@ namespace Infrastructure.Adapters.UseCases.Tasks;
             ?? throw new Exception("El usuario actual no tiene una instancia de OpenProject configurada.");
 
         // 1. Buscar el proyecto por su nombre/identificador
-        var project = await projectRepository.GetByIdAsync(request.ProjectId);
+        var project = await projectRepository.GetByIdForInstanceAsync(request.ProjectId, openProjectInstanceId);
        
        // Si no está localmente, intentamos buscarlo en OpenProject y sincronizarlo
         if (project is null)
@@ -64,7 +64,7 @@ namespace Infrastructure.Adapters.UseCases.Tasks;
 
         if (workPackageId > 0)
         {
-            task = await repository.GetByIdAsync(workPackageId);
+            task = await repository.GetByIdForUserAsync(workPackageId, userId);
         }
 
         if (task is null)
