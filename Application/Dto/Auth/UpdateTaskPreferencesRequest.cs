@@ -1,3 +1,8 @@
 namespace Application.Dto.Auth;
 
-public record UpdateTaskPreferencesRequest(string PauseDefaultBehavior, bool SkipCancelConfirmation, bool AddRandomSlackTime);
+/// <summary>DefaultStatusIds vacío = sin filtro por defecto al cargar tareas.</summary>
+public record UpdateTaskPreferencesRequest(
+    string PauseDefaultBehavior,
+    bool SkipCancelConfirmation,
+    bool AddRandomSlackTime,
+    List<int> DefaultStatusIds);

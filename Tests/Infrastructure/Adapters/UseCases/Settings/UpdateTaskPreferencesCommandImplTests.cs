@@ -40,7 +40,7 @@ public class UpdateTaskPreferencesCommandImplTests
         var command = BuildCommand(new FakeCurrentUser("user-1"));
 
         await Assert.ThrowsAsync<ValidationException>(() =>
-            command.Execute(new UpdateTaskPreferencesRequest("NotARealValue", false, true)));
+            command.Execute(new UpdateTaskPreferencesRequest("NotARealValue", false, true, [])));
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class UpdateTaskPreferencesCommandImplTests
         var command = BuildCommand(new FakeCurrentUser(null));
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-            command.Execute(new UpdateTaskPreferencesRequest("Ask", false, true)));
+            command.Execute(new UpdateTaskPreferencesRequest("Ask", false, true, [])));
     }
 
     [Fact]
@@ -60,12 +60,26 @@ public class UpdateTaskPreferencesCommandImplTests
         _userManagerMock.Setup(x => x.UpdateAsync(appUser)).ReturnsAsync(IdentityResult.Success);
 
         var command = BuildCommand(new FakeCurrentUser("user-1"));
-        await command.Execute(new UpdateTaskPreferencesRequest("UploadNow", true, false));
+        await command.Execute(new UpdateTaskPreferencesRequest("UploadNow", true, false, [1, 3]));
 
         Assert.Equal(PauseDefaultBehavior.UploadNow, appUser.PauseDefaultBehavior);
         Assert.True(appUser.SkipCancelConfirmation);
         Assert.False(appUser.AddRandomSlackTime);
+        Assert.Equal("1,3", appUser.DefaultStatusFilterIds);
         _userManagerMock.Verify(x => x.UpdateAsync(appUser), Times.Once);
+    }
+
+    [Fact]
+    public async Task Execute_EmptyDefaultStatusIds_ClearsSavedFilter()
+    {
+        var appUser = new ApplicationUser { Id = "user-1", Email = "user@test.com", DefaultStatusFilterIds = "1,2" };
+        _userManagerMock.Setup(x => x.FindByIdAsync("user-1")).ReturnsAsync(appUser);
+        _userManagerMock.Setup(x => x.UpdateAsync(appUser)).ReturnsAsync(IdentityResult.Success);
+
+        var command = BuildCommand(new FakeCurrentUser("user-1"));
+        await command.Execute(new UpdateTaskPreferencesRequest("Ask", false, true, []));
+
+        Assert.Null(appUser.DefaultStatusFilterIds);
     }
 
     [Fact]
@@ -79,7 +93,7 @@ public class UpdateTaskPreferencesCommandImplTests
         var command = BuildCommand(new FakeCurrentUser("user-1"));
 
         var ex = await Assert.ThrowsAsync<ApplicationException>(() =>
-            command.Execute(new UpdateTaskPreferencesRequest("Ask", false, true)));
+            command.Execute(new UpdateTaskPreferencesRequest("Ask", false, true, [])));
         Assert.Contains("boom", ex.Message);
     }
 }

@@ -38,6 +38,9 @@ async function loadStatuses() {
         // estados llegan después de la primera página, hay que pintarlas ahora o no
         // aparecen nunca.
         renderStatusFilters();
+        // Los checks de "estados por defecto" del sidebar también salen de este catálogo:
+        // si llega después de que el sidebar ya se pintó una vez, hay que repintarlo.
+        renderSidebarFields();
         // Si ya hay tarjetas renderizadas, refrescarlas para mostrar los dropdowns
         if (store.workPackages.length) renderCards();
     } catch (e) {
@@ -94,10 +97,11 @@ async function loadWorkPackages(projectId, force = false) {
     store.projectId   = projectId;
     store.currentPage = 1;
     store.searchQuery = '';
-    // Sin filtros preseleccionados: se muestran TODOS los estados. Antes se encendían
-    // solo "nuevo"/"en progreso" y las demás tareas quedaban ocultas, así que la UI
-    // enseñaba menos tareas de las que el usuario tiene.
+    // "Cargar tareas" siempre trae todas las tareas del proyecto (sin restringir qué existe);
+    // lo único configurable es con qué estados arranca YA filtrada la vista. Sin nada
+    // configurado en Comportamiento > Estados por defecto, se muestran todos (como siempre).
     store.activeStatusFilters.clear();
+    for (const id of store.userSettings?.defaultStatusIds ?? []) store.activeStatusFilters.add(id);
 
     const searchInput = document.getElementById('searchInput');
     if (searchInput) searchInput.value = '';

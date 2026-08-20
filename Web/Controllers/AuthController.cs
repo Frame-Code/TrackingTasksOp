@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Web.Controllers.Dto.HttpRequest;
 
 namespace Web.Controllers;
@@ -26,6 +27,7 @@ public class AuthController(
     
     [HttpPost("local-register")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> LocalRegisterAsync(LocalRegisterHttpRequest request, CancellationToken ct)
     {
         var opUrlNormalized = urlService.NormalizeUrl(request.OpenProjectInstanceUrl);
@@ -79,6 +81,7 @@ public class AuthController(
     
     [HttpPost("local-login")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> LocalLoginAsync(LocalLoginHttpRequest request, CancellationToken ct)
     {
         var commandRequest = new LocalLoginRequest { Email = request.Email, Password = request.Password };

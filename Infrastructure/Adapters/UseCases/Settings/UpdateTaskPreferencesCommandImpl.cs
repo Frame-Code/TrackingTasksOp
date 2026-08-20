@@ -26,6 +26,9 @@ public class UpdateTaskPreferencesCommandImpl(
         appUser.PauseDefaultBehavior = pauseBehavior;
         appUser.SkipCancelConfirmation = request.SkipCancelConfirmation;
         appUser.AddRandomSlackTime = request.AddRandomSlackTime;
+        appUser.DefaultStatusFilterIds = request.DefaultStatusIds.Count > 0
+            ? string.Join(',', request.DefaultStatusIds)
+            : null;
 
         var result = await userManager.UpdateAsync(appUser);
         if (!result.Succeeded)

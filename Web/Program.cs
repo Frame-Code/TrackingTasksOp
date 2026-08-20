@@ -42,6 +42,7 @@ try
     builder.Services.AddSwaggerGen();
     builder.Services.AddTrackingDataProtection(builder.Configuration, builder.Environment.ContentRootPath);
     builder.Services.AddIdentityAndAuth(builder.Configuration);
+    builder.Services.AddApiRateLimiting(builder.Configuration);
     builder.Services.AddHttpClients(builder.Configuration, builder.Environment.IsDevelopment());
     builder.Services.AddServices(builder.Configuration);
     builder.Services.AddDbContext(builder.Configuration);
