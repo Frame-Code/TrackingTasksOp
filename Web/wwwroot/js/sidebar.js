@@ -6,6 +6,7 @@ import { store, NOTIFICATION_TYPES, getTheme, setTheme, setPageSize,
          getSidebarCollapsed, setSidebarCollapsed } from './state.js';
 import { updateNotificationSetting, updateTaskPreferences, updateAiApiKey } from './api.js';
 import { refreshNotificationTimers } from './timer.js';
+import { escHtml } from './helpers.js';
 
 function showSidebarError(msg) {
     const el = document.getElementById('sidebarError');
@@ -148,6 +149,26 @@ function renderTaskBehaviorFields() {
     document.getElementById('skipCancelConfirmSwitch').checked = store.userSettings?.skipCancelConfirmation ?? false;
     // Default true: preserva el comportamiento histórico (con holgura) si el fetch falló.
     document.getElementById('addRandomSlackTimeSwitch').checked = store.userSettings?.addRandomSlackTime ?? true;
+    renderDefaultStatusFilterChecks();
+}
+
+/** Un check por estado de OpenProject conocido (mismo catálogo que las píldoras de filtro
+ *  de la vista principal). Se repinta también desde loadStatuses() en app.js, por si los
+ *  estados llegan después de la primera vez que se pinta el sidebar. */
+function renderDefaultStatusFilterChecks() {
+    const container = document.getElementById('defaultStatusFilterChecks');
+    if (!store.statuses.length) {
+        container.innerHTML = '<div class="form-text mb-0">No hay estados cargados todavía.</div>';
+        return;
+    }
+
+    const selected = new Set(store.userSettings?.defaultStatusIds ?? []);
+    container.innerHTML = store.statuses.map(s => `
+        <div class="form-check">
+            <input class="form-check-input default-status-filter-check" type="checkbox"
+                   value="${s.id}" id="defaultStatusCheck${s.id}" ${selected.has(s.id) ? 'checked' : ''}>
+            <label class="form-check-label" for="defaultStatusCheck${s.id}">${escHtml(s.name)}</label>
+        </div>`).join('');
 }
 
 async function saveTaskPreferences() {
@@ -159,17 +180,21 @@ async function saveTaskPreferences() {
     const pauseDefaultBehavior = pauseBehaviorEl.value;
     const skipCancelConfirmation = skipConfirmEl.checked;
     const addRandomSlackTime = slackTimeEl.checked;
+    const defaultStatusIds = [...document.querySelectorAll('.default-status-filter-check:checked')]
+        .map(el => parseInt(el.value));
 
     hideSidebarError();
     try {
-        await updateTaskPreferences(pauseDefaultBehavior, skipCancelConfirmation, addRandomSlackTime);
-        store.userSettings = { ...store.userSettings, pauseDefaultBehavior, skipCancelConfirmation, addRandomSlackTime };
+        await updateTaskPreferences(pauseDefaultBehavior, skipCancelConfirmation, addRandomSlackTime, defaultStatusIds);
+        store.userSettings = { ...store.userSettings, pauseDefaultBehavior, skipCancelConfirmation, addRandomSlackTime, defaultStatusIds };
     } catch (e) {
         showSidebarError(`No se pudo guardar: ${e.message}`);
         if (previous) {
             pauseBehaviorEl.value = previous.pauseDefaultBehavior;
             skipConfirmEl.checked = previous.skipCancelConfirmation;
             slackTimeEl.checked = previous.addRandomSlackTime;
+            store.userSettings = previous;
+            renderDefaultStatusFilterChecks();
         }
     }
 }
@@ -178,6 +203,11 @@ function bindTaskBehaviorFields() {
     document.getElementById('pauseBehaviorSelect').addEventListener('change', saveTaskPreferences);
     document.getElementById('skipCancelConfirmSwitch').addEventListener('change', saveTaskPreferences);
     document.getElementById('addRandomSlackTimeSwitch').addEventListener('change', saveTaskPreferences);
+    // Los checks de estado se repintan en cada renderTaskBehaviorFields(), así que se
+    // delega en el contenedor en vez de bindear cada uno (que dejaría de existir al repintar).
+    document.getElementById('defaultStatusFilterChecks').addEventListener('change', (e) => {
+        if (e.target.classList.contains('default-status-filter-check')) saveTaskPreferences();
+    });
 }
 
 // ── IA (bot) ─────────────────────────────────────────────────────────────────────

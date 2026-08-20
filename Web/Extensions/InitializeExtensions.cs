@@ -52,6 +52,10 @@ public static class InitializeExtensions
         app.UseStaticFiles();
         app.UseHttpsRedirection();
         app.UseAuthentication();
+        // Antes de Authorization: si no, un request sin sesión a un endpoint protegido recibe
+        // el 401 de Authorization y nunca llega al limiter, así que nunca cuenta contra el
+        // límite por IP (el global-by-user si aplica, porque Authentication ya corrió antes).
+        app.UseRateLimiter();
         app.UseAuthorization();
         app.MapControllers();
         return app;

@@ -9,6 +9,9 @@ public class UserSettingsResponse
     public bool SkipCancelConfirmation { get; init; }
     public bool AddRandomSlackTime { get; init; }
 
+    /// <summary>Estados que se aplican como filtro apenas carga "Cargar tareas". Vacío = todos.</summary>
+    public List<int> DefaultStatusIds { get; init; } = [];
+
     /// <summary>true = usa su propia key de Groq (sin límite diario); false = key compartida (con límite).</summary>
     public bool HasCustomAiApiKey { get; init; }
 }

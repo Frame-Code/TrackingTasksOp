@@ -40,6 +40,9 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
         builder.Property(u => u.EncryptedGroqApiKey)
             .HasColumnType("nvarchar(max)");
 
+        builder.Property(u => u.DefaultStatusFilterIds)
+            .HasColumnType("nvarchar(max)");
+
         builder.HasIndex(u => u.OpenProjectUserId);
 
         builder.HasOne(u => u.OpenProjectInstance)

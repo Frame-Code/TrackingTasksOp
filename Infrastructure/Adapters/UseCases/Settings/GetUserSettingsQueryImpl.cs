@@ -39,7 +39,15 @@ public class GetUserSettingsQueryImpl(
             PauseDefaultBehavior = appUser.PauseDefaultBehavior.ToString(),
             SkipCancelConfirmation = appUser.SkipCancelConfirmation,
             AddRandomSlackTime = appUser.AddRandomSlackTime,
+            DefaultStatusIds = ParseStatusIds(appUser.DefaultStatusFilterIds),
             HasCustomAiApiKey = !string.IsNullOrEmpty(appUser.EncryptedGroqApiKey)
         };
     }
+
+    private static List<int> ParseStatusIds(string? raw) =>
+        string.IsNullOrEmpty(raw)
+            ? []
+            : raw.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(int.Parse)
+                .ToList();
 }

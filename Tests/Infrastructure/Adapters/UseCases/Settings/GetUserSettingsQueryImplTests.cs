@@ -73,6 +73,7 @@ public class GetUserSettingsQueryImplTests
         Assert.Equal("Ask", result.PauseDefaultBehavior);
         Assert.False(result.SkipCancelConfirmation);
         Assert.True(result.AddRandomSlackTime);
+        Assert.Empty(result.DefaultStatusIds);
         Assert.False(result.HasCustomAiApiKey);
     }
 
@@ -84,7 +85,8 @@ public class GetUserSettingsQueryImplTests
         {
             Id = "user-1", Email = "user@test.com",
             PauseDefaultBehavior = PauseDefaultBehavior.SaveLocal, SkipCancelConfirmation = true,
-            AddRandomSlackTime = false, EncryptedGroqApiKey = "cipher-text"
+            AddRandomSlackTime = false, EncryptedGroqApiKey = "cipher-text",
+            DefaultStatusFilterIds = "1,3"
         };
         _userManagerMock.Setup(x => x.FindByIdAsync("user-1")).ReturnsAsync(appUser);
 
@@ -109,6 +111,7 @@ public class GetUserSettingsQueryImplTests
         Assert.Equal("SaveLocal", result.PauseDefaultBehavior);
         Assert.True(result.SkipCancelConfirmation);
         Assert.False(result.AddRandomSlackTime);
+        Assert.Equal([1, 3], result.DefaultStatusIds);
         Assert.True(result.HasCustomAiApiKey);
     }
 }

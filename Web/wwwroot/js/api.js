@@ -233,10 +233,10 @@ export async function updateNotificationSetting(typeCode, enabled, intervalMinut
     });
 }
 
-export async function updateTaskPreferences(pauseDefaultBehavior, skipCancelConfirmation, addRandomSlackTime) {
+export async function updateTaskPreferences(pauseDefaultBehavior, skipCancelConfirmation, addRandomSlackTime, defaultStatusIds) {
     return apiFetch(`${API}/settings/task-preferences`, {
         method: 'PUT',
-        body: JSON.stringify({ pauseDefaultBehavior, skipCancelConfirmation, addRandomSlackTime })
+        body: JSON.stringify({ pauseDefaultBehavior, skipCancelConfirmation, addRandomSlackTime, defaultStatusIds })
     });
 }
 

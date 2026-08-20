@@ -134,6 +134,16 @@ check(/startsWith\('trackingActiveSession:'\)/.test(app),
 check(!/clearLocalTaskState/.test(api), 'api.js ya no limpia el tracking en cada 401/logout (el aislamiento por usuario lo reemplaza)');
 const bot = read('Web/wwwroot/bot.html');
 check(!/clearLocalTaskState/.test(bot), 'bot.html ya no limpia el tracking en sus 401 (el aislamiento por usuario lo reemplaza)');
+
+// ── Estados por defecto al cargar tareas ──────────────────────────────────────────
+check(/id="defaultStatusFilterChecks"/.test(sidebarBlock), '#defaultStatusFilterChecks vive dentro del sidebar');
+check(/function renderDefaultStatusFilterChecks/.test(sidebar), 'sidebar.js pinta los checks de estados por defecto desde store.statuses');
+check(/defaultStatusIds/.test(sidebar) && /updateTaskPreferences\(pauseDefaultBehavior, skipCancelConfirmation, addRandomSlackTime, defaultStatusIds\)/.test(sidebar),
+      'saveTaskPreferences manda los estados marcados al guardar');
+check(/store\.activeStatusFilters\.add\(id\)/.test(app),
+      'loadWorkPackages aplica los estados por defecto configurados (en vez de limpiar siempre el filtro)');
+check(/renderSidebarFields\(\);[\s\S]{0,120}if \(store\.workPackages\.length\) renderCards\(\);/.test(app),
+      'loadStatuses() repinta el sidebar por si los checks de estado llegan después de la primera vez');
 check(/CHAT_SESSION_STORAGE_KEY = `chat_session_id:\$\{getCurrentUser\(\)\?\.userId\}`/.test(bot),
       'bot.html scopea el id de chat actualmente abierto por usuario, no en una sola clave global');
 check((bot.match(/localStorage\.(?:get|set)Item\(CHAT_SESSION_STORAGE_KEY/g) || []).length === 4,

@@ -32,4 +32,11 @@ public class ApplicationUser : IdentityUser
     /// hay límite: el costo/cuota corre por cuenta del usuario.
     /// </summary>
     public string? EncryptedGroqApiKey { get; set; }
+
+    /// <summary>
+    /// IDs de estado de OpenProject (separados por coma) que se aplican como filtro apenas
+    /// carga "Cargar tareas", en vez de mostrar todos los estados. Null/vacío = sin filtro
+    /// por defecto (comportamiento actual).
+    /// </summary>
+    public string? DefaultStatusFilterIds { get; set; }
 }
