@@ -300,7 +300,7 @@ html.sidebar-collapsed .sidebar-account-btn { justify-content: center; }
    tamaño y color es lo que dirige la mirada; sin él, la tarjeta es una lista
    plana donde todo pesa igual. */
 .wp-title {
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: 600;
     line-height: 1.35;
     color: var(--bs-body-color);
@@ -312,39 +312,53 @@ html.sidebar-collapsed .sidebar-account-btn { justify-content: center; }
 }
 
 .wp-id {
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     color: var(--bs-secondary-color);
     font-variant-numeric: tabular-nums;
 }
 
+/* 13px: por debajo de eso el texto secundario deja de leerse cómodo, sobre todo
+   atenuado sobre fondo oscuro. Sigue muy por debajo del título, que es lo que
+   mantiene la jerarquía. */
 .wp-meta {
-    font-size: 0.82rem;
+    font-size: 0.8125rem;
     line-height: 1.5;
     color: var(--bs-secondary-color);
     min-width: 0;
 }
 
-.wp-meta i { opacity: 0.65; }
+/* Los glifos necesitan más tamaño que la letra para leerse igual de bien: no tienen
+   ni altura de x ni contexto de palabra que ayude a reconocerlos. */
+.wp-meta i {
+    font-size: 0.95rem;
+    opacity: 0.75;
+}
 
 .wp-meta-sep { opacity: 0.35; }
 
-/* ── Acciones de la tarjeta ─────────────────────────────────────── */
-/* Objetivo de toque de 44px (WCAG 2.5.5, nivel AAA) en vez del mínimo de 24px:
-   la app la usa gente con distinta destreza y vista, y acertarle a un ícono de
-   12px sin etiqueta no es aceptable. Cada botón lleva su texto. */
-.wp-actions .btn {
-    min-height: 44px;
-    font-size: 0.85rem;
-    padding-inline: 0.5rem;
-    white-space: nowrap;
+.wp-meta-edit {
+    color: var(--bs-secondary-color);
+    font-size: 0.95rem;
+    line-height: 1;
+    opacity: 0.75;
+    transition: opacity 0.15s ease;
 }
 
-.wp-actions .btn i { font-size: 1rem; }
+.wp-meta-edit:hover { opacity: 1; }
 
-/* Fila secundaria en dos columnas cuando la tarjeta es angosta, para que las
-   etiquetas nunca se corten */
-@media (max-width: 400px) {
-    .wp-actions .btn { font-size: 0.8rem; }
+/* Acciones secundarias: presentes pero sin borde, para que no compitan con el
+   botón primario (Iniciar / Finalizar) del mismo renglón. */
+.wp-icon-btn {
+    color: var(--bs-secondary-color);
+    border: 0;
+    padding: 0.3rem 0.5rem;
+    font-size: 1.05rem;
+    line-height: 1;
+}
+
+.wp-icon-btn:hover {
+    color: var(--bs-body-color);
+    background: rgba(255, 255, 255, 0.07);
 }
 
 /* ── Timer ──────────────────────────────────────────────────────── */
@@ -379,9 +393,9 @@ html.sidebar-collapsed .sidebar-account-btn { justify-content: center; }
 .wp-progress-input {
     -webkit-appearance: none;
     appearance: none;
-    height: 9px;
+    height: 5px;
     padding: 0;
-    border-radius: 5px;
+    border-radius: 3px;
     cursor: pointer;
     outline: none;
     /* El background se sobreescribe por JS con el gradiente correcto */
@@ -393,8 +407,8 @@ html.sidebar-collapsed .sidebar-account-btn { justify-content: center; }
    fondo, y ese pseudo-elemento tapaba el gradiente del `<input>`: por eso la barra se
    veía vacía incluso al 100%. Transparente para que se vea el fill de abajo. */
 .wp-progress-input::-webkit-slider-runnable-track {
-    height: 9px;
-    border-radius: 5px;
+    height: 5px;
+    border-radius: 3px;
     background: transparent;
     box-shadow: none;
     border: 0;
@@ -404,15 +418,15 @@ html.sidebar-collapsed .sidebar-account-btn { justify-content: center; }
 .wp-progress-input::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 22px;
-    height: 22px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background: #0d6efd;
     cursor: pointer;
     border: 2px solid rgba(255,255,255,0.25);
     transition: transform 0.1s ease, box-shadow 0.1s ease;
-    /* Centra el thumb (22px) sobre el track (9px): (9 - 22) / 2 */
-    margin-top: -6.5px;
+    /* Centra el thumb (14px) sobre el track (5px): (5 - 14) / 2 */
+    margin-top: -4.5px;
 }
 
 .wp-progress-input::-webkit-slider-thumb:hover {
@@ -422,8 +436,8 @@ html.sidebar-collapsed .sidebar-account-btn { justify-content: center; }
 
 /* Thumb — firefox */
 .wp-progress-input::-moz-range-thumb {
-    width: 22px;
-    height: 22px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background: #0d6efd;
     cursor: pointer;
@@ -432,8 +446,8 @@ html.sidebar-collapsed .sidebar-account-btn { justify-content: center; }
 
 /* Track — firefox */
 .wp-progress-input::-moz-range-track {
-    height: 9px;
-    border-radius: 5px;
+    height: 5px;
+    border-radius: 3px;
     background: transparent;
 }
 
@@ -464,6 +478,21 @@ html.sidebar-collapsed .sidebar-account-btn { justify-content: center; }
 .status-dropdown-menu {
     min-width: 160px;
     font-size: .85rem;
+    /* El max-height real lo pone app.js al abrirlo (alto de la tarjeta contenedora);
+       este es el tope de respaldo si el JS no llegara a correr. */
+    max-height: 260px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* La tarjeta con el menú de estados abierto tiene que pintarse por encima de las de
+   abajo. `.wp-card:hover` aplica `transform`, y `transform` crea un contexto de
+   apilamiento que encierra el z-index del menú dentro de la tarjeta: sin esto, las
+   tarjetas siguientes (posteriores en el DOM) lo tapaban y los estados de más abajo
+   no se podían ni ver ni clickear. */
+.wp-card:has(.dropdown-menu.show) {
+    position: relative;
+    z-index: 5;
 }
 
 .status-dropdown-menu .dropdown-item {
@@ -584,7 +613,7 @@ html.sidebar-collapsed .sidebar-account-btn { justify-content: center; }
     background: color-mix(in srgb, var(--type) 20%, transparent);
     color: color-mix(in srgb, var(--type) 72%, #fff);
     border: 1px solid color-mix(in srgb, var(--type) 55%, transparent);
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;

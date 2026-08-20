@@ -64,7 +64,7 @@ async function loadUserSettings() {
  * Se llama en cada cambio de página, búsqueda o filtro: cada uno es una consulta nueva,
  * no un recorte de una lista completa en memoria.
  */
-async function reloadPage() {
+async function reloadPage(force = false) {
     setLoading(true);
     hideError();
     try {
@@ -73,7 +73,8 @@ async function reloadPage() {
             page:      store.currentPage,
             pageSize:  store.pageSize,
             search:    store.searchQuery,
-            statusIds: [...store.activeStatusFilters]
+            statusIds: [...store.activeStatusFilters],
+            force
         });
 
         store.workPackages = data?.items ?? [];
@@ -89,7 +90,7 @@ async function reloadPage() {
 }
 
 /** Carga desde cero: proyecto nuevo, filtros y búsqueda en blanco. */
-async function loadWorkPackages(projectId) {
+async function loadWorkPackages(projectId, force = false) {
     store.projectId   = projectId;
     store.currentPage = 1;
     store.searchQuery = '';
@@ -103,7 +104,7 @@ async function loadWorkPackages(projectId) {
     const clearBtn = document.getElementById('clearSearchBtn');
     if (clearBtn) clearBtn.classList.add('d-none');
 
-    await reloadPage();
+    await reloadPage(force);
 }
 
 // ── Acciones de sesión ────────────────────────────────────────────────────────
@@ -190,16 +191,41 @@ async function handleChangeStatus(wpId, statusId, statusName) {
     }
 }
 
-async function handleCancelSession(wpId) {
-    // Prevención de errores (Nielsen): cancelar descarta el tiempo de la sesión y no hay
-    // deshacer, así que se pide confirmación explícita antes de perderlo — salvo que el
-    // usuario haya desactivado este aviso desde el sidebar.
-    const wp = store.workPackages.find(w => w.id === wpId);
-    const name = wp ? `#${wp.id} — ${wp.subject}` : `#${wpId}`;
-    if (!store.userSettings?.skipCancelConfirmation &&
-        !confirm(`Se descartará el tiempo trabajado en ${name} sin registrarlo en OpenProject.\n\nEsta acción no se puede deshacer. ¿Continuar?`))
-        return;
+let _cancelWpId = null;
 
+/**
+ * Prevención de errores (Nielsen): cancelar descarta el tiempo de la sesión y no hay
+ * deshacer, así que se confirma antes — salvo que el usuario haya desactivado el aviso
+ * desde el sidebar. Se usa un modal propio y no confirm(): el nativo no se puede estilar,
+ * antepone el host de la página y sus botones ("OK/Cancel") no dicen qué hace cada uno.
+ */
+function handleCancelSession(wpId) {
+    if (store.userSettings?.skipCancelConfirmation) return doCancelSession(wpId);
+
+    const wp = store.workPackages.find(w => w.id === wpId);
+    _cancelWpId = wpId;
+
+    document.getElementById('cancelSessionTaskName').textContent =
+        wp ? `#${wp.id} — ${wp.subject}` : `#${wpId}`;
+
+    // El tiempo real que se va a perder, no una advertencia genérica: ver "00:23:41"
+    // pesa distinto que leer "se perderá el tiempo trabajado".
+    const session = getActiveSession();
+    const secs = session ? (Date.now() - new Date(session.startTime)) / 1000 : 0;
+    document.getElementById('cancelSessionElapsed').textContent = formatDuration(Math.max(0, secs));
+
+    new bootstrap.Modal(document.getElementById('cancelSessionModal')).show();
+}
+
+function bindCancelSessionModal() {
+    document.getElementById('confirmCancelSessionBtn').addEventListener('click', () => {
+        bootstrap.Modal.getInstance(document.getElementById('cancelSessionModal'))?.hide();
+        if (_cancelWpId) doCancelSession(_cancelWpId);
+        _cancelWpId = null;
+    });
+}
+
+async function doCancelSession(wpId) {
     try {
         await postCancelSession(wpId);
         clearSession();
@@ -689,6 +715,26 @@ function bindGridEvents() {
         );
     });
 
+    // ── Menú de estados: acotado al alto de su tarjeta ────────────────────────
+    // Si se desborda, la tarjeta de abajo lo tapa y quedan estados invisibles. Se calcula
+    // al abrirlo porque el alto de la tarjeta cambia (la que está en sesión es más alta).
+    // El menú se busca desde la tarjeta y no desde e.target: en Bootstrap 5 este evento se
+    // dispara en el BOTÓN toggle, no en el .dropdown padre, así que buscar dentro de
+    // e.target no encontraba nada y el clamp no se aplicaba nunca.
+    // ponytail: piso de 120 px para que en una tarjeta muy baja el menú siga siendo usable.
+    grid.addEventListener('shown.bs.dropdown', (e) => {
+        const card = e.target.closest('.wp-card');
+        const menu = card?.querySelector('.status-dropdown-menu.show');
+        if (!menu) return;
+
+        // Si Popper volteó el menú hacia arriba ya cabe: no hay nada que recortar.
+        const menuTop = menu.getBoundingClientRect().top;
+        const cardBottom = card.getBoundingClientRect().bottom;
+        if (menuTop >= cardBottom) return;
+
+        menu.style.maxHeight = `${Math.max(Math.floor(cardBottom - menuTop) - 8, 120)}px`;
+    });
+
     // ── Slider progreso: actualiza % y fill azul en tiempo real ──────────────
     grid.addEventListener('input', (e) => {
         const slider = e.target.closest('.wp-progress-input');
@@ -914,7 +960,8 @@ function bindConfirmApiKeyButton() {
 function bindLoadButton() {
     document.getElementById('loadBtn').addEventListener('click', () => {
         const projectId = document.getElementById('projectSelect').value || null;
-        loadWorkPackages(projectId);
+        // Este boton es el "refrescar" explicito del usuario: siempre salta la cache.
+        loadWorkPackages(projectId, true);
     });
 }
 
@@ -972,6 +1019,7 @@ bindSearchEvents();
 bindPaginationEvents();
 bindStorageSync();
 bindPauseModalButtons();
+bindCancelSessionModal();
 bindHistoryModalEvents();
 bindLogTimeModal();
 initSidebar();

@@ -240,24 +240,23 @@ function buildCard(wp, session) {
         </span>`;
 
     // ── Botones de acción ──────────────────────────────────────────────────────
-    // Todos con texto además del ícono y con altura de toque cómoda: un ícono suelto
-    // de 12px obliga a adivinar qué hace y es difícil de acertar con el dedo o el ratón.
     const actionBtns = isActive
-        ? `<button class="btn btn-outline-secondary flex-fill btn-cancel" data-id="${wp.id}" title="Cancelar la sesión sin guardar el tiempo">
-               <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Cancelar
+        // flex-fill: con sesión activa ocupan el ancho completo en tres partes iguales.
+        ? `<button class="btn btn-outline-secondary btn-sm btn-cancel flex-fill" data-id="${wp.id}" title="Cancelar sesión sin guardar" aria-label="Cancelar sesión sin guardar">
+               <i class="bi bi-x-circle"></i>
            </button>
-           <button class="btn btn-warning flex-fill btn-pause" data-id="${wp.id}" title="Pausar la sesión">
-               <i class="bi bi-pause-circle-fill me-1" aria-hidden="true"></i>Pausar
+           <button class="btn btn-warning btn-sm btn-pause flex-fill" data-id="${wp.id}" title="Pausar sesión" aria-label="Pausar sesión">
+               <i class="bi bi-pause-circle-fill me-1"></i>Pausar
            </button>
-           <button class="btn btn-danger flex-fill btn-end" data-id="${wp.id}" title="Finalizar y registrar el tiempo">
-               <i class="bi bi-stop-circle-fill me-1" aria-hidden="true"></i>Finalizar
+           <button class="btn btn-danger btn-sm btn-end flex-fill" data-id="${wp.id}">
+               <i class="bi bi-stop-circle-fill me-1"></i>Finalizar
            </button>`
         : isPaused
-            ? `<button class="btn btn-primary w-100 btn-resume" data-id="${wp.id}">
-                   <i class="bi bi-play-circle-fill me-1" aria-hidden="true"></i>Continuar sesión
+            ? `<button class="btn btn-primary btn-sm btn-resume" data-id="${wp.id}">
+                   <i class="bi bi-play-circle-fill me-1"></i>Continuar
                </button>`
-            : `<button class="btn btn-success w-100 btn-start" data-id="${wp.id}">
-                   <i class="bi bi-play-circle me-1" aria-hidden="true"></i>Iniciar sesión
+            : `<button class="btn btn-success btn-sm btn-start" data-id="${wp.id}">
+                   <i class="bi bi-play-circle me-1"></i>Iniciar
                </button>`;
 
     // La tarjeta se lee en tres niveles, de mayor a menor peso visual:
@@ -267,6 +266,48 @@ function buildCard(wp, session) {
     //   3. ESTADO Y ACCIÓN → progreso y botones, anclados abajo en todas las
     //                 tarjetas para que la fila de acciones sea escaneable.
     // Antes todo compartía tamaño y color, así que nada guiaba la mirada.
+    // ── Pie: fecha + accesorios + acción ──────────────────────────────────────
+    const datesBlock = `
+        <div class="wp-meta d-flex align-items-center gap-1 text-truncate">
+            ${datesDisplay}
+            <button class="btn btn-link btn-sm p-0 wp-meta-edit btn-dates"
+                    data-id="${wp.id}"
+                    data-start="${escHtml(wp.startDate || '')}"
+                    data-due="${escHtml(wp.dueDate || '')}"
+                    title="Editar fechas" aria-label="Editar fechas de la tarea ${wp.id}">
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+            </button>
+        </div>`;
+
+    const accessoryBtns = `
+        <button class="btn btn-sm wp-icon-btn btn-log-time"
+                data-id="${wp.id}" title="Registrar tiempo a mano (sin cronómetro)" aria-label="Registrar tiempo a mano en la tarea ${wp.id}">
+            <i class="bi bi-stopwatch" aria-hidden="true"></i>
+        </button>
+        <button class="btn btn-sm wp-icon-btn btn-history"
+                data-id="${wp.id}" title="Ver historial de sesiones" aria-label="Ver historial de sesiones de la tarea ${wp.id}">
+            <i class="bi bi-clock-history" aria-hidden="true"></i>
+        </button>`;
+
+    // Con sesión activa hay tres botones de acción (Cancelar/Pausar/Finalizar) y ya no
+    // cabe todo en un renglón: la fecha se comprimía hasta desaparecer. Se le da su
+    // propia línea, que además es la información —los controles van debajo, agrupados.
+    const footerHtml = isActive
+        ? `<div class="pt-2 mt-2 border-top border-subtle">
+               <div class="d-flex align-items-center gap-2 mb-2">
+                   ${datesBlock}
+                   <div class="d-flex gap-1 ms-auto flex-shrink-0">${accessoryBtns}</div>
+               </div>
+               <div class="d-flex gap-2">${actionBtns}</div>
+           </div>`
+        : `<div class="d-flex justify-content-between align-items-center gap-2 pt-2 mt-2 border-top border-subtle">
+               ${datesBlock}
+               <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                   ${accessoryBtns}
+                   ${actionBtns}
+               </div>
+           </div>`;
+
     return `
         <div class="col-12 col-md-6 col-xl-4">
             <div class="card wp-card h-100 ${cardExtraClass}" data-wp-id="${wp.id}">
@@ -294,7 +335,6 @@ function buildCard(wp, session) {
                                    </span>
                                    <span class="wp-meta-sep" aria-hidden="true">·</span>`
                                 : ''}
-                            ${datesDisplay}
                         </div>
                         <div class="d-flex flex-wrap column-gap-3 row-gap-1 mt-1">
                             ${buildPersonChip('bi-person', 'Asignado', assignee)}
@@ -317,28 +357,7 @@ function buildCard(wp, session) {
                                aria-label="Progreso de la tarea ${wp.id}"
                                style="background: linear-gradient(to right, #0d6efd ${pct}%, rgba(255,255,255,0.15) ${pct}%)">
 
-                        <div class="wp-actions pt-3 mt-2 border-top border-subtle">
-                            <div class="d-flex gap-2 mb-2">
-                                <button class="btn btn-outline-secondary flex-fill btn-log-time"
-                                        data-id="${wp.id}" title="Registrar tiempo trabajado a mano, sin usar el cronómetro">
-                                    <i class="bi bi-stopwatch me-1" aria-hidden="true"></i>Tiempo
-                                </button>
-                                <button class="btn btn-outline-secondary flex-fill btn-history"
-                                        data-id="${wp.id}" title="Ver el historial de sesiones de esta tarea">
-                                    <i class="bi bi-clock-history me-1" aria-hidden="true"></i>Historial
-                                </button>
-                                <button class="btn btn-outline-secondary flex-fill btn-dates"
-                                        data-id="${wp.id}"
-                                        data-start="${escHtml(wp.startDate || '')}"
-                                        data-due="${escHtml(wp.dueDate || '')}"
-                                        title="Cambiar la fecha de inicio y la fecha límite">
-                                    <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>Fechas
-                                </button>
-                            </div>
-                            <div class="d-flex gap-2">
-                                ${actionBtns}
-                            </div>
-                        </div>
+                        ${footerHtml}
                     </div>
 
                 </div>
