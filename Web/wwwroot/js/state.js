@@ -1,6 +1,8 @@
 // Manejo del estado de sesión activa (persistido en localStorage)
 // y listas en memoria para proyectos y work packages
 
+import { getCurrentUser } from './auth-guard.js';
+
 const SESSION_KEY = 'trackingActiveSession';
 
 export const NOTIFICATION_TYPES = {
@@ -58,32 +60,58 @@ export function setSidebarCollapsed(collapsed) {
     document.documentElement.classList.toggle('sidebar-collapsed', collapsed);
 }
 
+/** Una sola clave global (sin el userId) hacía que el último usuario en escribir pisara la
+ *  sesión del anterior — no alcanza con validar el dueño al leer si al guardar se sigue
+ *  usando la misma casilla para todos. Una casilla por usuario evita el pisado sin importar
+ *  cuántas cuentas alternen sesión de tracking en el mismo navegador. */
+function sessionKey(userId) {
+    return `${SESSION_KEY}:${userId}`;
+}
+
 export function getActiveSession() {
-    const raw = localStorage.getItem(SESSION_KEY);
+    const userId = getCurrentUser()?.userId;
+    if (!userId) return null;
+    const raw = localStorage.getItem(sessionKey(userId));
     return raw ? JSON.parse(raw) : null;
 }
 
 export function saveSession(session) {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    const userId = getCurrentUser()?.userId;
+    if (!userId) return;
+    localStorage.setItem(sessionKey(userId), JSON.stringify(session));
 }
 
 export function clearSession() {
-    localStorage.removeItem(SESSION_KEY);
+    const userId = getCurrentUser()?.userId;
+    if (!userId) return;
+    localStorage.removeItem(sessionKey(userId));
 }
 
 const PAUSED_KEY = 'trackingPausedTasks';
 
+function pausedKey(userId) {
+    return `${PAUSED_KEY}:${userId}`;
+}
+
 export function getPausedIds() {
-    try { return new Set(JSON.parse(localStorage.getItem(PAUSED_KEY) || '[]')); }
+    const userId = getCurrentUser()?.userId;
+    if (!userId) return new Set();
+    try { return new Set(JSON.parse(localStorage.getItem(pausedKey(userId)) || '[]')); }
     catch { return new Set(); }
+}
+
+function savePausedIds(ids) {
+    const userId = getCurrentUser()?.userId;
+    if (!userId) return;
+    localStorage.setItem(pausedKey(userId), JSON.stringify([...ids]));
 }
 
 export function markPaused(id) {
     const s = getPausedIds(); s.add(id);
-    localStorage.setItem(PAUSED_KEY, JSON.stringify([...s]));
+    savePausedIds(s);
 }
 
 export function unmarkPaused(id) {
     const s = getPausedIds(); s.delete(id);
-    localStorage.setItem(PAUSED_KEY, JSON.stringify([...s]));
+    savePausedIds(s);
 }

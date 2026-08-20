@@ -1,7 +1,10 @@
 using System.Net;
 using System.Text;
+using Application.Ports.Auth;
 using Infrastructure.Adapters.Services.Bot;
+using Infrastructure.DataAccess.Entities;
 using Infrastructure.Settings;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
@@ -10,6 +13,28 @@ namespace Tests.Infrastructure.Adapters.Services.Bot;
 
 public class GroqTranscriptionClientTests
 {
+    private class NoUserCurrentUser : CurrentUser
+    {
+        public override string? UserId => null;
+        public override bool IsAuthenticated => false;
+        public override string? OpenProjectInstanceUrl => null;
+        public override int? OpenProjectInstanceId => null;
+        public override int? OpenProjectUserId => null;
+    }
+
+    // Sin usuario autenticado, GroqAuthHeaderProvider cae siempre a la key compartida de
+    // GroqSettings — exactamente lo que estos tests ya esperan.
+    private static GroqAuthHeaderProvider BuildAuthHeaderProvider(GroqSettings settings)
+    {
+        var store = new Mock<IUserStore<ApplicationUser>>();
+#pragma warning disable CS8625
+        var userManager = new Mock<UserManager<ApplicationUser>>(
+            store.Object, null, null, null, null, null, null, null, null);
+#pragma warning restore CS8625
+        return new GroqAuthHeaderProvider(
+            userManager.Object, new NoUserCurrentUser(), Mock.Of<IApiKeyEncryptorService>(), Options.Create(settings));
+    }
+
     private static GroqSettings BuildSettings(string apiKey = "fake-key") => new()
     {
         ApiKey = apiKey,
@@ -49,7 +74,8 @@ public class GroqTranscriptionClientTests
             .Setup(x => x.CreateClient(It.IsAny<string>()))
             .Returns(client);
 
-        return new GroqTranscriptionClient(factoryMock.Object, Options.Create(settings ?? BuildSettings()));
+        var effectiveSettings = settings ?? BuildSettings();
+        return new GroqTranscriptionClient(factoryMock.Object, Options.Create(effectiveSettings), BuildAuthHeaderProvider(effectiveSettings));
     }
 
     [Fact]
@@ -113,7 +139,7 @@ public class GroqTranscriptionClientTests
     public void IsConfigured_ReflectsApiKeyPresence(string? apiKey, bool expected)
     {
         var settings = BuildSettings(apiKey!);
-        var client = new GroqTranscriptionClient(Mock.Of<IHttpClientFactory>(), Options.Create(settings));
+        var client = new GroqTranscriptionClient(Mock.Of<IHttpClientFactory>(), Options.Create(settings), BuildAuthHeaderProvider(settings));
 
         Assert.Equal(expected, client.IsConfigured);
     }

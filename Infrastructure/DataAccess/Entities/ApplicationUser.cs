@@ -25,4 +25,11 @@ public class ApplicationUser : IdentityUser
     /// exactos trackeados.
     /// </summary>
     public bool AddRandomSlackTime { get; set; } = true;
+
+    /// <summary>
+    /// API key propia del usuario para el bot de IA (cifrada). Null = usa la key compartida
+    /// del servidor, sujeta al límite de uso diario (ver IAiUsageLimiter). Con key propia no
+    /// hay límite: el costo/cuota corre por cuenta del usuario.
+    /// </summary>
+    public string? EncryptedGroqApiKey { get; set; }
 }

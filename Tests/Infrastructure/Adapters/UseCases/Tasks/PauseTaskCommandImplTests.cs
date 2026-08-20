@@ -1,5 +1,6 @@
 using Application.Dto.Tasks;
 using Application.Dto.TimeEntry;
+using Application.Ports.Auth;
 using Application.Ports.Repositories;
 using Application.Ports.Services;
 using Application.Ports.UseCases.TimeEntry;
@@ -22,6 +23,15 @@ public class PauseTaskCommandImplTests
     private readonly Mock<IAddTimeEntryCommand> _addTimeEntryCommandMock = new();
     private readonly Mock<IActivityOpService> _activityOpServiceMock = new();
 
+    private class FakeCurrentUser : CurrentUser
+    {
+        public override string? UserId => "user-1";
+        public override bool IsAuthenticated => true;
+        public override string? OpenProjectInstanceUrl => "http://op.example.com";
+        public override int? OpenProjectInstanceId => 2;
+        public override int? OpenProjectUserId => 7;
+    }
+
     public PauseTaskCommandImplTests()
     {
         _activityOpServiceMock
@@ -41,7 +51,8 @@ public class PauseTaskCommandImplTests
         new PendingTimeUploaderImpl(
             _repositoryMock.Object,
             _addTimeEntryCommandMock.Object,
-            _activityOpServiceMock.Object));
+            _activityOpServiceMock.Object),
+        new FakeCurrentUser());
 
     private static TaskEntity BuildTask(params TaskTimeDetail[] details) => new()
     {
@@ -56,7 +67,7 @@ public class PauseTaskCommandImplTests
     [Fact]
     public async Task Execute_TaskNotFound_ThrowsArgumentException()
     {
-        _repositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync((TaskEntity?)null);
+        _repositoryMock.Setup(x => x.GetByIdForUserAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync((TaskEntity?)null);
 
         var useCase = BuildUseCase();
 
@@ -72,7 +83,7 @@ public class PauseTaskCommandImplTests
             EndTime = new DateTime(2026, 6, 1, 11, 0, 0)
         };
         var task = BuildTask(detail);
-        _repositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(task);
+        _repositoryMock.Setup(x => x.GetByIdForUserAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(task);
 
         var useCase = BuildUseCase();
 
@@ -87,7 +98,7 @@ public class PauseTaskCommandImplTests
             StartTime = new DateTime(2026, 6, 1, 10, 0, 0)
         };
         var task = BuildTask(detail);
-        _repositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(task);
+        _repositoryMock.Setup(x => x.GetByIdForUserAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(task);
         _repositoryMock.Setup(x => x.SaveAsync(It.IsAny<TaskEntity>())).ReturnsAsync((TaskEntity t) => t);
 
         var useCase = BuildUseCase();
@@ -110,7 +121,7 @@ public class PauseTaskCommandImplTests
         };
         var task = BuildTask(detail);
         task.StatusTaskId = 3;
-        _repositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(task);
+        _repositoryMock.Setup(x => x.GetByIdForUserAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(task);
         _repositoryMock.Setup(x => x.SaveAsync(It.IsAny<TaskEntity>())).ReturnsAsync((TaskEntity t) => t);
 
         var useCase = BuildUseCase();
@@ -138,7 +149,7 @@ public class PauseTaskCommandImplTests
             StartTime = new DateTime(2026, 6, 1, 10, 0, 0)
         };
         var task = BuildTask(previous, active);
-        _repositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(task);
+        _repositoryMock.Setup(x => x.GetByIdForUserAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(task);
         _repositoryMock.Setup(x => x.SaveAsync(It.IsAny<TaskEntity>())).ReturnsAsync((TaskEntity t) => t);
 
         var useCase = BuildUseCase();
@@ -166,7 +177,7 @@ public class PauseTaskCommandImplTests
             StartTime = new DateTime(2026, 6, 1, 10, 0, 0)
         };
         var task = BuildTask(previous, active);
-        _repositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(task);
+        _repositoryMock.Setup(x => x.GetByIdForUserAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(task);
         _repositoryMock.Setup(x => x.SaveAsync(It.IsAny<TaskEntity>())).ReturnsAsync((TaskEntity t) => t);
 
         var useCase = BuildUseCase();
@@ -181,7 +192,7 @@ public class PauseTaskCommandImplTests
     {
         var active = new TaskTimeDetail { StartTime = new DateTime(2026, 6, 1, 10, 0, 0) };
         var task = BuildTask(active);
-        _repositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(task);
+        _repositoryMock.Setup(x => x.GetByIdForUserAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(task);
         _repositoryMock.Setup(x => x.SaveAsync(It.IsAny<TaskEntity>())).ReturnsAsync((TaskEntity t) => t);
 
         var useCase = BuildUseCase();
@@ -196,12 +207,28 @@ public class PauseTaskCommandImplTests
     {
         var active = new TaskTimeDetail { StartTime = new DateTime(2026, 6, 1, 10, 0, 0) };
         var task = BuildTask(active);
-        _repositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<int>(), It.IsAny<bool>())).ReturnsAsync(task);
+        _repositoryMock.Setup(x => x.GetByIdForUserAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>())).ReturnsAsync(task);
         _repositoryMock.Setup(x => x.SaveAsync(It.IsAny<TaskEntity>())).ReturnsAsync((TaskEntity t) => t);
 
         var useCase = BuildUseCase();
         var result = await useCase.Execute(new PauseTaskRequest(1, UploadNow: false));
 
         Assert.All(result.TasksTimeDetails, d => Assert.NotNull(d.EndTime));
+    }
+
+    [Fact]
+    public async Task Execute_BuscaLaTareaAcotadaAlUsuarioActual_NoSoloPorWorkPackageId()
+    {
+        // La PK real es (UserId, WorkPackageId): si se buscara solo por WorkPackageId, dos
+        // tenants con el mismo WorkPackageId numérico podrían pausarse la sesión entre sí.
+        var active = new TaskTimeDetail { StartTime = new DateTime(2026, 6, 1, 10, 0, 0) };
+        var task = BuildTask(active);
+        _repositoryMock.Setup(x => x.GetByIdForUserAsync(1, "user-1", It.IsAny<bool>())).ReturnsAsync(task);
+        _repositoryMock.Setup(x => x.SaveAsync(It.IsAny<TaskEntity>())).ReturnsAsync((TaskEntity t) => t);
+
+        var useCase = BuildUseCase();
+        await useCase.Execute(new PauseTaskRequest(1, UploadNow: false));
+
+        _repositoryMock.Verify(x => x.GetByIdForUserAsync(1, "user-1", It.IsAny<bool>()), Times.Once);
     }
 }

@@ -37,6 +37,9 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
         builder.Property(u => u.AddRandomSlackTime)
             .IsRequired();
 
+        builder.Property(u => u.EncryptedGroqApiKey)
+            .HasColumnType("nvarchar(max)");
+
         builder.HasIndex(u => u.OpenProjectUserId);
 
         builder.HasOne(u => u.OpenProjectInstance)

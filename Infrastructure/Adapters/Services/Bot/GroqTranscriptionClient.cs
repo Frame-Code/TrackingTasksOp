@@ -10,7 +10,10 @@ namespace Infrastructure.Adapters.Services.Bot;
 /// Adapter que transcribe audio a texto usando el endpoint de transcripciones de Groq
 /// (modelo Whisper), reutilizando el mismo HttpClient/credenciales configurados para Groq.
 /// </summary>
-public class GroqTranscriptionClient(IHttpClientFactory httpClientFactory, IOptions<GroqSettings> groqSettings) : IAudioTranscriptionService
+public class GroqTranscriptionClient(
+    IHttpClientFactory httpClientFactory,
+    IOptions<GroqSettings> groqSettings,
+    GroqAuthHeaderProvider authHeaderProvider) : IAudioTranscriptionService
 {
     private readonly GroqSettings _groqSettings = groqSettings.Value;
     private HttpClient? _httpClient;
@@ -33,7 +36,9 @@ public class GroqTranscriptionClient(IHttpClientFactory httpClientFactory, IOpti
         if (!string.IsNullOrWhiteSpace(_groqSettings.TranscriptionLanguage))
             content.Add(new StringContent(_groqSettings.TranscriptionLanguage), "language");
 
-        var httpResponse = await HttpClient.PostAsync(_groqSettings.TranscriptionBaseUrl, content, ct);
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, _groqSettings.TranscriptionBaseUrl) { Content = content };
+        httpRequest.Headers.Authorization = await authHeaderProvider.GetAuthorizationHeaderAsync();
+        var httpResponse = await HttpClient.SendAsync(httpRequest, ct);
 
         if (!httpResponse.IsSuccessStatusCode)
         {

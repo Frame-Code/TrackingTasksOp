@@ -50,18 +50,19 @@ check(!/data-bs-toggle="collapse"/.test(reportBtnTag),
 
 ['notifSessionEnabled', 'notifSessionInterval', 'notifPendingEnabled', 'notifPendingInterval',
  'themeSwitch', 'pageSizeSelect', 'pauseBehaviorSelect',
- 'skipCancelConfirmSwitch', 'addRandomSlackTimeSwitch', 'sidebarInstanceUrl', 'sidebarUserEmail', 'sidebarAvatarInitials', 'sidebarError']
+ 'skipCancelConfirmSwitch', 'addRandomSlackTimeSwitch', 'sidebarInstanceUrl', 'sidebarUserEmail', 'sidebarAvatarInitials', 'sidebarError',
+ 'aiKeyStatus', 'aiApiKeyInput', 'saveAiApiKeyBtn', 'clearAiApiKeyBtn']
     .forEach(id => check(new RegExp(`id="${id}"`).test(sidebarBlock), `#${id} existe en el sidebar`));
 check(!/id="defaultActivitySelect"/.test(sidebarBlock),
       'la actividad por defecto ya no existe (era contradictoria: no toda actividad vale para toda tarea)');
 
 // ── Grupos en acordeón: cada uno con ícono + data-bs-target coherente ────────────
-['groupNotifications', 'groupAppearance', 'groupTaskBehavior', 'groupOpenProject'].forEach(groupId => {
+['groupNotifications', 'groupAppearance', 'groupTaskBehavior', 'groupOpenProject', 'groupAi'].forEach(groupId => {
     check(new RegExp(`data-bs-target="#${groupId}"`).test(sidebarBlock) && new RegExp(`id="${groupId}"`).test(sidebarBlock),
           `el grupo #${groupId} tiene su header y su panel colapsable`);
 });
-// 4 grupos + el ítem suelto "Reporte" (que reutiliza la misma clase de ícono a propósito).
-check((sidebarBlock.match(/class="bi bi-\w[\w-]* sidebar-group-icon"/g) || []).length === 5, 'cada grupo (y el ítem Reporte) tiene su propio ícono');
+// 5 grupos + el ítem suelto "Reporte" (que reutiliza la misma clase de ícono a propósito).
+check((sidebarBlock.match(/class="bi bi-\w[\w-]* sidebar-group-icon"/g) || []).length === 6, 'cada grupo (y el ítem Reporte) tiene su propio ícono');
 check(/data-bs-parent="#sidebarAccordion"/.test(sidebarBlock), 'los grupos comparten acordeón (uno abierto cierra los demás)');
 
 // ── URL de la instancia: enlace clicable que envuelve, no <span> truncado ─────────
@@ -88,6 +89,7 @@ check(/export function setPageSize/.test(state), 'state.js expone setPageSize');
 check(/export async function fetchUserSettings/.test(api), 'api.js expone fetchUserSettings');
 check(/export async function updateNotificationSetting/.test(api), 'api.js expone updateNotificationSetting');
 check(/export async function updateTaskPreferences/.test(api), 'api.js expone updateTaskPreferences');
+check(/export async function updateAiApiKey/.test(api), 'api.js expone updateAiApiKey');
 
 // ── sidebar.js: rail expande + abre la sección correcta ──────────────────────────
 check(/export function initSidebar/.test(sidebar), 'sidebar.js expone initSidebar');
@@ -101,8 +103,9 @@ check(/bootstrap\.Collapse\.getOrCreateInstance/.test(groupHeaderHandler) && /\.
       'un clic desde el rail abre explícitamente esa sección (no solo alterna)');
 
 check(/refreshNotificationTimers/.test(sidebar), 'guardar una notificación reinicia los timers en caliente');
-check(/updateNotificationSetting/.test(sidebar) && /updateTaskPreferences/.test(sidebar),
+check(/updateNotificationSetting/.test(sidebar) && /updateTaskPreferences/.test(sidebar) && /updateAiApiKey/.test(sidebar),
       'sidebar.js llama a los endpoints de guardado');
+check(/hasCustomAiApiKey/.test(sidebar), 'el sidebar refleja si el usuario tiene su propia key de IA configurada');
 
 // ── app.js: wiring de arranque ────────────────────────────────────────────────────
 check(/import \{ initSidebar, renderSidebarFields \} from '\.\/sidebar\.js'/.test(app),
@@ -116,6 +119,25 @@ check(!/defaultActivityId/.test(app), 'app.js ya no tiene rastro de la actividad
 check(/pauseDefaultBehavior/.test(app), 'la preferencia de pausa se consulta al pausar una tarea');
 check(/store\.userSettings\?\.\s*skipCancelConfirmation/.test(app),
       'la preferencia de confirmación se consulta al cancelar una sesión');
+
+// ── Estado de tracking local: aislado por usuario, sin pisarse entre cuentas ─────
+// trackingActiveSession/trackingPausedTasks viven en localStorage (no sessionStorage), así
+// que sobreviven a un cambio de usuario en el mismo navegador. Una sola clave global para
+// todos los usuarios hacía que el último en escribir pisara al anterior; cada usuario
+// necesita su propia casilla (clave sufijada con su userId).
+check(/function sessionKey\(userId\)/.test(state) && /\$\{SESSION_KEY\}:\$\{userId\}/.test(state),
+      'getActiveSession/saveSession/clearSession usan una clave de localStorage por usuario');
+check(/function pausedKey\(userId\)/.test(state) && /\$\{PAUSED_KEY\}:\$\{userId\}/.test(state),
+      'getPausedIds/markPaused/unmarkPaused usan una clave de localStorage por usuario');
+check(/startsWith\('trackingActiveSession:'\)/.test(app),
+      'la sincronización entre pestañas matchea el prefijo de la clave por usuario, no el nombre exacto viejo');
+check(!/clearLocalTaskState/.test(api), 'api.js ya no limpia el tracking en cada 401/logout (el aislamiento por usuario lo reemplaza)');
+const bot = read('Web/wwwroot/bot.html');
+check(!/clearLocalTaskState/.test(bot), 'bot.html ya no limpia el tracking en sus 401 (el aislamiento por usuario lo reemplaza)');
+check(/CHAT_SESSION_STORAGE_KEY = `chat_session_id:\$\{getCurrentUser\(\)\?\.userId\}`/.test(bot),
+      'bot.html scopea el id de chat actualmente abierto por usuario, no en una sola clave global');
+check((bot.match(/localStorage\.(?:get|set)Item\(CHAT_SESSION_STORAGE_KEY/g) || []).length === 4,
+      'los 4 lectura/escritura del id de chat (init, switchSession, newChat) usan la clave por usuario');
 
 console.log(failed ? `\n${failed} comprobación(es) fallida(s)` : '\nCableado correcto');
 process.exit(failed ? 1 : 0);

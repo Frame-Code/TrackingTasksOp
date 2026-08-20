@@ -34,6 +34,17 @@ public class TaskRepositoryImpl(TrackingTasksDbContext context) : ITaskRepositor
             .FirstOrDefaultAsync(x => x.WorkPackageId == id);
     }
 
+    public async Task<Task?> GetByIdForUserAsync(int workPackageId, string userId, bool tracking = false)
+    {
+        var query = tracking
+            ? context.Tasks.AsQueryable()
+            : context.Tasks.AsNoTracking().AsQueryable();
+
+        return await query
+            .Include(x => x.TasksTimeDetails)
+            .FirstOrDefaultAsync(x => x.WorkPackageId == workPackageId && x.UserId == userId);
+    }
+
     public async Task<Task?> GetActiveByUserAsync(string userId)
     {
         return await context.Tasks

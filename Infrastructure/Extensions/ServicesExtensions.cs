@@ -69,6 +69,7 @@ public static class ServicesExtensions
         collection.AddScoped<IGetUserSettingsQuery, GetUserSettingsQueryImpl>();
         collection.AddScoped<IUpdateNotificationSettingCommand, UpdateNotificationSettingCommandImpl>();
         collection.AddScoped<IUpdateTaskPreferencesCommand, UpdateTaskPreferencesCommandImpl>();
+        collection.AddScoped<IUpdateAiApiKeyCommand, UpdateAiApiKeyCommandImpl>();
 
         //Services
         collection.AddScoped<IStatusOpService, StatusOpServiceImpl>();
@@ -98,6 +99,8 @@ public static class ServicesExtensions
         // Bot - Groq adapter
         collection.AddScoped<IGroqApiClient, GroqApiClient>();
         collection.AddScoped<IAudioTranscriptionService, GroqTranscriptionClient>();
+        collection.AddScoped<GroqAuthHeaderProvider>();
+        collection.AddScoped<IAiUsageLimiter, AiUsageLimiterImpl>();
         collection.AddScoped<IBotIntentInterceptor, HeuristicIntentInterceptor>();
         collection.AddScoped<IOpenProjectEntityResolver, OpenProjectEntityResolver>();
         collection.AddScoped<IBotActionExecutor, BotActionExecutor>();

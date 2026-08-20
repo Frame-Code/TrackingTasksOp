@@ -3,8 +3,9 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Application.Ports.Auth;
-using Domain.Entities.OpenProjectEntities.User;
 using Infrastructure.Exceptions;
+using Infrastructure.Settings;
+using User = Domain.Entities.OpenProjectEntities.User.User;
 
 namespace Infrastructure.Adapters.Auth;
 
@@ -12,7 +13,9 @@ public class ApiKeyValidatorServiceImpl(IHttpClientFactory clientFactory) : IApi
 {
     public async Task<User> ValidateAsync(string instanceUrl, string apiKey, CancellationToken ct)
     {
-        var client = clientFactory.CreateClient();
+        // Cliente con protección SSRF: instanceUrl la declara el usuario (al registrarse o
+        // al actualizar su API key), así que no puede tratarse como un destino confiable.
+        var client = clientFactory.CreateClient(KeyedServicesNames.OpenProjectValidationHttpClientName);
         client.BaseAddress = new Uri(instanceUrl.TrimEnd('/'));
         client.Timeout = TimeSpan.FromSeconds(20);
 

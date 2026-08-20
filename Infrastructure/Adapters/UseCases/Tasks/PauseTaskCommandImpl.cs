@@ -1,4 +1,5 @@
 using Application.Dto.Tasks;
+using Application.Ports.Auth;
 using Application.Ports.Repositories;
 using Application.Ports.Services;
 using Application.Ports.UseCases.Tasks;
@@ -10,11 +11,15 @@ namespace Infrastructure.Adapters.UseCases.Tasks;
 public class PauseTaskCommandImpl(
     ITaskRepository repository,
     IUpdateWorkPackageCommand updateWorkPackageCommand,
-    IPendingTimeUploader pendingTimeUploader) : IPauseTaskCommand
+    IPendingTimeUploader pendingTimeUploader,
+    CurrentUser currentUser) : IPauseTaskCommand
 {
     public async Task<TaskEntity> Execute(PauseTaskRequest request)
     {
-        var task = await repository.GetByIdAsync(request.WorkPackageId)
+        var userId = currentUser.UserId
+            ?? throw new UnauthorizedAccessException("Usuario no autenticado.");
+
+        var task = await repository.GetByIdForUserAsync(request.WorkPackageId, userId)
             ?? throw new ArgumentException($"Task with OpenProjectId {request.WorkPackageId} does not exist");
 
         var lastDetail = task.TasksTimeDetails.OrderBy(x => x.StartTime).LastOrDefault();

@@ -95,7 +95,7 @@ loginForm.addEventListener('submit', async (e) => {
         const data = await res.json().catch(() => ({}));
 
         if (!res.ok) {
-            showAlert(data.message ?? 'Credenciales inválidas. Verifica tu correo y contraseña.');
+            showAlert(data.message ?? data.detail ?? 'Credenciales inválidas. Verifica tu correo y contraseña.');
             return;
         }
 
@@ -142,7 +142,7 @@ registerForm.addEventListener('submit', async (e) => {
         const data = await res.json().catch(() => ({}));
 
         if (!res.ok) {
-            showAlert(data.message ?? 'Error al crear la cuenta. Verifica los datos ingresados.');
+            showAlert(data.message ?? data.detail ?? 'Error al crear la cuenta. Verifica los datos ingresados.');
             return;
         }
 

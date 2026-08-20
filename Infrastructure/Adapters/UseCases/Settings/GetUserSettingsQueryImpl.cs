@@ -38,7 +38,8 @@ public class GetUserSettingsQueryImpl(
             Email = appUser.Email!,
             PauseDefaultBehavior = appUser.PauseDefaultBehavior.ToString(),
             SkipCancelConfirmation = appUser.SkipCancelConfirmation,
-            AddRandomSlackTime = appUser.AddRandomSlackTime
+            AddRandomSlackTime = appUser.AddRandomSlackTime,
+            HasCustomAiApiKey = !string.IsNullOrEmpty(appUser.EncryptedGroqApiKey)
         };
     }
 }

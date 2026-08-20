@@ -992,7 +992,7 @@ function bindConfirmEndButton() {
 
 function bindStorageSync() {
     window.addEventListener('storage', (e) => {
-        if (e.key !== 'trackingActiveSession' && e.key !== 'trackingPausedTasks') return;
+        if (!e.key?.startsWith('trackingActiveSession:') && !e.key?.startsWith('trackingPausedTasks:')) return;
 
         if (getActiveSession()) {
             startTimer();
