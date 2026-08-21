@@ -1,5 +1,4 @@
 using Domain.Entities.TrackingTasksEntities;
-using Infrastructure.DataAccess.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -23,6 +22,18 @@ public class OpenProjectInstanceConfiguration : IEntityTypeConfiguration<OpenPro
 
         builder.Property(o => o.CreatedAt)
             .IsRequired()
+            .HasColumnType("datetime");
+
+        builder.Property(o => o.Alias)
+            .HasMaxLength(200);
+
+        builder.Property(o => o.OAuthClientId)
+            .HasColumnType("nvarchar(max)");
+
+        builder.Property(o => o.EncryptedOAuthClientSecret)
+            .HasColumnType("nvarchar(max)");
+
+        builder.Property(o => o.OAuthConnectedAt)
             .HasColumnType("datetime");
 
         builder.HasIndex(o => o.BaseUrl)

@@ -15,6 +15,9 @@ public class User
 
     [JsonPropertyName("email")]
     public string Email { get; set; } = string.Empty;
+
+    [JsonPropertyName("admin")]
+    public bool Admin { get; set; }
 }
 
 public class UserCollection : CollectionBase

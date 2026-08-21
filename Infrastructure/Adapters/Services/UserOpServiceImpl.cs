@@ -73,4 +73,26 @@ public class UserOpServiceImpl(
         var users = await ListAssignees(projectId);
         return users.FirstOrDefault(u => u.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
     }
+
+    public async Task<bool> IsAdmin(int userId)
+    {
+        logger.LogInformation("Executing IsAdmin:UserOpServiceImpl -> verifying if the id user: {UserId} is admin...", userId);
+        string url = $"/api/v3/users/{userId}";
+        HttpResponseMessage response = await _client.GetAsync(url);
+
+        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            return false;
+
+        if (!response.IsSuccessStatusCode)
+        {
+            string error = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Error HTTP {(int)response.StatusCode}: {error}");
+        }
+
+        string json = await response.Content.ReadAsStringAsync();
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var user = JsonSerializer.Deserialize<User>(json, options);
+
+        return user?.Admin ?? false;
+    }
 }
