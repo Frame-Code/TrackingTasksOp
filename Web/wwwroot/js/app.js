@@ -6,14 +6,20 @@ import { fetchProjects, fetchWorkPackages, fetchActivities, fetchTask,
          postStartSession, postEndSession, fetchStatuses,
          patchWorkPackageStatus, patchWorkPackageProgress,
          patchWorkPackageDates, postCancelSession,
-         downloadDailyTaskReport, fetchReportPreview, updateApiKey,
+         downloadDailyTaskReport, fetchReportPreview,
          postPauseSession, postResumeSession, postUploadPending,
          postLogTime, fetchUserSettings } from './api.js';
 import { updateNavbar, renderProjectSelect, renderCards, renderStatusFilters,
          renderHistoryLoading, renderHistoryContent, renderHistoryError,
          renderActivitiesSelect, renderReportPreview } from './render.js';
 import { startTimer, stopTimer, startPendingReminder } from './timer.js';
-import { initSidebar, renderSidebarFields } from './sidebar.js';
+import { renderSidebarAvatar } from './avatar.js';
+
+/** Cuenta en la barra superior: correo y foto (o iniciales si no cargó ninguna). */
+function renderTopbarAccount() {
+    document.getElementById('sidebarUserEmail').textContent = store.userSettings?.email || '';
+    renderSidebarAvatar();
+}
 import { showToast, setLoading, showError, hideError } from './ui.js';
 import { escHtml, formatDuration, statusClass, extractId } from './helpers.js';
 
@@ -38,9 +44,6 @@ async function loadStatuses() {
         // estados llegan después de la primera página, hay que pintarlas ahora o no
         // aparecen nunca.
         renderStatusFilters();
-        // Los checks de "estados por defecto" del sidebar también salen de este catálogo:
-        // si llega después de que el sidebar ya se pintó una vez, hay que repintarlo.
-        renderSidebarFields();
         // Si ya hay tarjetas renderizadas, refrescarlas para mostrar los dropdowns
         if (store.workPackages.length) renderCards();
     } catch (e) {
@@ -914,53 +917,6 @@ function bindReportPreviewButtons() {
     });
 }
 
-// ── Modal: Actualizar API key ─────────────────────────────────────────────────
-
-function openApiKeyModal() {
-    document.getElementById('apiKeyInput').value = '';
-    document.getElementById('apiKeyError').classList.add('d-none');
-
-    const confirmBtn = document.getElementById('confirmApiKeyBtn');
-    confirmBtn.disabled = false;
-    confirmBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Actualizar';
-
-    new bootstrap.Modal(document.getElementById('apiKeyModal')).show();
-}
-
-function bindApiKeyButton() {
-    document.getElementById('apiKeyBtn').addEventListener('click', openApiKeyModal);
-}
-
-function bindConfirmApiKeyButton() {
-    document.getElementById('confirmApiKeyBtn').addEventListener('click', async () => {
-        const apiKey = document.getElementById('apiKeyInput').value.trim();
-        const errorBox = document.getElementById('apiKeyError');
-        errorBox.classList.add('d-none');
-
-        if (!apiKey) {
-            errorBox.textContent = 'Debes indicar la API key.';
-            errorBox.classList.remove('d-none');
-            return;
-        }
-
-        const btn = document.getElementById('confirmApiKeyBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Actualizando...';
-
-        try {
-            await updateApiKey(apiKey);
-            bootstrap.Modal.getInstance(document.getElementById('apiKeyModal'))?.hide();
-            showToast('API key actualizada correctamente.', 'success');
-        } catch (e) {
-            errorBox.textContent = `Error al actualizar: ${e.message}`;
-            errorBox.classList.remove('d-none');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Actualizar';
-        }
-    });
-}
-
 function bindLoadButton() {
     document.getElementById('loadBtn').addEventListener('click', () => {
         const projectId = document.getElementById('projectSelect').value || null;
@@ -1016,8 +972,6 @@ bindConfirmDatesButton();
 bindReportButton();
 bindPreviewReportButton();
 bindReportPreviewButtons();
-bindApiKeyButton();
-bindConfirmApiKeyButton();
 bindStatusFilterEvents();
 bindSearchEvents();
 bindPaginationEvents();
@@ -1026,7 +980,6 @@ bindPauseModalButtons();
 bindCancelSessionModal();
 bindHistoryModalEvents();
 bindLogTimeModal();
-initSidebar();
 
 // El sidebar avisa cuando cambia algo que altera qué tareas trae la página (por ahora,
 // el tamaño de página). Vuelve a la primera para no quedar en una página inexistente.
@@ -1042,7 +995,7 @@ loadStatuses();
 // por tipo): hay que esperar a que carguen para no arrancarlos con los valores por defecto
 // y tener que reiniciarlos un instante después.
 loadUserSettings().then(() => {
-    renderSidebarFields();
+    renderTopbarAccount();
     startPendingReminder();
     if (getActiveSession()) startTimer();
 });

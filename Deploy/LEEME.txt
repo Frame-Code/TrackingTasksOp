@@ -1,0 +1,124 @@
+TrackingTasksOp - Instalacion
+=============================
+
+Programa para registrar tus horas en OpenProject sin anotar la hora a
+mano ni calcular nada.
+
+Queda instalado como un servicio de Windows: arranca solo cuando
+prendes la PC, sin ventanas abiertas. Solo funciona en esta PC: nadie
+de la red ni de internet puede entrar.
+
+Los pasos 1 y 2 se hacen UNA SOLA VEZ.
+
+
+PASO 1 - Instalar los dos requisitos
+------------------------------------
+
+  a) ASP.NET Core 8 Runtime (Hosting Bundle)
+     https://dotnet.microsoft.com/download/dotnet/8.0
+     En la columna "Run apps", bajar el "Hosting Bundle" de Windows.
+
+  b) SQL Server Express
+     https://www.microsoft.com/sql-server/sql-server-downloads
+     Elegir la opcion "Express" -> instalacion "Basica".
+     Aceptar todo por defecto. No hay que configurar usuarios ni
+     contrasenas: usa tu cuenta de Windows.
+
+Reiniciar la PC despues de instalar los dos.
+
+
+PASO 2 - Instalar el programa
+-----------------------------
+
+  1. Clic derecho sobre:  install-service.ps1
+  2. Elegir "Ejecutar con PowerShell"
+  3. Windows va a pedir permiso de Administrador -> aceptar
+
+Se abre una ventana azul, escribe varias lineas y al final muestra:
+
+     Status : Running
+
+Eso significa que quedo instalado y andando. Cerra la ventana.
+
+Si dice otra cosa, mira la seccion "SI ALGO FALLA" al final.
+
+
+PASO 3 - Abrir la aplicacion
+-----------------------------
+
+Abri el navegador y entra a:
+
+     http://localhost:5266
+
+Guardalo en favoritos. De ahora en mas entras siempre por ahi, sin
+tener que arrancar nada.
+
+
+PASO 4 - Registrarte (una sola vez)
+------------------------------------
+
+La primera vez te pide tres cosas:
+
+  1. Tu email y una contrasena
+     La elegis vos. Minimo 12 caracteres.
+
+  2. La direccion de tu OpenProject
+     La misma que usas para entrar normalmente.
+     Ejemplo:  http://192.168.1.50:8080
+
+  3. Tu API key de OpenProject
+     Como conseguirla:
+       - Entra a tu OpenProject
+       - Clic en tu foto/avatar (arriba a la derecha) -> "Mi cuenta"
+       - Menu de la izquierda: "Tokens de acceso"
+       - En la fila "API", clic en "Generar" (o "+")
+       - Copia el texto largo y pegalo aca
+
+     OJO: OpenProject muestra esa clave UNA SOLA VEZ.
+     Copiala antes de cerrar esa ventana.
+
+Listo. Ya podes elegir una tarea y darle "Comenzar".
+
+
+PASO 5 - El asistente / bot (opcional)
+---------------------------------------
+
+El bot no funciona hasta que cargues una clave gratuita de Groq:
+
+  1. Entra a  https://console.groq.com  y crea una cuenta (es gratis)
+  2. Ahi mismo: "API Keys" -> "Create API Key" -> copiar la clave
+  3. En TrackingTasksOp, abri la barra lateral -> pega la clave y guarda
+
+Si no te interesa el bot, saltea este paso. Todo lo demas
+(comenzar y terminar tareas) funciona igual sin esto.
+
+
+COMO SE APAGA O SE PRENDE
+--------------------------
+
+Normalmente no hace falta tocar nada. Si alguna vez lo necesitas:
+
+  Tecla Windows -> escribir "Servicios" -> Enter
+  Buscar en la lista:  Tracking Task Operations
+  Clic derecho -> Detener / Iniciar / Reiniciar
+
+
+SI ALGO FALLA
+--------------
+
+Los errores quedan en la carpeta "logs", al lado de este archivo.
+Hay un archivo por dia. Mandame el mas reciente.
+
+Problemas comunes:
+
+  - "No se puede acceder a este sitio" en el navegador
+    -> El servicio no esta corriendo. Fijate en "Servicios" (arriba)
+       si Tracking Task Operations dice "En ejecucion".
+
+  - El servicio arranca y se detiene solo a los pocos segundos
+    -> Casi siempre es la base de datos. Revisa el log del dia:
+       si dice algo de "login failed" o "cannot open database",
+       avisame y te paso una linea para ejecutar en SQL Server.
+
+  - El puerto 5266 ya lo usa otro programa
+    -> Avisame y te paso el archivo de configuracion con otro puerto.

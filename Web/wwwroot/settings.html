@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title>Ajustes — TrackingTasksOp</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-page: #0d1117;
+            --bg-container: #161b22;
+            --text-main: #e6edf3;
+            --text-secondary: #9aa4b2;
+            --accent-blue: #0d6efd;
+            --border-color: rgba(255, 255, 255, .10);
+            --hover-bg: rgba(255, 255, 255, .06);
+            --code-bg: #0b0f14;
+            --success: #2ea043;
+            --warning: #d29922;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg-page);
+            color: var(--text-main);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        /* ── Cabecera ── */
+        .topbar {
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: sticky;
+            top: 0;
+            background: var(--bg-page);
+            z-index: 20;
+        }
+        .nav-back {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: .85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 6px;
+        }
+        .nav-back:hover { background: var(--hover-bg); color: var(--text-main); }
+        .topbar h1 { font-size: 1rem; font-weight: 600; }
+
+        /* ── Layout de dos columnas ── */
+        .shell {
+            max-width: 1040px;
+            margin: 0 auto;
+            padding: 24px 20px 64px;
+            display: grid;
+            grid-template-columns: 210px minmax(0, 1fr);
+            gap: 28px;
+            align-items: start;
+        }
+
+        .side-nav {
+            position: sticky;
+            top: 76px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .side-nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: .86rem;
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .side-nav a:hover { background: var(--hover-bg); color: var(--text-main); }
+        .side-nav a[aria-current="page"] {
+            background: rgba(13, 110, 253, .15);
+            color: #79c0ff;
+            font-weight: 600;
+        }
+        .side-nav i { width: 16px; text-align: center; }
+
+        .side-nav-title {
+            font-size: .7rem;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--text-secondary);
+            padding: 0 12px;
+            margin-bottom: 6px;
+        }
+        .side-nav-title:not(:first-child) { margin-top: 16px; }
+
+        /* ── Paneles ── */
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        .panel > h2 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .panel > .panel-hint {
+            font-size: .84rem;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: var(--bg-container);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 18px;
+        }
+        .card h3 {
+            font-size: .92rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-hint { font-size: .8rem; color: var(--text-secondary); margin-bottom: 16px; }
+
+        .divider { height: 1px; background: var(--border-color); margin: 18px 0; }
+
+        /* ── Formularios ── */
+        label { display: block; font-size: .78rem; color: var(--text-secondary); margin-bottom: 4px; }
+
+        input[type=text], input[type=password], input[type=number], input[type=file], select {
+            width: 100%;
+            background: var(--bg-page);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-main);
+            padding: 8px 10px;
+            font-size: .88rem;
+            font-family: inherit;
+        }
+        input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible {
+            outline: 2px solid var(--accent-blue);
+            outline-offset: 1px;
+        }
+
+        .field { margin-bottom: 14px; }
+        .field:last-child { margin-bottom: 0; }
+
+        /* Fila con etiqueta a la izquierda y control a la derecha */
+        .row-field {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 10px 0;
+        }
+        .row-field + .row-field { border-top: 1px solid var(--border-color); }
+        .row-field .row-label { flex: 1; }
+        .row-field .row-label strong { font-size: .88rem; font-weight: 500; color: var(--text-main); display: block; }
+        .row-field .row-label span { font-size: .78rem; color: var(--text-secondary); }
+        .row-field .row-control { flex-shrink: 0; width: 150px; }
+
+        /* Switch */
+        .switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .switch .track {
+            position: absolute; inset: 0; cursor: pointer;
+            background: rgba(255,255,255,.15); border-radius: 999px; transition: background .15s;
+        }
+        .switch .track::before {
+            content: ''; position: absolute; height: 16px; width: 16px; left: 3px; top: 3px;
+            background: #fff; border-radius: 50%; transition: transform .15s;
+        }
+        .switch input:checked + .track { background: var(--accent-blue); }
+        .switch input:checked + .track::before { transform: translateX(18px); }
+        .switch input:focus-visible + .track { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
+
+        .btn {
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-main);
+            border-radius: 6px;
+            padding: 7px 14px;
+            font-size: .85rem;
+            font-family: inherit;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:hover:not(:disabled) { background: var(--hover-bg); }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+        .btn-primary { background: var(--accent-blue); border-color: var(--accent-blue); }
+        .btn-primary:hover:not(:disabled) { filter: brightness(1.12); }
+        .btn-danger { color: #ff7b72; border-color: rgba(255, 123, 114, .35); }
+        .btn-danger:hover:not(:disabled) { background: rgba(248, 81, 73, .12); }
+        .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+        /* ── Mostrar/ocultar contraseña. El marcado lo genera settings.js ── */
+        .password-field { position: relative; }
+        .password-field input { padding-right: 40px; }
+        .password-toggle {
+            position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+            background: none; border: 0; color: var(--text-secondary);
+            cursor: pointer; padding: 6px 8px; border-radius: 4px; line-height: 1; font-size: .95rem;
+        }
+        .password-toggle:hover { color: var(--text-main); background: var(--hover-bg); }
+
+        /* ── Avatar ── */
+        .avatar-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+        .avatar-preview {
+            width: 80px; height: 80px; border-radius: 50%; object-fit: cover;
+            border: 1px solid var(--border-color); flex-shrink: 0;
+        }
+        .avatar-initials {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: var(--accent-blue); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.6rem; font-weight: 600; flex-shrink: 0;
+        }
+        .avatar-controls { flex: 1; min-width: 220px; }
+
+        /* ── Estado y mensajes ── */
+        .badge {
+            font-size: .72rem; padding: 2px 8px; border-radius: 999px;
+            font-weight: 600; margin-left: auto;
+        }
+        .badge-on { background: rgba(46, 160, 67, .15); color: var(--success); }
+        .badge-off { background: rgba(210, 153, 34, .15); color: var(--warning); }
+
+        .alert {
+            border-radius: 6px; padding: 10px 12px; font-size: .82rem;
+            margin-bottom: 14px; border: 1px solid transparent;
+        }
+        .alert-error { background: rgba(248, 81, 73, .1); border-color: rgba(248, 81, 73, .3); color: #ff9d96; }
+        .alert-ok { background: rgba(46, 160, 67, .1); border-color: rgba(46, 160, 67, .3); color: #7ee787; }
+        .alert-info { background: rgba(13, 110, 253, .1); border-color: rgba(13, 110, 253, .3); color: #79c0ff; }
+
+        /* Los mensajes flotan arriba: en una página con scroll, un aviso al pie del panel
+           se pierde de vista justo cuando importa. */
+        .messages { position: sticky; top: 68px; z-index: 15; }
+
+        .hidden { display: none !important; }
+        .hint { font-size: .78rem; color: var(--text-secondary); margin-top: 6px; }
+        .hint a { color: #79c0ff; }
+
+        .readonly-value {
+            font-size: .88rem; padding: 8px 10px; background: var(--bg-page);
+            border: 1px solid var(--border-color); border-radius: 6px;
+            color: var(--text-secondary); word-break: break-all;
+        }
+        .readonly-value a { color: #79c0ff; }
+
+        /* ── Enrolamiento 2FA ── */
+        .qr-box { text-align: center; margin-bottom: 14px; }
+        .qr-box img { width: 180px; height: 180px; background: #fff; padding: 8px; border-radius: 8px; }
+
+        code { background: var(--code-bg); padding: 3px 7px; border-radius: 4px; font-size: .85rem; letter-spacing: .04em; }
+        pre {
+            background: var(--code-bg); border: 1px solid var(--border-color); border-radius: 6px;
+            padding: 12px; font-size: .85rem; line-height: 1.9; margin-bottom: 12px; white-space: pre-wrap;
+        }
+        ol.steps { margin: 0 0 14px 18px; font-size: .84rem; color: var(--text-secondary); }
+        ol.steps li { margin-bottom: 4px; }
+
+        .checks { display: flex; flex-direction: column; gap: 6px; }
+        .checks .form-check { display: flex; align-items: center; gap: 8px; font-size: .85rem; }
+        .checks .form-check input { width: auto; }
+        .checks .form-check label { margin: 0; color: var(--text-main); font-size: .85rem; }
+        .checks .form-text { font-size: .8rem; color: var(--text-secondary); }
+
+        /* ── Responsive: el menú pasa arriba, en fila ── */
+        @media (max-width: 760px) {
+            .shell { grid-template-columns: 1fr; gap: 18px; padding: 16px 14px 48px; }
+            .side-nav {
+                position: static;
+                flex-direction: row;
+                overflow-x: auto;
+                gap: 4px;
+                padding-bottom: 6px;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .side-nav a { white-space: nowrap; }
+            .side-nav-title { display: none; }
+            .row-field { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .row-field .row-control { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <a href="/" class="nav-back"><i class="bi bi-grid-1x2"></i> Dashboard</a>
+    <h1>Ajustes</h1>
+</header>
+
+<div class="shell">
+
+    <!-- ── Menú ── -->
+    <nav class="side-nav" aria-label="Secciones de ajustes">
+        <p class="side-nav-title">Cuenta</p>
+        <a href="#cuenta"         data-section="cuenta"><i class="bi bi-person"></i> Mi cuenta</a>
+        <a href="#seguridad"      data-section="seguridad"><i class="bi bi-shield-lock"></i> Seguridad</a>
+
+        <p class="side-nav-title">Aplicación</p>
+        <a href="#notificaciones" data-section="notificaciones"><i class="bi bi-bell"></i> Notificaciones</a>
+        <a href="#apariencia"     data-section="apariencia"><i class="bi bi-palette"></i> Apariencia</a>
+        <a href="#tareas"         data-section="tareas"><i class="bi bi-sliders"></i> Tareas</a>
+
+        <p class="side-nav-title">Integraciones</p>
+        <a href="#openproject"    data-section="openproject"><i class="bi bi-box-arrow-up-right"></i> OpenProject</a>
+        <a href="#asistente"      data-section="asistente"><i class="bi bi-robot"></i> Asistente IA</a>
+    </nav>
+
+    <div>
+        <div class="messages">
+            <div id="settingsError" class="alert alert-error hidden" role="alert" aria-live="assertive"></div>
+            <div id="settingsOk" class="alert alert-ok hidden" role="status" aria-live="polite"></div>
+        </div>
+
+        <!-- ── Mi cuenta ── -->
+        <section class="panel" id="panel-cuenta" data-section="cuenta" aria-labelledby="hCuenta">
+            <h2 id="hCuenta">Mi cuenta</h2>
+            <p class="panel-hint">Tu foto se muestra en el menú del dashboard.</p>
+
+            <div class="card">
+                <div class="avatar-row">
+                    <img id="accountAvatarPreview" class="avatar-preview hidden" alt="Tu foto de perfil">
+                    <span id="accountAvatarInitials" class="avatar-initials" aria-hidden="true"></span>
+
+                    <div class="avatar-controls">
+                        <div class="field">
+                            <label for="accountAvatarInput">Cambiar foto</label>
+                            <input type="file" id="accountAvatarInput" accept="image/jpeg,image/png,image/webp">
+                            <p class="hint">Se recorta al centro y se achica a 256px antes de subir.</p>
+                        </div>
+                        <button type="button" id="accountAvatarRemoveBtn" class="btn btn-danger hidden">
+                            <i class="bi bi-trash"></i> Quitar foto
+                        </button>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="field">
+                    <label for="accountEmail">Correo</label>
+                    <div class="readonly-value" id="accountEmail">—</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Seguridad ── -->
+        <section class="panel" id="panel-seguridad" data-section="seguridad" aria-labelledby="hSeg">
+            <h2 id="hSeg">Seguridad</h2>
+            <p class="panel-hint">Tu contraseña y el segundo factor de verificación.</p>
+
+            <div class="card">
+                <h3>
+                    <i class="bi bi-shield-lock"></i> Verificación en dos pasos
+                    <span id="account2faBadge" class="badge badge-off">No activada</span>
+                </h3>
+                <p class="card-hint">
+                    Un código que cambia cada 30 segundos, generado por una app en tu teléfono.
+                    Hace falta para cambiar tu contraseña.
+                </p>
+
+                <div id="account2faSetup" class="hidden">
+                    <ol class="steps">
+                        <li>Instalá Google Authenticator, Authy, 2FAS o similar en tu teléfono.</li>
+                        <li>Escaneá este código desde la app.</li>
+                        <li>Escribí abajo el número de 6 dígitos que te muestre.</li>
+                    </ol>
+                    <div class="qr-box">
+                        <img id="account2faQr" alt="Código QR para vincular la app de autenticación">
+                    </div>
+                    <p class="hint" style="text-align:center; margin-bottom:14px;">
+                        ¿No podés escanearlo? Cargá esta clave a mano:<br>
+                        <code id="account2faManualKey"></code>
+                    </p>
+                    <div class="field">
+                        <label for="account2faCode">Código de la app</label>
+                        <input type="text" id="account2faCode" inputmode="numeric" autocomplete="one-time-code"
+                               maxlength="7" placeholder="123456">
+                    </div>
+                    <button type="button" id="account2faEnableBtn" class="btn btn-primary">
+                        <i class="bi bi-check2"></i> Activar
+                    </button>
+                </div>
+
+                <div id="account2faManage" class="hidden">
+                    <div class="field">
+                        <label for="account2faManageCode">Código de la app (o uno de recuperación)</label>
+                        <input type="text" id="account2faManageCode" inputmode="numeric"
+                               autocomplete="one-time-code" placeholder="123456">
+                        <p class="hint">Se pide para confirmar que sos vos.</p>
+                    </div>
+                    <div class="btn-row">
+                        <button type="button" id="accountRegenerateCodesBtn" class="btn">
+                            <i class="bi bi-arrow-repeat"></i> Generar códigos nuevos
+                        </button>
+                        <button type="button" id="accountResetAuthBtn" class="btn">
+                            <i class="bi bi-phone"></i> Cambiar de teléfono
+                        </button>
+                    </div>
+                </div>
+
+                <div id="accountResetAuthForm" class="hidden">
+                    <div class="alert alert-info">
+                        Vas a desvincular la app actual. Después escaneás el código nuevo con el otro teléfono.
+                    </div>
+                    <div class="field">
+                        <label for="accountResetPassword">Confirmá tu contraseña actual</label>
+                        <input type="password" id="accountResetPassword" autocomplete="current-password">
+                    </div>
+                    <div class="btn-row">
+                        <button type="button" id="accountResetConfirmBtn" class="btn btn-danger">
+                            <i class="bi bi-phone"></i> Desvincular
+                        </button>
+                        <button type="button" id="accountResetCancelBtn" class="btn">Cancelar</button>
+                    </div>
+                </div>
+
+                <div id="accountRecoveryCodes" class="hidden">
+                    <div class="divider"></div>
+                    <div class="alert alert-info">
+                        <strong>Guardá estos códigos.</strong> Sirven en lugar del código de la app cuando
+                        no tenés el teléfono a mano. No se vuelven a mostrar, pero podés generar otros
+                        cuando quieras desde acá.
+                    </div>
+                    <pre id="accountRecoveryCodesList"></pre>
+                    <button type="button" id="accountRecoveryDoneBtn" class="btn">Ya los guardé</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3><i class="bi bi-key"></i> Contraseña</h3>
+                <p class="card-hint">Mínimo 12 caracteres.</p>
+
+                <div id="accountPasswordLocked" class="alert alert-info hidden">
+                    Para cambiar tu contraseña necesitás activar antes la verificación en dos pasos, acá arriba.
+                </div>
+
+                <div id="accountPasswordForm" class="hidden">
+                    <div class="field">
+                        <label for="accountCurrentPassword">Contraseña actual</label>
+                        <input type="password" id="accountCurrentPassword" autocomplete="current-password">
+                    </div>
+                    <div class="field">
+                        <label for="accountNewPassword">Contraseña nueva</label>
+                        <input type="password" id="accountNewPassword" autocomplete="new-password">
+                    </div>
+                    <div class="field">
+                        <label for="accountConfirmPassword">Repetí la contraseña nueva</label>
+                        <input type="password" id="accountConfirmPassword" autocomplete="new-password">
+                    </div>
+                    <div class="field">
+                        <label for="accountPasswordCode">Código de la app (o uno de recuperación)</label>
+                        <input type="text" id="accountPasswordCode" inputmode="numeric"
+                               autocomplete="one-time-code" placeholder="123456">
+                    </div>
+                    <button type="button" id="accountPasswordBtn" class="btn btn-primary">
+                        <i class="bi bi-check2"></i> Cambiar contraseña
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Notificaciones ── -->
+        <section class="panel" id="panel-notificaciones" data-section="notificaciones" aria-labelledby="hNotif">
+            <h2 id="hNotif">Notificaciones</h2>
+            <p class="panel-hint">Recordatorios del navegador. Se guardan solos al cambiarlos.</p>
+
+            <div class="card">
+                <div class="row-field">
+                    <span class="row-label">
+                        <strong>Sesión activa</strong>
+                        <span id="notifSessionStatus"></span>
+                    </span>
+                    <span class="switch">
+                        <input type="checkbox" id="notifSessionEnabled">
+                        <span class="track"></span>
+                    </span>
+                </div>
+                <div class="row-field">
+                    <span class="row-label">
+                        <strong>Frecuencia</strong>
+                        <span>Cada cuántos minutos avisar</span>
+                    </span>
+                    <span class="row-control">
+                        <input type="number" id="notifSessionInterval" min="1" max="1440">
+                    </span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="row-field">
+                    <span class="row-label">
+                        <strong>Sesiones sin subir</strong>
+                        <span id="notifPendingStatus"></span>
+                    </span>
+                    <span class="switch">
+                        <input type="checkbox" id="notifPendingEnabled">
+                        <span class="track"></span>
+                    </span>
+                </div>
+                <div class="row-field">
+                    <span class="row-label">
+                        <strong>Frecuencia</strong>
+                        <span>Cada cuántos minutos avisar</span>
+                    </span>
+                    <span class="row-control">
+                        <input type="number" id="notifPendingInterval" min="1" max="1440">
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Apariencia ── -->
+        <section class="panel" id="panel-apariencia" data-section="apariencia" aria-labelledby="hApar">
+            <h2 id="hApar">Apariencia</h2>
+            <p class="panel-hint">Cómo se ve el dashboard.</p>
+
+            <div class="card">
+                <div class="row-field">
+                    <span class="row-label">
+                        <strong>Tema oscuro</strong>
+                        <span>Se aplica al instante</span>
+                    </span>
+                    <span class="switch">
+                        <input type="checkbox" id="themeSwitch">
+                        <span class="track"></span>
+                    </span>
+                </div>
+                <div class="row-field">
+                    <span class="row-label">
+                        <strong>Tareas por página</strong>
+                        <span>Cuántas tarjetas trae cada consulta</span>
+                    </span>
+                    <span class="row-control">
+                        <select id="pageSizeSelect">
+                            <option value="6">6</option>
+                            <option value="12">12</option>
+                            <option value="24">24</option>
+                            <option value="48">48</option>
+                        </select>
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Tareas ── -->
+        <section class="panel" id="panel-tareas" data-section="tareas" aria-labelledby="hTareas">
+            <h2 id="hTareas">Tareas</h2>
+            <p class="panel-hint">Cómo se comportan tus sesiones de trabajo.</p>
+
+            <div class="card">
+                <div class="row-field">
+                    <span class="row-label">
+                        <strong>Al pausar una tarea</strong>
+                        <span>Qué hacer sin preguntar cada vez</span>
+                    </span>
+                    <span class="row-control">
+                        <select id="pauseBehaviorSelect">
+                            <option value="Ask">Preguntar siempre</option>
+                            <option value="KeepOpen">Mantener abierta</option>
+                            <option value="Upload">Subir el tiempo</option>
+                        </select>
+                    </span>
+                </div>
+                <div class="row-field">
+                    <span class="row-label">
+                        <strong>Cancelar sin confirmar</strong>
+                        <span>Descarta el tiempo sin preguntar</span>
+                    </span>
+                    <span class="switch">
+                        <input type="checkbox" id="skipCancelConfirmSwitch">
+                        <span class="track"></span>
+                    </span>
+                </div>
+                <div class="row-field">
+                    <span class="row-label">
+                        <strong>Margen aleatorio</strong>
+                        <span>Suma unos minutos al tiempo registrado en OpenProject</span>
+                    </span>
+                    <span class="switch">
+                        <input type="checkbox" id="addRandomSlackTimeSwitch">
+                        <span class="track"></span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3><i class="bi bi-funnel"></i> Filtro de estados por defecto</h3>
+                <p class="card-hint">
+                    Estados que se aplican apenas cargás tareas. Sin ninguno marcado, se muestran todos.
+                </p>
+                <div class="checks" id="defaultStatusFilterChecks"></div>
+            </div>
+        </section>
+
+        <!-- ── OpenProject ── -->
+        <section class="panel" id="panel-openproject" data-section="openproject" aria-labelledby="hOp">
+            <h2 id="hOp">OpenProject</h2>
+            <p class="panel-hint">La instancia contra la que trabaja tu cuenta.</p>
+
+            <div class="card">
+                <div class="field">
+                    <label>Instancia</label>
+                    <div class="readonly-value">
+                        <a id="sidebarInstanceUrl" href="#" target="_blank" rel="noopener">—</a>
+                    </div>
+                    <p class="hint">Se definió al registrarte y no se puede cambiar desde acá.</p>
+                </div>
+
+                <div class="divider"></div>
+
+                <h3><i class="bi bi-key"></i> API key</h3>
+                <p class="card-hint">
+                    Es la credencial con la que la app lee y escribe en OpenProject por vos. Se guarda
+                    cifrada. Actualizala si la revocaste o generaste una nueva.
+                </p>
+                <div class="field">
+                    <label for="apiKeyInput">Nueva API key</label>
+                    <input type="password" id="apiKeyInput" autocomplete="off" spellcheck="false">
+                    <p class="hint">
+                        En OpenProject: tu avatar → Mi cuenta → Tokens de acceso → API → Generar.
+                        Se muestra una sola vez.
+                    </p>
+                </div>
+                <button type="button" id="saveOpApiKeyBtn" class="btn btn-primary">
+                    <i class="bi bi-check2"></i> Actualizar API key
+                </button>
+            </div>
+        </section>
+
+        <!-- ── Asistente IA ── -->
+        <section class="panel" id="panel-asistente" data-section="asistente" aria-labelledby="hAi">
+            <h2 id="hAi">Asistente IA</h2>
+            <p class="panel-hint">El bot que entiende pedidos en lenguaje natural.</p>
+
+            <div class="card">
+                <h3>
+                    <i class="bi bi-robot"></i> API key de Groq
+                    <span id="aiKeyBadge" class="badge badge-off">Key compartida</span>
+                </h3>
+                <p class="card-hint">
+                    El bot funciona sin que configures nada, usando una key compartida con un límite
+                    diario de mensajes por persona. Si querés sacarte ese límite, podés poner una key
+                    propia: el consumo pasa a correr por tu cuenta.
+                </p>
+
+                <div id="aiKeyStatus" class="alert alert-info"></div>
+
+                <div class="field">
+                    <label for="aiApiKeyInput">Tu API key de Groq</label>
+                    <input type="password" id="aiApiKeyInput" autocomplete="off" spellcheck="false"
+                           placeholder="gsk_...">
+                    <p class="hint">
+                        Se consigue gratis en <a href="https://console.groq.com" target="_blank"
+                        rel="noopener">console.groq.com</a> → API Keys → Create API Key.
+                        Se guarda cifrada y nunca se vuelve a mostrar.
+                    </p>
+                </div>
+
+                <div class="btn-row">
+                    <button type="button" id="saveAiApiKeyBtn" class="btn btn-primary">
+                        <i class="bi bi-check2"></i> Guardar
+                    </button>
+                    <button type="button" id="clearAiApiKeyBtn" class="btn btn-danger hidden">
+                        <i class="bi bi-trash"></i> Quitar y volver a la compartida
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+<script type="module" src="/js/settings.js"></script>
+</body>
+</html>
