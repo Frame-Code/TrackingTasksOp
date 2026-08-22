@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title>Ajustes — TrackingTasksOp</title>
+    <script>
+        // Antes de pintar nada: evita el flash de oscuro -> claro al cargar.
+        document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('appTheme') || 'dark');
+    </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
         :root {
@@ -18,6 +22,42 @@
             --code-bg: #0b0f14;
             --success: #2ea043;
             --warning: #d29922;
+            --link: #79c0ff;
+            --danger-text: #ff7b72;
+            --danger-border: rgba(255, 123, 114, .35);
+            --danger-hover: rgba(248, 81, 73, .12);
+            --switch-off: rgba(255, 255, 255, .15);
+            --alert-error-bg: rgba(248, 81, 73, .1);
+            --alert-error-text: #ff9d96;
+            --alert-ok-bg: rgba(46, 160, 67, .1);
+            --alert-ok-text: #7ee787;
+            --alert-info-bg: rgba(13, 110, 253, .1);
+            --alert-info-text: #79c0ff;
+        }
+
+        /* Tema claro. El dashboard ya reaccionaba a data-bs-theme porque usa Bootstrap;
+           esta vista tiene paleta propia, así que necesita su propio juego de valores. */
+        :root[data-bs-theme="light"] {
+            --bg-page: #ffffff;
+            --bg-container: #f6f8fa;
+            --text-main: #1f2328;
+            --text-secondary: #59636e;
+            --border-color: rgba(0, 0, 0, .12);
+            --hover-bg: rgba(0, 0, 0, .05);
+            --code-bg: #f6f8fa;
+            --success: #1a7f37;
+            --warning: #9a6700;
+            --link: #0969da;
+            --danger-text: #cf222e;
+            --danger-border: rgba(207, 34, 46, .35);
+            --danger-hover: rgba(207, 34, 46, .08);
+            --switch-off: rgba(0, 0, 0, .25);
+            --alert-error-bg: rgba(207, 34, 46, .08);
+            --alert-error-text: #a40e26;
+            --alert-ok-bg: rgba(26, 127, 55, .08);
+            --alert-ok-text: #1a7f37;
+            --alert-info-bg: rgba(9, 105, 218, .08);
+            --alert-info-text: #0a5ca8;
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -87,7 +127,7 @@
         .side-nav a:hover { background: var(--hover-bg); color: var(--text-main); }
         .side-nav a[aria-current="page"] {
             background: rgba(13, 110, 253, .15);
-            color: #79c0ff;
+            color: var(--link);
             font-weight: 600;
         }
         .side-nav i { width: 16px; text-align: center; }
@@ -166,17 +206,34 @@
             padding: 10px 0;
         }
         .row-field + .row-field { border-top: 1px solid var(--border-color); }
-        .row-field .row-label { flex: 1; }
+        /* Es un <label for> real: al clickear el texto también se alterna el control, y le
+           da nombre accesible. margin en 0 porque la regla global de label mete separación
+           que acá desalinea la fila. */
+        .row-field .row-label { flex: 1; margin: 0; cursor: pointer; }
         .row-field .row-label strong { font-size: .88rem; font-weight: 500; color: var(--text-main); display: block; }
         .row-field .row-label span { font-size: .78rem; color: var(--text-secondary); }
         .row-field .row-control { flex-shrink: 0; width: 150px; }
 
         /* Switch */
-        .switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
-        .switch input { opacity: 0; width: 0; height: 0; }
+        .switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; margin: 0; }
+
+        /* El input ocupa todo el switch y es el que recibe el clic: invisible pero presente.
+           Con width/height en 0 no había nada que clickear y el control quedaba muerto. */
+        .switch input {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 1;
+        }
+
+        /* pointer-events: none para que el track no le robe el clic al input que tiene encima. */
         .switch .track {
-            position: absolute; inset: 0; cursor: pointer;
-            background: rgba(255,255,255,.15); border-radius: 999px; transition: background .15s;
+            position: absolute; inset: 0; pointer-events: none;
+            background: var(--switch-off); border-radius: 999px; transition: background .15s;
         }
         .switch .track::before {
             content: ''; position: absolute; height: 16px; width: 16px; left: 3px; top: 3px;
@@ -201,10 +258,12 @@
         }
         .btn:hover:not(:disabled) { background: var(--hover-bg); }
         .btn:disabled { opacity: .5; cursor: not-allowed; }
-        .btn-primary { background: var(--accent-blue); border-color: var(--accent-blue); }
+        /* color fijo: hereda text-main de .btn, que en tema claro es casi negro y sobre
+           el azul del fondo queda ilegible. */
+        .btn-primary { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; }
         .btn-primary:hover:not(:disabled) { filter: brightness(1.12); }
-        .btn-danger { color: #ff7b72; border-color: rgba(255, 123, 114, .35); }
-        .btn-danger:hover:not(:disabled) { background: rgba(248, 81, 73, .12); }
+        .btn-danger { color: var(--danger-text); border-color: var(--danger-border); }
+        .btn-danger:hover:not(:disabled) { background: var(--danger-hover); }
         .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
 
         /* ── Mostrar/ocultar contraseña. El marcado lo genera settings.js ── */
@@ -243,9 +302,9 @@
             border-radius: 6px; padding: 10px 12px; font-size: .82rem;
             margin-bottom: 14px; border: 1px solid transparent;
         }
-        .alert-error { background: rgba(248, 81, 73, .1); border-color: rgba(248, 81, 73, .3); color: #ff9d96; }
-        .alert-ok { background: rgba(46, 160, 67, .1); border-color: rgba(46, 160, 67, .3); color: #7ee787; }
-        .alert-info { background: rgba(13, 110, 253, .1); border-color: rgba(13, 110, 253, .3); color: #79c0ff; }
+        .alert-error { background: var(--alert-error-bg); border-color: var(--alert-error-text); color: var(--alert-error-text); }
+        .alert-ok { background: var(--alert-ok-bg); border-color: var(--alert-ok-text); color: var(--alert-ok-text); }
+        .alert-info { background: var(--alert-info-bg); border-color: var(--alert-info-text); color: var(--alert-info-text); }
 
         /* Los mensajes flotan arriba: en una página con scroll, un aviso al pie del panel
            se pierde de vista justo cuando importa. */
@@ -253,14 +312,14 @@
 
         .hidden { display: none !important; }
         .hint { font-size: .78rem; color: var(--text-secondary); margin-top: 6px; }
-        .hint a { color: #79c0ff; }
+        .hint a { color: var(--link); }
 
         .readonly-value {
             font-size: .88rem; padding: 8px 10px; background: var(--bg-page);
             border: 1px solid var(--border-color); border-radius: 6px;
             color: var(--text-secondary); word-break: break-all;
         }
-        .readonly-value a { color: #79c0ff; }
+        .readonly-value a { color: var(--link); }
 
         /* ── Enrolamiento 2FA ── */
         .qr-box { text-align: center; margin-bottom: 14px; }
@@ -483,20 +542,20 @@
 
             <div class="card">
                 <div class="row-field">
-                    <span class="row-label">
+                    <label class="row-label" for="notifSessionEnabled">
                         <strong>Sesión activa</strong>
                         <span id="notifSessionStatus"></span>
-                    </span>
+                    </label>
                     <span class="switch">
                         <input type="checkbox" id="notifSessionEnabled">
                         <span class="track"></span>
                     </span>
                 </div>
                 <div class="row-field">
-                    <span class="row-label">
+                    <label class="row-label" for="notifSessionInterval">
                         <strong>Frecuencia</strong>
                         <span>Cada cuántos minutos avisar</span>
-                    </span>
+                    </label>
                     <span class="row-control">
                         <input type="number" id="notifSessionInterval" min="1" max="1440">
                     </span>
@@ -505,20 +564,20 @@
 
             <div class="card">
                 <div class="row-field">
-                    <span class="row-label">
+                    <label class="row-label" for="notifPendingEnabled">
                         <strong>Sesiones sin subir</strong>
                         <span id="notifPendingStatus"></span>
-                    </span>
+                    </label>
                     <span class="switch">
                         <input type="checkbox" id="notifPendingEnabled">
                         <span class="track"></span>
                     </span>
                 </div>
                 <div class="row-field">
-                    <span class="row-label">
+                    <label class="row-label" for="notifPendingInterval">
                         <strong>Frecuencia</strong>
                         <span>Cada cuántos minutos avisar</span>
-                    </span>
+                    </label>
                     <span class="row-control">
                         <input type="number" id="notifPendingInterval" min="1" max="1440">
                     </span>
@@ -533,20 +592,20 @@
 
             <div class="card">
                 <div class="row-field">
-                    <span class="row-label">
+                    <label class="row-label" for="themeSwitch">
                         <strong>Tema oscuro</strong>
                         <span>Se aplica al instante</span>
-                    </span>
+                    </label>
                     <span class="switch">
                         <input type="checkbox" id="themeSwitch">
                         <span class="track"></span>
                     </span>
                 </div>
                 <div class="row-field">
-                    <span class="row-label">
+                    <label class="row-label" for="pageSizeSelect">
                         <strong>Tareas por página</strong>
                         <span>Cuántas tarjetas trae cada consulta</span>
-                    </span>
+                    </label>
                     <span class="row-control">
                         <select id="pageSizeSelect">
                             <option value="6">6</option>
@@ -566,10 +625,10 @@
 
             <div class="card">
                 <div class="row-field">
-                    <span class="row-label">
+                    <label class="row-label" for="pauseBehaviorSelect">
                         <strong>Al pausar una tarea</strong>
                         <span>Qué hacer sin preguntar cada vez</span>
-                    </span>
+                    </label>
                     <span class="row-control">
                         <select id="pauseBehaviorSelect">
                             <option value="Ask">Preguntar siempre</option>
@@ -579,20 +638,20 @@
                     </span>
                 </div>
                 <div class="row-field">
-                    <span class="row-label">
+                    <label class="row-label" for="skipCancelConfirmSwitch">
                         <strong>Cancelar sin confirmar</strong>
                         <span>Descarta el tiempo sin preguntar</span>
-                    </span>
+                    </label>
                     <span class="switch">
                         <input type="checkbox" id="skipCancelConfirmSwitch">
                         <span class="track"></span>
                     </span>
                 </div>
                 <div class="row-field">
-                    <span class="row-label">
+                    <label class="row-label" for="addRandomSlackTimeSwitch">
                         <strong>Margen aleatorio</strong>
                         <span>Suma unos minutos al tiempo registrado en OpenProject</span>
-                    </span>
+                    </label>
                     <span class="switch">
                         <input type="checkbox" id="addRandomSlackTimeSwitch">
                         <span class="track"></span>
