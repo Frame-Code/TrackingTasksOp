@@ -140,6 +140,7 @@ Software que permite comenzar y terminar sesiones de trabajo a una tarea especí
 
 - `AUTH_DESIGN.md` — diseño y estado real del sistema de autenticación (Identity local + OAuth contra OpenProject), modelo de datos, flujos, middleware de invalidación de API key, y qué falta (OAuth) del roadmap original en 4 fases.
 - `Docs/DataProtection.md` — cómo y dónde se cifran las API keys de OpenProject (Data Protection API), por qué el key ring vive en `Web/Keys/`, y qué hacer si se pierde.
+- `Docs/Cuenta.md` — la vista `/settings.html`, que concentra toda la configuración (cuenta, seguridad, notificaciones, apariencia, tareas, OpenProject, asistente IA). Incluye guía para usuarios finales del 2FA con TOTP, qué pasa si se pierde el teléfono, el reset de 2FA por SQL, y las decisiones de diseño del avatar y del segundo factor. El dashboard ya no tiene sidebar: sus acciones viven en una barra superior.
 - `Docs/OpenProjectEntities.md` — mapeo de las respuestas JSON de la API de OpenProject a las entidades de `Domain/Entities/OpenProjectEntities/`.
 - `Docs/Bot.md` — diseño del bot conversacional (intents, adapters de LLM, acciones).
 - `Docs/OpenProjectDockerBackup.md` — backup/restore de la instancia de OpenProject (servidor de testing) contra la que corre esta app en desarrollo, incluyendo migración completa servidor → máquina local.

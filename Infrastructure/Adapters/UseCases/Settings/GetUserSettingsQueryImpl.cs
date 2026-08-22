@@ -21,6 +21,10 @@ public class GetUserSettingsQueryImpl(
         var appUser = await userManager.FindByIdAsync(userId)
             ?? throw new ApplicationException($"User {userId} not found while loading settings");
 
+        // AnyAsync y no cargar la entidad: acá solo hace falta saber si existe, y esta consulta
+        // corre en cada carga de página.
+        var hasAvatar = await context.UserAvatars.AnyAsync(a => a.UserId == userId, ct);
+
         var savedSettings = await context.Set<UserNotificationSetting>()
             .Where(s => s.UserId == userId)
             .ToDictionaryAsync(s => s.TypeCode, ct);
@@ -40,7 +44,9 @@ public class GetUserSettingsQueryImpl(
             SkipCancelConfirmation = appUser.SkipCancelConfirmation,
             AddRandomSlackTime = appUser.AddRandomSlackTime,
             DefaultStatusIds = ParseStatusIds(appUser.DefaultStatusFilterIds),
-            HasCustomAiApiKey = !string.IsNullOrEmpty(appUser.EncryptedGroqApiKey)
+            HasCustomAiApiKey = !string.IsNullOrEmpty(appUser.EncryptedGroqApiKey),
+            TwoFactorEnabled = appUser.TwoFactorEnabled,
+            HasAvatar = hasAvatar
         };
     }
 

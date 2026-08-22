@@ -17,228 +17,52 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="/css/app.css" rel="stylesheet">
 </head>
-<body class="d-flex min-vh-100">
+<body class="d-flex flex-column min-vh-100">
 
-    <!-- Sidebar: navegación + configuración -->
-    <aside id="appSidebar" class="app-sidebar d-flex flex-column">
-        <div class="sidebar-header">
-            <button type="button" id="sidebarToggleBtn" class="sidebar-toggle-btn" title="TrackingTasksOp">
-                <i class="bi bi-clock-history"></i>
-            </button>
-            <div class="sidebar-brand-text">
-                <div class="fw-bold">TrackingTasksOp</div>
-            </div>
-            <button type="button" id="sidebarCollapseBtn" class="sidebar-collapse-chevron" title="Colapsar">
-                <i class="bi bi-chevron-left"></i>
-            </button>
-        </div>
+    <!-- Barra superior: sesión activa, acciones y cuenta.
+         Antes esto era un sidebar de 260px lleno de configuración; toda esa config se
+         mudó a /settings.html y el ancho quedó para las tarjetas de tareas. -->
+    <header class="app-topbar">
+        <a href="/" class="app-brand" title="TrackingTasksOp">
+            <i class="bi bi-clock-history"></i>
+            <span class="d-none d-sm-inline">TrackingTasksOp</span>
+        </a>
 
-        <div id="activeSessionBadge" class="sidebar-session-badge d-none">
+        <div id="activeSessionBadge" class="topbar-session d-none">
             <span class="pulse-dot"></span>
-            <div class="sidebar-session-info">
-                <span id="activeSessionName" class="sidebar-session-name"></span>
-                <span id="navTimer" class="sidebar-session-timer">00:00:00</span>
-            </div>
+            <span id="activeSessionName" class="topbar-session-name"></span>
+            <span id="navTimer" class="topbar-session-timer">00:00:00</span>
         </div>
 
-        <div id="sidebarError" class="alert alert-danger py-2 small mx-3 mb-0 d-none" role="alert"></div>
-
-        <nav class="sidebar-nav flex-grow-1" id="sidebarAccordion">
-
-            <!-- Reporte: acción directa sobre las tareas, no una sección de configuración
-                 (por eso vive fuera del acordeón y del menú de cuenta) -->
-            <button id="reportBtn" type="button" class="sidebar-group-header sidebar-nav-item"
-                    title="Generar reporte de tareas (con vista previa)">
-                <i class="bi bi-file-earmark-excel sidebar-group-icon"></i>
-                <span class="sidebar-group-label">Reporte</span>
+        <div class="ms-auto d-flex align-items-center gap-2">
+            <button id="reportBtn" type="button" class="btn btn-sm btn-outline-secondary"
+                    title="Generar reporte de tareas">
+                <i class="bi bi-file-earmark-excel"></i><span class="d-none d-md-inline ms-1">Reporte</span>
             </button>
-            <hr class="sidebar-nav-divider">
 
-            <!-- Notificaciones -->
-            <div class="sidebar-group">
-                <button type="button" class="sidebar-group-header" data-bs-toggle="collapse"
-                        data-bs-target="#groupNotifications" aria-expanded="false" title="Notificaciones">
-                    <i class="bi bi-bell sidebar-group-icon"></i>
-                    <span class="sidebar-group-label">Notificaciones</span>
-                    <i class="bi bi-chevron-down sidebar-group-chevron"></i>
+            <div class="dropdown">
+                <button type="button" class="topbar-account-btn" data-bs-toggle="dropdown"
+                        aria-expanded="false" title="Cuenta">
+                    <span class="topbar-avatar" id="sidebarAvatarInitials"></span>
                 </button>
-                <div class="collapse" id="groupNotifications" data-bs-parent="#sidebarAccordion">
-                    <div class="sidebar-group-body">
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <label class="form-check-label fw-medium" for="notifSessionEnabled">Sesión activa</label>
-                                <div class="form-check form-switch mb-0">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="notifSessionEnabled">
-                                </div>
-                            </div>
-                            <div class="input-group input-group-sm mt-2">
-                                <span class="input-group-text">Cada</span>
-                                <input type="number" class="form-control" id="notifSessionInterval" min="1" max="1440">
-                                <span class="input-group-text">min</span>
-                            </div>
-                            <div class="form-text" id="notifSessionStatus"></div>
-                        </div>
-                        <div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <label class="form-check-label fw-medium" for="notifPendingEnabled">Sesiones sin subir</label>
-                                <div class="form-check form-switch mb-0">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="notifPendingEnabled">
-                                </div>
-                            </div>
-                            <div class="input-group input-group-sm mt-2">
-                                <span class="input-group-text">Cada</span>
-                                <input type="number" class="form-control" id="notifPendingInterval" min="1" max="1440">
-                                <span class="input-group-text">min</span>
-                            </div>
-                            <div class="form-text" id="notifPendingStatus"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Apariencia -->
-            <div class="sidebar-group">
-                <button type="button" class="sidebar-group-header" data-bs-toggle="collapse"
-                        data-bs-target="#groupAppearance" aria-expanded="false" title="Apariencia">
-                    <i class="bi bi-palette sidebar-group-icon"></i>
-                    <span class="sidebar-group-label">Apariencia</span>
-                    <i class="bi bi-chevron-down sidebar-group-chevron"></i>
-                </button>
-                <div class="collapse" id="groupAppearance" data-bs-parent="#sidebarAccordion">
-                    <div class="sidebar-group-body">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <label class="form-check-label fw-medium" for="themeSwitch">Tema oscuro</label>
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" role="switch" id="themeSwitch">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="form-label fw-medium" for="pageSizeSelect">Tareas por página</label>
-                            <select id="pageSizeSelect" class="form-select form-select-sm">
-                                <option value="6">6</option>
-                                <option value="12">12</option>
-                                <option value="24">24</option>
-                                <option value="48">48</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Comportamiento de tareas -->
-            <div class="sidebar-group">
-                <button type="button" class="sidebar-group-header" data-bs-toggle="collapse"
-                        data-bs-target="#groupTaskBehavior" aria-expanded="false" title="Comportamiento de tareas">
-                    <i class="bi bi-sliders sidebar-group-icon"></i>
-                    <span class="sidebar-group-label">Comportamiento</span>
-                    <i class="bi bi-chevron-down sidebar-group-chevron"></i>
-                </button>
-                <div class="collapse" id="groupTaskBehavior" data-bs-parent="#sidebarAccordion">
-                    <div class="sidebar-group-body">
-                        <div class="mb-3">
-                            <label class="form-label fw-medium" for="pauseBehaviorSelect">Al pausar una tarea</label>
-                            <select id="pauseBehaviorSelect" class="form-select form-select-sm">
-                                <option value="Ask">Preguntar cada vez</option>
-                                <option value="UploadNow">Subir a OpenProject siempre</option>
-                                <option value="SaveLocal">Guardar en local siempre</option>
-                            </select>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <label class="form-check-label fw-medium" for="skipCancelConfirmSwitch">Cancelar sin confirmar</label>
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" role="switch" id="skipCancelConfirmSwitch">
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <label class="form-check-label fw-medium" for="addRandomSlackTimeSwitch">Holgura aleatoria al finalizar</label>
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" role="switch" id="addRandomSlackTimeSwitch">
-                            </div>
-                        </div>
-                        <div class="form-text mb-3">Suma unos minutos al azar al tiempo enviado a OpenProject en vez del minuto exacto.</div>
-
-                        <label class="form-label fw-medium">Estados por defecto al cargar tareas</label>
-                        <div id="defaultStatusFilterChecks" class="d-flex flex-column gap-1 mb-1">
-                            <div class="form-text mb-0">Cargando estados...</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- OpenProject -->
-            <div class="sidebar-group">
-                <button type="button" class="sidebar-group-header" data-bs-toggle="collapse"
-                        data-bs-target="#groupOpenProject" aria-expanded="false" title="OpenProject">
-                    <i class="bi bi-diagram-3 sidebar-group-icon"></i>
-                    <span class="sidebar-group-label">OpenProject</span>
-                    <i class="bi bi-chevron-down sidebar-group-chevron"></i>
-                </button>
-                <div class="collapse" id="groupOpenProject" data-bs-parent="#sidebarAccordion">
-                    <div class="sidebar-group-body">
-                        <p class="text-muted small mb-2">
-                            Instancia:
-                            <a id="sidebarInstanceUrl" class="d-block text-break" href="#" target="_blank" rel="noopener"
-                               title="Abrir tu instancia de OpenProject"></a>
-                        </p>
-                        <button id="apiKeyBtn" type="button" class="btn btn-sm btn-outline-secondary w-100" title="Actualizar API key de OpenProject">
-                            <i class="bi bi-key me-1"></i>Actualizar API Key
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                    <li><span class="dropdown-item-text small text-secondary" id="sidebarUserEmail"></span></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a href="/settings.html" class="dropdown-item">
+                            <i class="bi bi-gear me-2"></i>Ajustes
+                        </a>
+                    </li>
+                    <li>
+                        <button id="logoutBtn" type="button" class="dropdown-item text-danger" title="Cerrar sesión">
+                            <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
                         </button>
-                    </div>
-                </div>
+                    </li>
+                </ul>
             </div>
-
-            <!-- IA (bot) -->
-            <div class="sidebar-group">
-                <button type="button" class="sidebar-group-header" data-bs-toggle="collapse"
-                        data-bs-target="#groupAi" aria-expanded="false" title="Asistente de IA">
-                    <i class="bi bi-robot sidebar-group-icon"></i>
-                    <span class="sidebar-group-label">Asistente IA</span>
-                    <i class="bi bi-chevron-down sidebar-group-chevron"></i>
-                </button>
-                <div class="collapse" id="groupAi" data-bs-parent="#sidebarAccordion">
-                    <div class="sidebar-group-body">
-                        <p class="text-muted small mb-2" id="aiKeyStatus"></p>
-                        <label class="form-label fw-medium" for="aiApiKeyInput">Tu API key de Groq (opcional)</label>
-                        <input type="password" class="form-control form-control-sm mb-2" id="aiApiKeyInput"
-                               placeholder="Dejar vacío = usar la compartida" autocomplete="off">
-                        <div class="d-flex gap-2">
-                            <button id="saveAiApiKeyBtn" type="button" class="btn btn-sm btn-outline-secondary flex-grow-1">
-                                <i class="bi bi-check-lg me-1"></i>Guardar
-                            </button>
-                            <button id="clearAiApiKeyBtn" type="button" class="btn btn-sm btn-outline-danger" title="Quitar mi key y volver a la compartida">
-                                <i class="bi bi-trash3"></i>
-                            </button>
-                        </div>
-                        <div class="form-text">Con tu propia key no aplica el límite diario de mensajes.</div>
-                    </div>
-                </div>
-            </div>
-
-        </nav>
-
-        <!-- Cuenta -->
-        <div class="sidebar-footer dropup">
-            <button type="button" class="sidebar-account-btn" data-bs-toggle="dropdown" aria-expanded="false" title="Cuenta">
-                <span class="sidebar-avatar" id="sidebarAvatarInitials"></span>
-                <span class="sidebar-account-info">
-                    <span id="sidebarUserEmail" class="sidebar-account-email"></span>
-                </span>
-            </button>
-            <ul class="dropdown-menu shadow">
-                <li>
-                    <button id="accountBtn" type="button" class="dropdown-item" disabled title="Próximamente">
-                        <i class="bi bi-person-gear me-2"></i>Mi cuenta
-                    </button>
-                </li>
-                <li><hr class="dropdown-divider"></li>
-                <li>
-                    <button id="logoutBtn" type="button" class="dropdown-item text-danger" title="Cerrar sesión">
-                        <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
-                    </button>
-                </li>
-            </ul>
         </div>
-    </aside>
+    </header>
+
 
     <div class="app-content d-flex flex-column min-w-0 flex-grow-1">
 
@@ -558,33 +382,6 @@
     </div>
 
     <!-- ── Modal: Actualizar API key de OpenProject ── -->
-    <div class="modal fade" id="apiKeyModal" tabindex="-1">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-content">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title">
-                        <i class="bi bi-key me-2 text-warning"></i>Actualizar API key
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="text-muted small">Actualiza tu API key de OpenProject.</p>
-                    <div id="apiKeyError" class="alert alert-danger py-2 small d-none"></div>
-                    <div>
-                        <label class="form-label fw-medium">Nueva API key</label>
-                        <input type="password" id="apiKeyInput" class="form-control" autocomplete="off">
-                    </div>
-                </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" id="confirmApiKeyBtn" class="btn btn-warning px-4">
-                        <i class="bi bi-check-lg me-1"></i>Actualizar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- ── Modal: Pausar sesión ── -->
     <div class="modal fade" id="pauseModal" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-sm">

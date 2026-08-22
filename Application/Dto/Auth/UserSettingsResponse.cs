@@ -14,4 +14,13 @@ public class UserSettingsResponse
 
     /// <summary>true = usa su propia key de Groq (sin límite diario); false = key compartida (con límite).</summary>
     public bool HasCustomAiApiKey { get; init; }
+
+    /// <summary>
+    /// true = ya enroló la app de autenticación. La UI de "Mi cuenta" lo usa para decidir si el
+    /// cambio de contraseña arranca por el enrolamiento o va directo al formulario.
+    /// </summary>
+    public bool TwoFactorEnabled { get; init; }
+
+    /// <summary>true = tiene avatar propio; false = el sidebar muestra las iniciales.</summary>
+    public bool HasAvatar { get; init; }
 }
