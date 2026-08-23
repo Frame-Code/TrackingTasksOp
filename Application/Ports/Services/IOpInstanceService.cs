@@ -4,5 +4,7 @@ namespace Application.Ports.Services;
 
 public interface IOpInstanceService
 {
-    Task save(OpInstanceDto dto);
+    Task Save(SaveOpInstanceDto dto);
+    Task<IEnumerable<ListsOpInstanceDto>> Lists();
+    Task<GetOpInstance?> GetOpInstance(int instanceId);
 }

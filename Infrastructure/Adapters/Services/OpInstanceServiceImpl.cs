@@ -6,5 +6,7 @@ namespace Infrastructure.Adapters.Services;
 
 public class OpInstanceServiceImpl(IOpInstanceRepository repository) : IOpInstanceService
 {
-    public async Task save(OpInstanceDto dto) => await repository.Save(dto);
+    public async Task<IEnumerable<ListsOpInstanceDto>> Lists() => await repository.Lists();
+    public async Task<GetOpInstance?> GetOpInstance(int instanceId) => await repository.GetOpInstance(instanceId);
+    public async Task Save(SaveOpInstanceDto dto) => await repository.Save(dto);
 }

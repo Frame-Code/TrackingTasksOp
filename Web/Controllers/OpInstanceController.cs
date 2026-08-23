@@ -29,8 +29,16 @@ public class OpInstanceController(
             return new ForbidResult();
 
         var cipher = apiKeyEncryptor.Protect(request.ClientSecret);
-        var dto = new OpInstanceDto(appUser.OpenProjectInstanceId, request.Alias, request.ClientId, cipher);
-        await opInstanceService.save(dto);
+        var dto = new SaveOpInstanceDto(appUser.OpenProjectInstanceId, request.Alias, request.ClientId, cipher);
+        await opInstanceService.Save(dto);
         return Ok();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Lists()
+    {
+        var instances = await opInstanceService.Lists();
+        var oauthInstances = instances.Where(x => x.IsOAuthConnected).ToList();
+        return Ok(oauthInstances);
     }
 }

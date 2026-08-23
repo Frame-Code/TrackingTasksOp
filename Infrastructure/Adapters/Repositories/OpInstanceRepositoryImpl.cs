@@ -1,9 +1,9 @@
-﻿using System.Xml;
-using Application.Dto.OpInstance;
+﻿using Application.Dto.OpInstance;
 using Application.Ports.Repositories;
 using Infrastructure.DataAccess;
 using Infrastructure.Exceptions;
 using Infrastructure.Extensions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Adapters.Repositories;
@@ -13,7 +13,23 @@ public class OpInstanceRepositoryImpl(
     TrackingTasksDbContext context
     ) : IOpInstanceRepository
 {
-    public async Task Save(OpInstanceDto dto)
+    public async Task<IEnumerable<ListsOpInstanceDto>> Lists()
+    {
+        return await context.OpenProjectInstances
+            .AsNoTracking()
+            .Select(x => new ListsOpInstanceDto(x.Id, x.BaseUrl, x.Alias ?? "-", x.OAuthClientId != null))
+            .ToListAsync();
+    }
+
+    public async Task<GetOpInstance?> GetOpInstance(int instanceId)
+    {
+        var instance = await context.OpenProjectInstances.FirstOrDefaultAsync(x => x.Id == instanceId);
+        return instance == null 
+            ? null 
+            : new GetOpInstance(instance.BaseUrl, instance.OAuthClientId, instance.EncryptedOAuthClientSecret);
+    }
+
+    public async Task Save(SaveOpInstanceDto dto)
     {
         var instance = context.OpenProjectInstances.FirstOrDefault(x => x.Id == dto.idInstance);
         if (instance is null)

@@ -19,6 +19,8 @@ public class AuthController(
     ILoginLocalUserCommand loginLocalUserCommand,
     IUpdateApiKeyCommand updateApiKeyCommand,
     IInitializerInstanceService initializerInstanceService,
+    IOAuthService oAuthService,
+    IOAuthLoginCommand oAuthLoginCommand,
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
     [FromKeyedServices(KeyedServicesNames.OpenProjectUrlService)]
@@ -125,5 +127,32 @@ public class AuthController(
     {
         await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
         return NoContent();
+    }
+
+    [HttpGet("oauth/authorize")]
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> Authorize(int instanceId)
+    {
+        var state = await oAuthService.GenerateOAuthState(instanceId);
+        var urlAuthorize = await oAuthService.GenerateAuthorizeUrl(state, instanceId);
+        return Redirect(urlAuthorize);
+    }
+
+    [HttpGet("oauth/callback")]
+    [AllowAnonymous]
+    public async Task<IActionResult> OAuthCallback(string code, string state, CancellationToken ct)
+    {
+        var response = await oAuthLoginCommand.ExecuteAsync(code, state, ct);
+        if (!response.IsSuccess)
+            return BadRequest(new { message = response.ErrorMessage });
+
+        var appUser = await userManager.FindByIdAsync(response.Data!.UserId)
+            ?? throw new ApplicationException($"User {response.Data.UserId} not found after OAuth login");
+
+        var principal = await signInManager.CreateUserPrincipalAsync(appUser);
+        await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal);
+
+        return Ok(response.Data);
     }
 }

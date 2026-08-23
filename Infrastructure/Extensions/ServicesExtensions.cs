@@ -1,4 +1,5 @@
 ﻿using Application.Ports.Auth;
+using Application.Ports.Cache;
 using Application.Ports.Repositories;
 using Application.Ports.Services;
 using Application.Ports.UseCases.Auth;
@@ -8,6 +9,7 @@ using Application.Ports.UseCases.Tasks;
 using Application.Ports.UseCases.TimeEntry;
 using Application.Ports.UseCases.WorkPackages;
 using Infrastructure.Adapters.Auth;
+using Infrastructure.Adapters.Cache;
 using Infrastructure.Adapters.Http;
 using Infrastructure.Adapters.Repositories;
 using Infrastructure.Adapters.Services;
@@ -44,6 +46,7 @@ public static class ServicesExtensions
             .GetChildren()
             .First();
         collection.Configure<GroqSettings>(aiModel);
+        collection.Configure<OAuthSettings>(configuration.GetSection("OAuthSettings"));
         //collection.Configure<GeminiSettings>(aiModel);
         //collection.Configure<OllamaSettings>(aiModel);
 
@@ -65,6 +68,7 @@ public static class ServicesExtensions
         collection.AddScoped<IRegisterLocalUserCommand, RegisterLocalUserCommandImpl>();
         collection.AddScoped<ILoginLocalUserCommand, LoginLocalUserCommandImpl>();
         collection.AddScoped<IUpdateApiKeyCommand, UpdateApiKeyCommandImpl>();
+        collection.AddScoped<IOAuthLoginCommand, OAuthLoginCommandImpl>();
         collection.AddScoped<IGenerateDailyTaskReportCommand, GenerateDailyTaskReportCommandImpl>();
         collection.AddScoped<IGetUserSettingsQuery, GetUserSettingsQueryImpl>();
         collection.AddScoped<IUpdateNotificationSettingCommand, UpdateNotificationSettingCommandImpl>();
@@ -79,6 +83,8 @@ public static class ServicesExtensions
         collection.AddScoped<ITimeEntryOpService, TimeEntryOpServiceImpl>();
         collection.AddScoped<IOpInstanceRepository, OpInstanceRepositoryImpl>();
         collection.AddScoped<IOpInstanceService, OpInstanceServiceImpl>();
+        collection.AddScoped<IOAuthService, OAuthServiceImpl>();
+        collection.AddScoped<IRedisCache, RedisCacheImpl>();
         collection.AddScoped<IApiKeyEncryptorService, DataProtectionApiKeyEncryptorImpl>();
         // Scoped: memoiza la credencial de OpenProject por request (ver la clase).
         collection.AddScoped<Infrastructure.Adapters.Http.OpenProjectAuthHeaderProvider>();

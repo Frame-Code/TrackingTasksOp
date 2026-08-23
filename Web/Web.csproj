@@ -73,9 +73,5 @@
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Include="Controllers\Dto\HttpRequest\OpInstanceHttpRequest.cs" />
-    <Compile Include="Controllers\OpInstanceController.cs" />
-  </ItemGroup>
 
 </Project>

@@ -1,6 +1,6 @@
 ﻿namespace Application.Dto.OpInstance;
 
-public record OpInstanceDto(
+public record SaveOpInstanceDto(
     int idInstance,
     string Alias,
     string ClientId,
