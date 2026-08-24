@@ -269,3 +269,54 @@ export async function updateAiApiKey(apiKey) {
         body: JSON.stringify({ apiKey })
     });
 }
+
+// --- Mi cuenta ---
+
+/** Devuelve { qrCodeDataUri, manualKey }. No activa el 2FA todavía. */
+export async function setupTwoFactor() {
+    return apiFetch(`${API}/account/2fa/setup`, { method: 'POST' });
+}
+
+/** Confirma el código y activa el 2FA. Devuelve { recoveryCodes }, que solo se emiten una vez. */
+export async function enableTwoFactor(code) {
+    return apiFetch(`${API}/account/2fa/enable`, {
+        method: 'POST',
+        body: JSON.stringify({ code })
+    });
+}
+
+/** Emite códigos nuevos e invalida los anteriores. Devuelve { recoveryCodes }. */
+export async function regenerateRecoveryCodes(code) {
+    return apiFetch(`${API}/account/2fa/recovery-codes`, {
+        method: 'POST',
+        body: JSON.stringify({ code })
+    });
+}
+
+/** Desvincula la app de autenticación para enrolar otro teléfono. Deja el 2FA desactivado. */
+export async function resetAuthenticator(currentPassword, twoFactorCode) {
+    return apiFetch(`${API}/account/2fa/reset`, {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, twoFactorCode })
+    });
+}
+
+/** twoFactorCode acepta el código de la app o uno de recuperación. */
+export async function changePassword(currentPassword, newPassword, twoFactorCode) {
+    return apiFetch(`${API}/account/password`, {
+        method: 'PUT',
+        body: JSON.stringify({ currentPassword, newPassword, twoFactorCode })
+    });
+}
+
+/** jpegBase64 sin el prefijo "data:". El navegador ya lo redimensionó a 256px. */
+export async function updateAvatar(jpegBase64) {
+    return apiFetch(`${API}/account/avatar`, {
+        method: 'PUT',
+        body: JSON.stringify({ jpegBase64 })
+    });
+}
+
+export async function deleteAvatar() {
+    return apiFetch(`${API}/account/avatar`, { method: 'DELETE' });
+}

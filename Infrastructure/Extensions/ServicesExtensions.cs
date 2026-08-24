@@ -4,6 +4,7 @@ using Application.Ports.Repositories;
 using Application.Ports.Services;
 using Application.Ports.UseCases.Auth;
 using Application.Ports.UseCases.Reports;
+using Application.Ports.UseCases.Account;
 using Application.Ports.UseCases.Settings;
 using Application.Ports.UseCases.Tasks;
 using Application.Ports.UseCases.TimeEntry;
@@ -16,6 +17,7 @@ using Infrastructure.Adapters.Services;
 using Infrastructure.Adapters.Services.Bot;
 using Infrastructure.Adapters.Services.Bot.Actions;
 using Infrastructure.Adapters.UseCases;
+using Infrastructure.Adapters.UseCases.Account;
 using Infrastructure.Adapters.UseCases.Auth;
 using Infrastructure.Adapters.UseCases.Reports;
 using Infrastructure.Adapters.UseCases.Settings;
@@ -76,7 +78,17 @@ public static class ServicesExtensions
         collection.AddScoped<IUpdateTaskPreferencesCommand, UpdateTaskPreferencesCommandImpl>();
         collection.AddScoped<IUpdateAiApiKeyCommand, UpdateAiApiKeyCommandImpl>();
 
+        //Account (contraseña, segundo factor y avatar)
+        collection.AddScoped<ISetupTwoFactorCommand, SetupTwoFactorCommandImpl>();
+        collection.AddScoped<IEnableTwoFactorCommand, EnableTwoFactorCommandImpl>();
+        collection.AddScoped<IRegenerateRecoveryCodesCommand, RegenerateRecoveryCodesCommandImpl>();
+        collection.AddScoped<IResetAuthenticatorCommand, ResetAuthenticatorCommandImpl>();
+        collection.AddScoped<IChangePasswordCommand, ChangePasswordCommandImpl>();
+        collection.AddScoped<IUpdateAvatarCommand, UpdateAvatarCommandImpl>();
+        collection.AddScoped<IGetAvatarQuery, GetAvatarQueryImpl>();
+
         //Services
+        collection.AddScoped<IQrCodeService, QrCodeServiceImpl>();
         collection.AddScoped<IStatusOpService, StatusOpServiceImpl>();
         collection.AddScoped<IProjectOpService, ProjectOpServiceImpl>();
         collection.AddScoped<IActivityOpService, ActivityOpServiceImpl>();

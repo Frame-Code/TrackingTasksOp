@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TrackingTasksOp Bot</title>
+    <script>
+        // Antes de pintar nada: evita el flash de oscuro -> claro al cargar.
+        document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('appTheme') || 'dark');
+    </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
         :root {
@@ -20,6 +24,47 @@
             --hover-bg: rgba(255,255,255,.06);
             --code-bg: #0b0f14;
             --danger: #dc3545;
+            --text-strong: #f0f6fc;
+            --avatar-user-bg: #30363d;
+            --avatar-user-text: #ffffff;
+            --code-text: #f1c40f;
+            --badge-default-bg: rgba(255,255,255,.06);
+            --badge-new: #8ab4ff;
+            --badge-progress: #6edff6;
+            --badge-developed: #75d69c;
+            --badge-testing: #c4b1ff;
+            --badge-hold: #ffd75e;
+            --badge-closed: #adb5bd;
+            --badge-rejected: #ffb066;
+            --badge-testfailed: #ff8a95;
+        }
+
+        /* Tema claro. Los textos de los badges eran pasteles pensados para fondo oscuro:
+           sobre blanco no se leen, asi que cada uno necesita su version oscura. */
+        :root[data-bs-theme="light"] {
+            --bg-page: #ffffff;
+            --bg-container: #f6f8fa;
+            --bg-sidebar: #f6f8fa;
+            --text-main: #1f2328;
+            --text-secondary: #59636e;
+            --user-msg-bg: #eaeef2;
+            --bot-msg-bg: #f6f8fa;
+            --border-color: rgba(0,0,0,.12);
+            --hover-bg: rgba(0,0,0,.05);
+            --code-bg: #f6f8fa;
+            --text-strong: #1f2328;
+            --avatar-user-bg: #d0d7de;
+            --avatar-user-text: #1f2328;
+            --code-text: #953800;
+            --badge-default-bg: rgba(0,0,0,.05);
+            --badge-new: #0a58ca;
+            --badge-progress: #087990;
+            --badge-developed: #0f5132;
+            --badge-testing: #59359a;
+            --badge-hold: #7a5c00;
+            --badge-closed: #495057;
+            --badge-rejected: #8a4310;
+            --badge-testfailed: #b02a37;
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -201,12 +246,12 @@
 
         .avatar { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
         .avatar.bot { background: linear-gradient(135deg,var(--accent-blue),var(--accent-violet)); color:white; }
-        .avatar.user { background: #30363d; color:white; }
+        .avatar.user { background: var(--avatar-user-bg); color: var(--avatar-user-text); }
 
         .message-content { flex:1; line-height:1.7; font-size:.95rem; word-wrap:break-word; }
         .message-content p { margin-bottom:8px; }
         .message-content p:last-child { margin-bottom:0; }
-        .message-content strong { font-weight:600; color:#f0f6fc; }
+        .message-content strong { font-weight:600; color:var(--text-strong); }
 
         .message-content ul { list-style:none; margin:6px 0 10px; padding:0; display:flex; flex-direction:column; gap:2px; }
         .message-content ul li { display:flex; align-items:center; flex-wrap:wrap; gap:4px 10px; padding:6px 10px; border-radius:8px; transition:background .15s; }
@@ -214,7 +259,7 @@
         .message-content ul li .task-label { flex:1 1 200px; min-width:0; word-break:break-word; }
         .message-content ul li .status-badge { margin-left:auto; }
 
-        .message-content .task-list-title { font-size:.93rem; font-weight:600; color:#f0f6fc; margin:2px 0 8px; }
+        .message-content .task-list-title { font-size:.93rem; font-weight:600; color:var(--text-strong); margin:2px 0 8px; }
         .message-content .task-group-header {
             font-size:.72rem; font-weight:600; color:var(--text-secondary);
             text-transform:uppercase; letter-spacing:.06em;
@@ -224,18 +269,18 @@
 
         .status-badge { display:inline-flex; align-items:center; gap:5px; flex-shrink:0; font-size:.72rem; font-weight:500; padding:2px 9px; border-radius:999px; white-space:nowrap; }
         .status-badge .status-dot { width:5px; height:5px; border-radius:50%; background:currentColor; }
-        .status-badge.status-new       { background:rgba(13,110,253,.18);  color:#8ab4ff; }
-        .status-badge.status-progress  { background:rgba(13,202,240,.18);  color:#6edff6; }
-        .status-badge.status-developed { background:rgba(25,135,84,.22);   color:#75d69c; }
-        .status-badge.status-testing   { background:rgba(139,92,246,.20);  color:#c4b1ff; }
-        .status-badge.status-hold      { background:rgba(255,193,7,.20);   color:#ffd75e; }
-        .status-badge.status-closed    { background:rgba(108,117,125,.28); color:#adb5bd; }
-        .status-badge.status-rejected  { background:rgba(253,126,20,.20);  color:#ffb066; }
-        .status-badge.status-testfailed{ background:rgba(220,53,69,.20);   color:#ff8a95; }
-        .status-badge.status-default   { background:rgba(255,255,255,.06); color:var(--text-secondary); }
+        .status-badge.status-new       { background:rgba(13,110,253,.18);  color:var(--badge-new); }
+        .status-badge.status-progress  { background:rgba(13,202,240,.18);  color:var(--badge-progress); }
+        .status-badge.status-developed { background:rgba(25,135,84,.22);   color:var(--badge-developed); }
+        .status-badge.status-testing   { background:rgba(139,92,246,.20);  color:var(--badge-testing); }
+        .status-badge.status-hold      { background:rgba(255,193,7,.20);   color:var(--badge-hold); }
+        .status-badge.status-closed    { background:rgba(108,117,125,.28); color:var(--badge-closed); }
+        .status-badge.status-rejected  { background:rgba(253,126,20,.20);  color:var(--badge-rejected); }
+        .status-badge.status-testfailed{ background:rgba(220,53,69,.20);   color:var(--badge-testfailed); }
+        .status-badge.status-default   { background:var(--badge-default-bg); color:var(--text-secondary); }
 
-        .message-content h4 { font-size:1rem; font-weight:600; margin:12px 0 5px; color:#f0f6fc; }
-        .message-content code { font-family:Consolas,monospace; font-size:.83em; background:var(--code-bg); padding:1px 5px; border-radius:4px; color:#f1c40f; }
+        .message-content h4 { font-size:1rem; font-weight:600; margin:12px 0 5px; color:var(--text-strong); }
+        .message-content code { font-family:Consolas,monospace; font-size:.83em; background:var(--code-bg); padding:1px 5px; border-radius:4px; color:var(--code-text); }
         .message-content pre { font-family:Consolas,monospace; font-size:.83em; background:var(--code-bg); padding:10px 12px; border-radius:8px; overflow-x:auto; margin:8px 0; }
         .message-content pre code { background:none; padding:0; color:var(--text-main); }
 
@@ -287,7 +332,7 @@
         #mic-btn:disabled { color:var(--text-secondary); opacity:.5; cursor:not-allowed; }
         @keyframes pulse-rec { 0%,100%{box-shadow:0 0 0 0 rgba(242,139,130,.4);} 50%{box-shadow:0 0 0 7px rgba(242,139,130,0);} }
 
-        .footer-copyright { text-align:center; font-size:.72rem; color:#80868b; margin-top:10px; }
+        .footer-copyright { text-align:center; font-size:.72rem; color:var(--text-secondary); margin-top:10px; }
 
         @media (max-width:640px) { #sidebar { display:none; } }
     </style>

@@ -20,6 +20,7 @@ public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> opt
     public DbSet<OAuthCredential> OAuthCredentials { get; set; } = null!;
     public DbSet<AuthAuditLog> AuthAuditLogs { get; set; } = null!;
     public DbSet<UserNotificationSetting> UserNotificationSettings { get; set; } = null!;
+    public DbSet<UserAvatar> UserAvatars { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
