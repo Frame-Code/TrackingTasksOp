@@ -2,6 +2,7 @@
 using Application.Ports.Auth;
 using Application.Ports.Services;
 using Infrastructure.DataAccess.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Web.Controllers.Dto.HttpRequest;
@@ -31,10 +32,16 @@ public class OpInstanceController(
         var cipher = apiKeyEncryptor.Protect(request.ClientSecret);
         var dto = new SaveOpInstanceDto(appUser.OpenProjectInstanceId, request.Alias, request.ClientId, cipher);
         await opInstanceService.Save(dto);
-        return Ok();
+        return NoContent();
     }
 
+    /// <summary>
+    /// Público: la página de login la usa (sin sesión todavía) para saber qué instancias
+    /// tienen OAuth conectado y ofrecer el botón "OAuth con OpenProject". Nunca expone
+    /// clientId/clientSecret (ver ListsOpInstanceDto).
+    /// </summary>
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> Lists()
     {
         var instances = await opInstanceService.Lists();

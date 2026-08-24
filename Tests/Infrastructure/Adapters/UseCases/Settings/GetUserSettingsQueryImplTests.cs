@@ -1,5 +1,6 @@
 using Application.Dto.Auth;
 using Application.Ports.Auth;
+using Application.Ports.Services;
 using Infrastructure.Adapters.UseCases.Settings;
 using Infrastructure.DataAccess;
 using Infrastructure.DataAccess.Entities;
@@ -42,9 +43,10 @@ public class GetUserSettingsQueryImplTests
     }
 
     private readonly Mock<UserManager<ApplicationUser>> _userManagerMock = BuildUserManagerMock();
+    private readonly Mock<IUserOpService> _userOpServiceMock = new();
 
     private GetUserSettingsQueryImpl BuildQuery(TrackingTasksDbContext db, CurrentUser currentUser) => new(
-        db, _userManagerMock.Object, currentUser);
+        db, _userManagerMock.Object, _userOpServiceMock.Object, currentUser);
 
     [Fact]
     public async Task Execute_NoAuthenticatedUser_ThrowsUnauthorizedAccessException()
@@ -113,5 +115,18 @@ public class GetUserSettingsQueryImplTests
         Assert.False(result.AddRandomSlackTime);
         Assert.Equal([1, 3], result.DefaultStatusIds);
         Assert.True(result.HasCustomAiApiKey);
+    }
+
+    [Fact]
+    public async Task Execute_UserIsAdminInOpenProject_ReturnsIsAdminTrue()
+    {
+        var db = BuildDbContext(nameof(Execute_UserIsAdminInOpenProject_ReturnsIsAdminTrue));
+        var appUser = new ApplicationUser { Id = "user-1", Email = "user@test.com", OpenProjectUserId = 7 };
+        _userManagerMock.Setup(x => x.FindByIdAsync("user-1")).ReturnsAsync(appUser);
+        _userOpServiceMock.Setup(x => x.IsAdmin(7)).ReturnsAsync(true);
+
+        var result = await BuildQuery(db, new FakeCurrentUser("user-1", "http://op.example.com")).Execute();
+
+        Assert.True(result.IsAdmin);
     }
 }

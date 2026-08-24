@@ -1,4 +1,5 @@
 ﻿using Application.Dto.Auth;
+using Application.Ports.Auth;
 using Application.Ports.Services;
 using Application.Ports.UseCases.Auth;
 using Infrastructure.DataAccess.Entities;
@@ -23,6 +24,7 @@ public class AuthController(
     IOAuthLoginCommand oAuthLoginCommand,
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
+    CurrentUser currentUser,
     [FromKeyedServices(KeyedServicesNames.OpenProjectUrlService)]
     BaseUrlService urlService) : ControllerBase
 {
@@ -153,6 +155,32 @@ public class AuthController(
         var principal = await signInManager.CreateUserPrincipalAsync(appUser);
         await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal);
 
-        return Ok(response.Data);
+        // Este endpoint lo pega el navegador con una redirección completa (es el redirect_uri
+        // de OpenProject), no un fetch del frontend: no tiene sentido devolver JSON acá, nadie
+        // lo lee por JS. Se manda a una página puente que llama a GET /auth/me (con la cookie
+        // recién emitida) para poblar sessionStorage.currentUser antes de entrar a la app.
+        return Redirect("/oauth-callback.html");
+    }
+
+    /// <summary>
+    /// "Quién soy": lo usa la página puente del callback OAuth para poblar sessionStorage.currentUser
+    /// con la cookie recién emitida por SignInAsync (no hay otra forma de obtener esos datos ahí,
+    /// porque el callback es una navegación de página completa, no un fetch del frontend).
+    /// </summary>
+    [HttpGet("me")]
+    public async Task<IActionResult> Me()
+    {
+        var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Usuario no autenticado.");
+        var appUser = await userManager.FindByIdAsync(userId)
+            ?? throw new ApplicationException($"User {userId} not found");
+
+        return Ok(new AuthenticatedUserResponse
+        {
+            UserId = appUser.Id,
+            Email = appUser.Email!,
+            Name = appUser.UserName!,
+            OpenProjectInstanceUrl = appUser.OpenProjectInstanceBaseUrl,
+            OpenProjectInstanceId = appUser.OpenProjectInstanceId
+        });
     }
 }

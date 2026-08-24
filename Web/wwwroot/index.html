@@ -180,8 +180,11 @@
                             <a id="sidebarInstanceUrl" class="d-block text-break" href="#" target="_blank" rel="noopener"
                                title="Abrir tu instancia de OpenProject"></a>
                         </p>
-                        <button id="apiKeyBtn" type="button" class="btn btn-sm btn-outline-secondary w-100" title="Actualizar API key de OpenProject">
+                        <button id="apiKeyBtn" type="button" class="btn btn-sm btn-outline-secondary w-100 mb-2" title="Actualizar API key de OpenProject">
                             <i class="bi bi-key me-1"></i>Actualizar API Key
+                        </button>
+                        <button id="oauthConnectBtn" type="button" class="btn btn-sm btn-outline-secondary w-100" title="Conectar OAuth para tu organización (requiere admin en OpenProject)">
+                            <i class="bi bi-arrow-left-right me-1"></i>Conectar OpenProject
                         </button>
                     </div>
                 </div>
@@ -579,6 +582,46 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" id="confirmApiKeyBtn" class="btn btn-warning px-4">
                         <i class="bi bi-check-lg me-1"></i>Actualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Modal: Conectar OAuth ── -->
+    <div class="modal fade" id="oauthConnectModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title">
+                        <i class="bi bi-arrow-left-right me-2 text-primary"></i>Conectar OAuth
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">
+                        Permite que cualquier usuario de tu organización inicie sesión con OpenProject
+                        en vez de registrar su API key manualmente. Requiere ser admin en OpenProject.
+                        Se crea en Administration → Authentication → OAuth applications.
+                    </p>
+                    <div id="oauthConnectError" class="alert alert-danger py-2 small d-none"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Alias</label>
+                        <input type="text" id="oauthConnectAlias" class="form-control" placeholder="Nombre de tu organización" autocomplete="off">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Client ID</label>
+                        <input type="text" id="oauthConnectClientId" class="form-control" autocomplete="off">
+                    </div>
+                    <div>
+                        <label class="form-label fw-medium">Client Secret</label>
+                        <input type="password" id="oauthConnectClientSecret" class="form-control" autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="confirmOAuthConnectBtn" class="btn btn-primary px-4">
+                        <i class="bi bi-check-lg me-1"></i>Conectar
                     </button>
                 </div>
             </div>

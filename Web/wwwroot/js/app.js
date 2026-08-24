@@ -8,7 +8,7 @@ import { fetchProjects, fetchWorkPackages, fetchActivities, fetchTask,
          patchWorkPackageDates, postCancelSession,
          downloadDailyTaskReport, fetchReportPreview, updateApiKey,
          postPauseSession, postResumeSession, postUploadPending,
-         postLogTime, fetchUserSettings } from './api.js';
+         postLogTime, fetchUserSettings, connectOAuthInstance } from './api.js';
 import { updateNavbar, renderProjectSelect, renderCards, renderStatusFilters,
          renderHistoryLoading, renderHistoryContent, renderHistoryError,
          renderActivitiesSelect, renderReportPreview } from './render.js';
@@ -961,6 +961,59 @@ function bindConfirmApiKeyButton() {
     });
 }
 
+// ── Modal: Conectar OAuth ─────────────────────────────────────────────────────
+
+function openOAuthConnectModal() {
+    document.getElementById('oauthConnectAlias').value = '';
+    document.getElementById('oauthConnectClientId').value = '';
+    document.getElementById('oauthConnectClientSecret').value = '';
+    document.getElementById('oauthConnectError').classList.add('d-none');
+
+    const confirmBtn = document.getElementById('confirmOAuthConnectBtn');
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Conectar';
+
+    new bootstrap.Modal(document.getElementById('oauthConnectModal')).show();
+}
+
+function bindOAuthConnectButton() {
+    document.getElementById('oauthConnectBtn').addEventListener('click', openOAuthConnectModal);
+}
+
+function bindConfirmOAuthConnectButton() {
+    document.getElementById('confirmOAuthConnectBtn').addEventListener('click', async () => {
+        const alias = document.getElementById('oauthConnectAlias').value.trim();
+        const clientId = document.getElementById('oauthConnectClientId').value.trim();
+        const clientSecret = document.getElementById('oauthConnectClientSecret').value.trim();
+        const errorBox = document.getElementById('oauthConnectError');
+        errorBox.classList.add('d-none');
+
+        if (!alias || !clientId || !clientSecret) {
+            errorBox.textContent = 'Completa alias, client ID y client secret.';
+            errorBox.classList.remove('d-none');
+            return;
+        }
+
+        const btn = document.getElementById('confirmOAuthConnectBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Conectando...';
+
+        try {
+            await connectOAuthInstance(alias, clientId, clientSecret);
+            bootstrap.Modal.getInstance(document.getElementById('oauthConnectModal'))?.hide();
+            showToast('OpenProject conectado correctamente. Ya se puede iniciar sesión usando el mismo OpenProject!.', 'success');
+        } catch (e) {
+            errorBox.textContent = e.message === 'Error 403'
+                ? 'No tienes permisos de administrador en OpenProject para hacer esto.'
+                : `Error al conectar: ${e.message}`;
+            errorBox.classList.remove('d-none');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Conectar';
+        }
+    });
+}
+
 function bindLoadButton() {
     document.getElementById('loadBtn').addEventListener('click', () => {
         const projectId = document.getElementById('projectSelect').value || null;
@@ -1018,6 +1071,8 @@ bindPreviewReportButton();
 bindReportPreviewButtons();
 bindApiKeyButton();
 bindConfirmApiKeyButton();
+bindOAuthConnectButton();
+bindConfirmOAuthConnectButton();
 bindStatusFilterEvents();
 bindSearchEvents();
 bindPaginationEvents();

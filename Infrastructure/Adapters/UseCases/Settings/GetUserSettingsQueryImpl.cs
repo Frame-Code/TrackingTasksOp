@@ -1,5 +1,6 @@
 using Application.Dto.Auth;
 using Application.Ports.Auth;
+using Application.Ports.Services;
 using Application.Ports.UseCases.Settings;
 using Infrastructure.DataAccess;
 using Infrastructure.DataAccess.Entities;
@@ -11,6 +12,7 @@ namespace Infrastructure.Adapters.UseCases.Settings;
 public class GetUserSettingsQueryImpl(
     TrackingTasksDbContext context,
     UserManager<ApplicationUser> userManager,
+    IUserOpService userOpService,
     CurrentUser currentUser) : IGetUserSettingsQuery
 {
     public async Task<UserSettingsResponse> Execute(CancellationToken ct = default)
@@ -20,6 +22,8 @@ public class GetUserSettingsQueryImpl(
 
         var appUser = await userManager.FindByIdAsync(userId)
             ?? throw new ApplicationException($"User {userId} not found while loading settings");
+
+        var isAdmin = await userOpService.IsAdmin(appUser.OpenProjectUserId);
 
         var savedSettings = await context.Set<UserNotificationSetting>()
             .Where(s => s.UserId == userId)
@@ -40,7 +44,8 @@ public class GetUserSettingsQueryImpl(
             SkipCancelConfirmation = appUser.SkipCancelConfirmation,
             AddRandomSlackTime = appUser.AddRandomSlackTime,
             DefaultStatusIds = ParseStatusIds(appUser.DefaultStatusFilterIds),
-            HasCustomAiApiKey = !string.IsNullOrEmpty(appUser.EncryptedGroqApiKey)
+            HasCustomAiApiKey = !string.IsNullOrEmpty(appUser.EncryptedGroqApiKey),
+            IsAdmin = isAdmin
         };
     }
 

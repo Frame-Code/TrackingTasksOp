@@ -32,7 +32,11 @@ public class OAuthServiceImpl(
         if (instance?.ClientId == null || instance?.ClientSecret == null)
             throw new OpInstanceNotFoundException("Op Instance Not Found Or Not available");
         
-        return $"{instance.BaseUrl}/oauth/authorize?response_type=code&client_id={instance.ClientId}&redirect_uri={settings.Value.RedirectUri}&scope=&prompt=consent";
+        return $"{instance.BaseUrl}/oauth/authorize?response_type=code" +
+               $"&client_id={Uri.EscapeDataString(instance.ClientId)}" +
+               $"&redirect_uri={Uri.EscapeDataString(settings.Value.RedirectUri)}" +
+               $"&state={Uri.EscapeDataString(state)}" +
+               "&scope=&prompt=consent";
     }
 
     public async Task<(User User, Token Token, int InstanceId)> OAuthCallback(string code, string state)

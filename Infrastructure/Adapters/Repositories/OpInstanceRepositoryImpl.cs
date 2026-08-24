@@ -2,7 +2,6 @@
 using Application.Ports.Repositories;
 using Infrastructure.DataAccess;
 using Infrastructure.Exceptions;
-using Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -38,11 +37,23 @@ public class OpInstanceRepositoryImpl(
             throw new OpInstanceNotFoundException("Error fatal: no se encontró la instancia de openproject, por favor intente de nuevo");
         }
 
+        // El alias es como el usuario busca su organización en el selector de login OAuth:
+        // si dos orgs comparten alias, no hay forma de distinguirlas ahí. Se excluye la propia
+        // instancia para no bloquear que un admin la vuelva a conectar con el mismo alias.
+        var aliasTaken = context.OpenProjectInstances.Any(x =>
+            x.Id != dto.idInstance && x.Alias != null && x.Alias.ToLower() == dto.Alias.ToLower());
+        if (aliasTaken)
+            throw new DuplicateAliasException($"Ya existe una organización conectada con el alias '{dto.Alias}'. Elegí uno distinto.");
+
         instance.Alias = dto.Alias;
         instance.EncryptedOAuthClientSecret = dto.ClientSecret;
         instance.OAuthClientId = dto.ClientId;
         instance.OAuthConnectedAt = DateTime.Now;
-        await context.AddOrUpdateAsync(instance);
+
+        // El DbContext usa NoTracking por default (ver DbContextExtensions.AddDbContext): la
+        // entidad que devolvió FirstOrDefault no está siendo vigilada, así que sin este Update
+        // explícito SaveChangesAsync no detecta ningún cambio y no escribe nada.
+        context.OpenProjectInstances.Update(instance);
         await context.SaveChangesAsync();
     }
 }

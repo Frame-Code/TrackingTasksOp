@@ -276,6 +276,10 @@ function renderAccountFields() {
 
     document.getElementById('sidebarUserEmail').textContent = store.userSettings?.email || '';
     document.getElementById('sidebarAvatarInitials').textContent = initials(store.userSettings?.email);
+
+    // Solo admins de OpenProject pueden conectar OAuth para la organización (el backend
+    // también lo valida — esto es nada más para no ofrecer una acción que va a rebotar).
+    document.getElementById('oauthConnectBtn').classList.toggle('d-none', !store.userSettings?.isAdmin);
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────────

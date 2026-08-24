@@ -186,6 +186,14 @@ export async function updateApiKey(apiKey) {
     });
 }
 
+/** Conecta OAuth para la organización del usuario autenticado. Requiere ser admin en OpenProject. */
+export async function connectOAuthInstance(alias, clientId, clientSecret) {
+    return apiFetch(`${API}/opinstance`, {
+        method: 'POST',
+        body: JSON.stringify({ alias, clientId, clientSecret })
+    });
+}
+
 export async function postPauseSession(workPackageId, uploadNow = true) {
     return apiFetch(`${API}/task/pause_session`, {
         method: 'POST',

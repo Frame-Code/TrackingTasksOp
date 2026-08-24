@@ -62,7 +62,10 @@ public class OAuthLoginCommandImpl(
             var credential = await context.OAuthCredentials.FirstOrDefaultAsync(c => c.UserId == appUser.Id, ct);
             if (credential is null)
             {
-                credential = new OAuthCredential { UserId = appUser.Id, ApplicationUser = appUser };
+                // Solo el FK escalar: setear también la navegación ApplicationUser hace que
+                // EF, bajo NoTracking global, trate a appUser como una entidad nueva a insertar
+                // (aunque ya exista o ya esté trackeado desde CreateAsync) y choque con la PK.
+                credential = new OAuthCredential { UserId = appUser.Id };
                 context.OAuthCredentials.Add(credential);
             }
 

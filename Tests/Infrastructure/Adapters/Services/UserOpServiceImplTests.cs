@@ -89,4 +89,53 @@ public class UserOpServiceImplTests
 
         Assert.Empty(users);
     }
+
+    [Fact]
+    public async Task IsAdmin_UserIsAdmin_ReturnsTrue()
+    {
+        var (service, getRequest) = BuildService("""{ "id": 5, "name": "Admin User", "admin": true }""");
+
+        var isAdmin = await service.IsAdmin(5);
+
+        Assert.True(isAdmin);
+        Assert.Equal("/api/v3/users/5", getRequest()!.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task IsAdmin_UserIsNotAdmin_ReturnsFalse()
+    {
+        var (service, _) = BuildService("""{ "id": 5, "name": "Regular User", "admin": false }""");
+
+        var isAdmin = await service.IsAdmin(5);
+
+        Assert.False(isAdmin);
+    }
+
+    [Fact]
+    public async Task IsAdmin_OnNotFound_ReturnsFalse()
+    {
+        var (service, _) = BuildService("{}", HttpStatusCode.NotFound);
+
+        var isAdmin = await service.IsAdmin(999);
+
+        Assert.False(isAdmin);
+    }
+
+    [Fact]
+    public async Task IsAdmin_OnForbidden_ReturnsFalse()
+    {
+        var (service, _) = BuildService("{}", HttpStatusCode.Forbidden);
+
+        var isAdmin = await service.IsAdmin(5);
+
+        Assert.False(isAdmin);
+    }
+
+    [Fact]
+    public async Task IsAdmin_OnServerError_Throws()
+    {
+        var (service, _) = BuildService("error", HttpStatusCode.InternalServerError);
+
+        await Assert.ThrowsAsync<Exception>(() => service.IsAdmin(5));
+    }
 }
