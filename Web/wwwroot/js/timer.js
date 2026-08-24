@@ -4,6 +4,7 @@ import { getActiveSession, store, NOTIFICATION_TYPES } from './state.js';
 import { formatDuration } from './helpers.js';
 import { updateNavbar } from './render.js';
 import { fetchPendingSummary } from './api.js';
+import { refreshPendingBadge, openPendingSessionsModal } from './pending-sessions.js';
 
 let timerInterval   = null;
 let notifInterval   = null;
@@ -60,14 +61,19 @@ async function checkPendingSessions() {
 
     try {
         const summary = await fetchPendingSummary();
+        refreshPendingBadge(summary); // reusa el summary: sin fetch adicional
         if (!summary || summary.count === 0) return;
 
-        new Notification('📤 Sesiones sin subir — TrackingTasksOp', {
+        const notif = new Notification('📤 Sesiones sin subir — TrackingTasksOp', {
             body: `Tienes ${summary.count} sesión(es) sin enviar a OpenProject (${summary.totalHours} h en total).`,
             icon: '/favicon.ico',
             tag:  NOTIFICATION_TYPES.PENDING_UPLOAD_REMINDER, // reemplaza la anterior en vez de apilarlas
             renotify: true
         });
+        notif.onclick = () => {
+            window.focus();
+            openPendingSessionsModal();
+        };
     } catch {
         // Un fallo de red no debe interrumpir al usuario; se reintenta en el próximo ciclo.
     }

@@ -10,6 +10,7 @@ import { requireAuth } from './auth-guard.js';
 import { store } from './state.js';
 import { initials } from './avatar.js';
 import { renderSettingsFields, bindSettingsFields } from './settings-fields.js';
+import { refreshPendingBadge } from './pending-sessions.js';
 
 requireAuth();
 
@@ -462,8 +463,11 @@ el('saveOpApiKeyBtn').addEventListener('click', onSaveOpApiKey);
 el('oauthConnectBtn').addEventListener('click', onConnectOAuth);
 el('saveAiApiKeyBtn').addEventListener('click', onSaveAiKey);
 el('clearAiApiKeyBtn').addEventListener('click', onClearAiKey);
+// El modal en sí solo existe en index.html (esta página no carga Bootstrap JS).
+el('viewPendingSessionsBtn').addEventListener('click', () => { location.href = '/?openPending=1'; });
 
 bindSettingsFields();
+refreshPendingBadge();
 
 (async () => {
     try {

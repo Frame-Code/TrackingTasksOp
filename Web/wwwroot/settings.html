@@ -297,6 +297,7 @@
         }
         .badge-on { background: rgba(46, 160, 67, .15); color: var(--success); }
         .badge-off { background: rgba(210, 153, 34, .15); color: var(--warning); }
+        .badge-count { background: #dc3545; color: #fff; margin-left: 0; }
 
         .alert {
             border-radius: 6px; padding: 10px 12px; font-size: .82rem;
@@ -666,6 +667,21 @@
                 </p>
                 <div class="checks" id="defaultStatusFilterChecks"></div>
             </div>
+
+            <div class="card">
+                <div class="row-field">
+                    <label class="row-label">
+                        <strong>Sesiones sin enviar</strong>
+                        <span>Tiempo pausado y guardado solo en local, sin subir a OpenProject</span>
+                    </label>
+                    <span class="row-control" style="width:auto; display:flex; align-items:center; gap:8px;">
+                        <span class="badge badge-count js-pending-badge" id="pendingBadgeSettings" style="display:none"></span>
+                        <button type="button" id="viewPendingSessionsBtn" class="btn">
+                            <i class="bi bi-cloud-upload"></i> Ver sesiones
+                        </button>
+                    </span>
+                </div>
+            </div>
         </section>
 
         <!-- ── OpenProject ── -->
@@ -710,6 +726,10 @@
                     en vez de registrar su API key a mano. Se crea en OpenProject:
                     Administration → Authentication → OAuth applications.
                 </p>
+                <div class="field">
+                    <label for="oauthCallbackUrl">Redirect URI (poné esto en OpenProject)</label>
+                    <input type="text" id="oauthCallbackUrl" readonly onclick="this.select()">
+                </div>
                 <div class="field">
                     <label for="oauthConnectAlias">Alias</label>
                     <input type="text" id="oauthConnectAlias" autocomplete="off" placeholder="Nombre de tu organización">
