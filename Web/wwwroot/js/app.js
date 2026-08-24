@@ -14,6 +14,7 @@ import { updateNavbar, renderProjectSelect, renderCards, renderStatusFilters,
          renderActivitiesSelect, renderReportPreview } from './render.js';
 import { startTimer, stopTimer, startPendingReminder } from './timer.js';
 import { renderSidebarAvatar } from './avatar.js';
+import { bindPendingSessionsModal, openPendingSessionsModal, refreshPendingBadge } from './pending-sessions.js';
 
 /** Cuenta en la barra superior: correo y foto (o iniciales si no cargó ninguna). */
 function renderTopbarAccount() {
@@ -274,6 +275,7 @@ async function handlePauseSession(wpId, uploadNow) {
         renderCards();
         const msg = uploadNow ? ' Tiempo subido a OpenProject.' : ' Tiempo guardado localmente.';
         showToast(`Sesión pausada.${msg}`, 'warning');
+        if (!uploadNow) refreshPendingBadge();
     } catch (e) {
         showToast(`Error al pausar: ${e.message}`, 'danger');
     }
@@ -440,6 +442,7 @@ async function handleUploadPending(wpId, btn) {
 
     showToast(okMsg, uploaded > 0 ? 'success' : 'info');
     btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Subido';
+    if (uploaded > 0) refreshPendingBadge();
 
     try {
         renderHistoryContent(await fetchTask(wpId));
@@ -980,6 +983,7 @@ bindPauseModalButtons();
 bindCancelSessionModal();
 bindHistoryModalEvents();
 bindLogTimeModal();
+bindPendingSessionsModal();
 
 // El sidebar avisa cuando cambia algo que altera qué tareas trae la página (por ahora,
 // el tamaño de página). Vuelve a la primera para no quedar en una página inexistente.
@@ -990,6 +994,16 @@ document.addEventListener('tasks:reload', () => {
 
 loadProjects();
 loadStatuses();
+
+// Fuera del camino crítico a propósito: el grid de tareas ya se está cargando arriba,
+// esto solo pinta un badge y puede resolver después sin que nadie lo note.
+refreshPendingBadge();
+
+// Entrada desde settings.html, que no tiene el modal (esa página no carga Bootstrap JS).
+if (new URLSearchParams(location.search).get('openPending')) {
+    history.replaceState(null, '', location.pathname);
+    openPendingSessionsModal();
+}
 
 // Los recordatorios dependen de las preferencias guardadas (intervalo, activado/desactivado
 // por tipo): hay que esperar a que carguen para no arrancarlos con los valores por defecto

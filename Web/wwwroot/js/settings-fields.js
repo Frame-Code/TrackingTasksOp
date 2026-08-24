@@ -175,6 +175,10 @@ function renderInstanceUrl() {
     // Solo admins de OpenProject pueden conectar OAuth para la organización (el backend
     // también lo valida — esto es nada más para no ofrecer una acción que va a rebotar).
     document.getElementById('oauthConnectSection').classList.toggle('hidden', !store.userSettings?.isAdmin);
+
+    // La redirect_uri es fija por deployment (mismo origen que sirve esta página, ruta fija
+    // en AuthController) — no hace falta pedirla al backend.
+    document.getElementById('oauthCallbackUrl').value = `${window.location.origin}/api/v1/auth/oauth/callback`;
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────────

@@ -19,6 +19,7 @@ public class TaskController(
     IResumeTaskCommand resumeTaskCommand,
     IUploadPendingSessionsCommand uploadPendingSessionsCommand,
     IGetPendingSessionsSummaryQuery getPendingSessionsSummaryQuery,
+    IGetPendingSessionsListQuery getPendingSessionsListQuery,
     ILogTimeCommand logTimeCommand,
     ITaskRepository taskRepository,
     CurrentUser currentUser
@@ -84,6 +85,16 @@ public class TaskController(
     public async Task<ActionResult<PendingSessionsSummaryResponse>> GetPendingSummary(CancellationToken ct)
     {
         return await getPendingSessionsSummaryQuery.Execute(ct);
+    }
+
+    /// <summary>
+    /// Detalle por tarea de las sesiones cerradas sin subir a OpenProject, para el modal
+    /// de "sesiones sin enviar".
+    /// </summary>
+    [HttpGet("pending_sessions")]
+    public async Task<ActionResult<List<PendingSessionTaskRow>>> GetPendingSessions(CancellationToken ct)
+    {
+        return await getPendingSessionsListQuery.Execute(ct);
     }
 
     [HttpGet("{workPackageId:int}")]

@@ -243,6 +243,11 @@ export async function fetchPendingSummary() {
     return apiFetch(`${API}/task/pending_summary`);
 }
 
+/** Detalle por tarea de las sesiones cerradas sin subir: [{ workPackageId, taskName, projectName, hours }]. */
+export async function fetchPendingSessions() {
+    return apiFetch(`${API}/task/pending_sessions`);
+}
+
 /** Preferencias del usuario: notificaciones por tipo, actividad por defecto, etc. */
 export async function fetchUserSettings() {
     return apiFetch(`${API}/settings`);
