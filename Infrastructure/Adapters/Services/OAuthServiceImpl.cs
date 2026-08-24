@@ -49,12 +49,8 @@ public class OAuthServiceImpl(
         if (instance?.ClientId == null || instance?.ClientSecret == null)
             throw new OpInstanceNotFoundException("Op Instance Not Found Or Not available");
 
-        var client = clientFactory.CreateClient(KeyedServicesNames.OpenProjectValidationHttpClientName);
-        client.BaseAddress = new Uri(instance.BaseUrl.TrimEnd('/'));
-        client.Timeout = TimeSpan.FromSeconds(20);
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-        var tokenRequestBody = new FormUrlEncodedContent(new Dictionary<string, string>
+        var client = CreateOpenProjectClient(instance.BaseUrl);
+        var token = await ExchangeTokenAsync(client, new Dictionary<string, string>
         {
             ["grant_type"] = "authorization_code",
             ["client_id"] = instance.ClientId,
@@ -62,14 +58,6 @@ public class OAuthServiceImpl(
             ["code"] = code,
             ["redirect_uri"] = settings.Value.RedirectUri
         });
-        var response = await client.PostAsync("/oauth/token", tokenRequestBody);
-
-        if (!response.IsSuccessStatusCode)
-            throw new OpenProjectRequestException($"OpenProject respondió {(int)response.StatusCode}");
-
-        var body = await response.Content.ReadAsStringAsync();
-        var token = JsonSerializer.Deserialize<Token>(body)
-            ?? throw new InvalidOperationException("No se pudo deserializar la respuesta de /oauth/token");
 
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
         var userResponse = await client.GetAsync("/api/v3/users/me");
@@ -82,5 +70,61 @@ public class OAuthServiceImpl(
             ?? throw new InvalidOperationException("No se pudo deserializar la respuesta de /api/v3/users/me");
 
         return (opUser, token, cacheState);
+    }
+
+    public async Task<Token> RefreshToken(string refreshToken, int instanceId)
+    {
+        var instance = await opInstanceService.GetOpInstance(instanceId);
+        if (instance?.ClientId == null || instance?.ClientSecret == null)
+            throw new OpInstanceNotFoundException("Op Instance Not Found Or Not available");
+
+        var client = CreateOpenProjectClient(instance.BaseUrl);
+        return await ExchangeTokenAsync(client, new Dictionary<string, string>
+        {
+            ["grant_type"] = "refresh_token",
+            ["refresh_token"] = refreshToken,
+            ["client_id"] = instance.ClientId,
+            ["client_secret"] = encryptorService.UnProtect(instance.ClientSecret)
+        });
+    }
+
+    public async Task RevokeToken(string accessToken, int instanceId)
+    {
+        var instance = await opInstanceService.GetOpInstance(instanceId);
+        if (instance?.ClientId == null || instance?.ClientSecret == null)
+            return; // La org ya desconectó OAuth: no hay contra qué revocar.
+
+        var client = CreateOpenProjectClient(instance.BaseUrl);
+        var body = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["token"] = accessToken,
+            ["client_id"] = instance.ClientId,
+            ["client_secret"] = encryptorService.UnProtect(instance.ClientSecret)
+        });
+
+        // RFC 7009: /oauth/revoke devuelve 200 tanto si el token era válido como si no —
+        // no hay nada útil que chequear en la respuesta.
+        await client.PostAsync("/oauth/revoke", body);
+    }
+
+    private HttpClient CreateOpenProjectClient(string baseUrl)
+    {
+        var client = clientFactory.CreateClient(KeyedServicesNames.OpenProjectValidationHttpClientName);
+        client.BaseAddress = new Uri(baseUrl.TrimEnd('/'));
+        client.Timeout = TimeSpan.FromSeconds(20);
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        return client;
+    }
+
+    private static async Task<Token> ExchangeTokenAsync(HttpClient client, Dictionary<string, string> formParams)
+    {
+        var response = await client.PostAsync("/oauth/token", new FormUrlEncodedContent(formParams));
+
+        if (!response.IsSuccessStatusCode)
+            throw new OpenProjectRequestException($"OpenProject respondió {(int)response.StatusCode}");
+
+        var body = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<Token>(body)
+            ?? throw new InvalidOperationException("No se pudo deserializar la respuesta de /oauth/token");
     }
 }

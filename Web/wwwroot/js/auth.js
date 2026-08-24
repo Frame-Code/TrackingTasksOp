@@ -16,6 +16,16 @@ const loginForm    = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
 const authAlert    = document.getElementById('authAlert');
 
+// ── Aviso de sesión expirada (ej. falló el refresh de OAuth) ──────────────────
+// apiFetch guarda acá el motivo antes de redirigir a este login — sin esto, el
+// usuario solo veía que lo desloguearon, sin ninguna explicación de por qué.
+
+const authNotice = sessionStorage.getItem('authNotice');
+if (authNotice) {
+    sessionStorage.removeItem('authNotice');
+    showAlert(authNotice, 'warning');
+}
+
 // ── Cambio de tabs ────────────────────────────────────────────────────────────
 
 function switchTab(tab) {

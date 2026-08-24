@@ -69,6 +69,7 @@ public static class ServicesExtensions
         collection.AddScoped<ILoginLocalUserCommand, LoginLocalUserCommandImpl>();
         collection.AddScoped<IUpdateApiKeyCommand, UpdateApiKeyCommandImpl>();
         collection.AddScoped<IOAuthLoginCommand, OAuthLoginCommandImpl>();
+        collection.AddScoped<IRevokeOAuthSessionCommand, RevokeOAuthSessionCommandImpl>();
         collection.AddScoped<IGenerateDailyTaskReportCommand, GenerateDailyTaskReportCommandImpl>();
         collection.AddScoped<IGetUserSettingsQuery, GetUserSettingsQueryImpl>();
         collection.AddScoped<IUpdateNotificationSettingCommand, UpdateNotificationSettingCommandImpl>();
@@ -88,6 +89,8 @@ public static class ServicesExtensions
         collection.AddScoped<IApiKeyEncryptorService, DataProtectionApiKeyEncryptorImpl>();
         // Scoped: memoiza la credencial de OpenProject por request (ver la clase).
         collection.AddScoped<Infrastructure.Adapters.Http.OpenProjectAuthHeaderProvider>();
+        // Singleton a propósito: el lock de refresh de OAuth tiene que sobrevivir entre requests.
+        collection.AddSingleton<Infrastructure.Adapters.Http.OAuthRefreshLock>();
         // Scoped: acumula los tiempos del request para la cabecera Server-Timing.
         collection.AddScoped<Infrastructure.Adapters.Http.RequestTimings>();
         collection.AddScoped<IApiKeyValidatorService, ApiKeyValidatorServiceImpl>();

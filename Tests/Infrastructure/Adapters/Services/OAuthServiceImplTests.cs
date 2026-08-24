@@ -198,4 +198,76 @@ public class OAuthServiceImplTests
         Assert.Equal("Bearer", userRequest.Headers.Authorization!.Scheme);
         Assert.Equal("at-123", userRequest.Headers.Authorization!.Parameter);
     }
+
+    // ── RefreshToken ────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RefreshToken_HappyPath_ReturnsNewToken()
+    {
+        var (service, _, _, _, _) = Build(ConnectedInstance());
+
+        var token = await service.RefreshToken("old-refresh-token", 1);
+
+        Assert.Equal("at-123", token.AccessToken);
+        Assert.Equal("rt-456", token.RefreshToken);
+    }
+
+    [Fact]
+    public async Task RefreshToken_HitsCorrectEndpointWithRefreshTokenGrant()
+    {
+        var (service, _, _, _, getRequests) = Build(ConnectedInstance());
+
+        await service.RefreshToken("old-refresh-token", 1);
+
+        var request = getRequests().Single(r => r.RequestUri!.AbsolutePath == "/oauth/token");
+        var body = await request.Content!.ReadAsStringAsync();
+        Assert.Contains("grant_type=refresh_token", body);
+        Assert.Contains("refresh_token=old-refresh-token", body);
+        Assert.Contains("client_id=client-id-1", body);
+    }
+
+    [Fact]
+    public async Task RefreshToken_InstanceNoLongerConnected_ThrowsOpInstanceNotFoundException()
+    {
+        var (service, _, _, _, _) = Build(instance: null);
+
+        await Assert.ThrowsAsync<OpInstanceNotFoundException>(() => service.RefreshToken("old-refresh-token", 1));
+    }
+
+    [Fact]
+    public async Task RefreshToken_OpenProjectRejectsRefreshToken_ThrowsOpenProjectRequestException()
+    {
+        // Caso típico: Doorkeeper rota el refresh_token al usarlo — si dos requests refrescan
+        // en paralelo, el segundo pega con un refresh_token ya invalidado y esto es lo que devuelve.
+        var (service, _, _, _, _) = Build(ConnectedInstance(), tokenStatus: HttpStatusCode.Unauthorized);
+
+        await Assert.ThrowsAsync<OpenProjectRequestException>(() => service.RefreshToken("stale-refresh-token", 1));
+    }
+
+    // ── RevokeToken ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RevokeToken_HitsRevokeEndpointWithTokenAndClientCredentials()
+    {
+        var (service, _, _, _, getRequests) = Build(ConnectedInstance());
+
+        await service.RevokeToken("access-token-to-kill", 1);
+
+        var request = getRequests().Single(r => r.RequestUri!.AbsolutePath == "/oauth/revoke");
+        Assert.Equal(HttpMethod.Post, request.Method);
+        var body = await request.Content!.ReadAsStringAsync();
+        Assert.Contains("token=access-token-to-kill", body);
+        Assert.Contains("client_id=client-id-1", body);
+    }
+
+    [Fact]
+    public async Task RevokeToken_InstanceNoLongerConnected_DoesNothingSilently()
+    {
+        // No hay contra qué revocar (la org desconectó OAuth) — no debe explotar el logout.
+        var (service, _, _, _, getRequests) = Build(instance: null);
+
+        await service.RevokeToken("access-token", 1);
+
+        Assert.Empty(getRequests());
+    }
 }

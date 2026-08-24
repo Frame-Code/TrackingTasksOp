@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using Application.Ports.Auth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,10 +21,10 @@ public class OpenProjectAuthHandler(IHttpContextAccessor httpContextAccessor) : 
 
         // La credencial se resuelve una sola vez por request: si el request dispara
         // varias llamadas en paralelo, consultar la BD aquí rompía el DbContext scoped
-        // ("A second operation was started on this context instance...").
+        // ("A second operation was started on this context instance..."). Basic (API key) o
+        // Bearer (OAuth) según qué credencial tenga el usuario — ver OpenProjectAuthHeaderProvider.
         var headerProvider = services.GetRequiredService<OpenProjectAuthHeaderProvider>();
-        var encoded = await headerProvider.GetBasicHeaderAsync();
-        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", encoded);
+        request.Headers.Authorization = await headerProvider.GetAuthorizationHeaderAsync();
 
         return await base.SendAsync(request, ct);
     }

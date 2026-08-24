@@ -22,6 +22,7 @@ public class AuthController(
     IInitializerInstanceService initializerInstanceService,
     IOAuthService oAuthService,
     IOAuthLoginCommand oAuthLoginCommand,
+    IRevokeOAuthSessionCommand revokeOAuthSessionCommand,
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
     CurrentUser currentUser,
@@ -125,8 +126,9 @@ public class AuthController(
     }
 
     [HttpPost("logout")]
-    public async Task<IActionResult> LogoutAsync()
+    public async Task<IActionResult> LogoutAsync(CancellationToken ct)
     {
+        await revokeOAuthSessionCommand.Execute(ct);
         await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
         return NoContent();
     }
