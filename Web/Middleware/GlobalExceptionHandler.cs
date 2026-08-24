@@ -21,7 +21,10 @@ public class GlobalExceptionHandler(
             SsrfBlockedException           => (StatusCodes.Status400BadRequest,          "Bad Request"),
             OpenProjectRequestException    => (StatusCodes.Status400BadRequest,          "Bad Request"),
             InitializerInstanceException   => (StatusCodes.Status400BadRequest,          "Bad Request"),
+            OpInstanceNotFoundException    => (StatusCodes.Status404NotFound,            "Not Found"),
+            DuplicateAliasException        => (StatusCodes.Status400BadRequest,          "Bad Request"),
             ActiveSessionConflictException => (StatusCodes.Status409Conflict,            "Conflict"),
+            StateOAuthException            => (StatusCodes.Status403Forbidden,            "Forbidden"),
             _                              => (StatusCodes.Status500InternalServerError, "Internal Server Error")
         };
 

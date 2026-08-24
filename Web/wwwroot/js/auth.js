@@ -16,6 +16,16 @@ const loginForm    = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
 const authAlert    = document.getElementById('authAlert');
 
+// ── Aviso de sesión expirada (ej. falló el refresh de OAuth) ──────────────────
+// apiFetch guarda acá el motivo antes de redirigir a este login — sin esto, el
+// usuario solo veía que lo desloguearon, sin ninguna explicación de por qué.
+
+const authNotice = sessionStorage.getItem('authNotice');
+if (authNotice) {
+    sessionStorage.removeItem('authNotice');
+    showAlert(authNotice, 'warning');
+}
+
 // ── Cambio de tabs ────────────────────────────────────────────────────────────
 
 function switchTab(tab) {
@@ -33,6 +43,80 @@ document.getElementById('authTabs').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-tab]');
     if (btn) switchTab(btn.dataset.tab);
 });
+
+// ── OAuth con OpenProject ─────────────────────────────────────────────────────
+// Sin sesión todavía (esta página es pública), por eso GET /opinstance también lo es:
+// solo devuelve instancias con OAuth conectado (id + baseUrl + alias, nunca client_id/secret).
+
+let oauthInstances = [];
+const oauthPickerModalEl = document.getElementById('oauthPickerModal');
+const oauthPickerModal = new bootstrap.Modal(oauthPickerModalEl);
+const oauthPickerList = document.getElementById('oauthPickerList');
+const oauthPickerEmpty = document.getElementById('oauthPickerEmpty');
+const oauthPickerSearch = document.getElementById('oauthPickerSearch');
+
+function renderOAuthPickerList(filterText = '') {
+    const term = filterText.trim().toLowerCase();
+    const filtered = term
+        ? oauthInstances.filter(i =>
+            (i.alias || '').toLowerCase().includes(term) || i.baseUrl.toLowerCase().includes(term))
+        : oauthInstances;
+
+    oauthPickerEmpty.classList.toggle('d-none', filtered.length > 0);
+    oauthPickerList.innerHTML = filtered.map(i => `
+        <button type="button" class="list-group-item list-group-item-action" data-instance-id="${i.id}">
+            <div class="fw-medium">${escapeHtml(i.alias && i.alias !== '-' ? i.alias : i.baseUrl)}</div>
+            ${i.alias && i.alias !== '-' ? `<div class="small text-muted">${escapeHtml(i.baseUrl)}</div>` : ''}
+        </button>`).join('');
+}
+
+// auth.js no importa helpers.js (queda deliberadamente independiente del resto de la app),
+// así que se repite este escape mínimo en vez de traer un módulo entero para una función.
+function escapeHtml(str) {
+    return str.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+oauthPickerList.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-instance-id]');
+    if (btn) window.location.href = `/api/v1/auth/oauth/authorize?instanceId=${btn.dataset.instanceId}`;
+});
+
+oauthPickerSearch.addEventListener('input', () => renderOAuthPickerList(oauthPickerSearch.value));
+
+function openOAuthPicker() {
+    oauthPickerSearch.value = '';
+    renderOAuthPickerList();
+    oauthPickerModal.show();
+    setTimeout(() => oauthPickerSearch.focus(), 300); // tras la animación del modal
+}
+
+function setOAuthButtonState(btn, badge) {
+    if (!oauthInstances.length) {
+        badge.textContent = 'No disponible';
+        return;
+    }
+
+    btn.disabled = false;
+    badge.remove();
+    btn.addEventListener('click', openOAuthPicker);
+}
+
+(async function initOAuthButtons() {
+    const loginBtn = document.getElementById('oauthLoginBtn');
+    const registerBtn = document.getElementById('oauthRegisterBtn');
+    const loginBadge = document.getElementById('oauthLoginBadge');
+    const registerBadge = document.getElementById('oauthRegisterBadge');
+
+    try {
+        const res = await fetch('/api/v1/opinstance');
+        oauthInstances = res.ok ? await res.json() : [];
+        setOAuthButtonState(loginBtn, loginBadge);
+        setOAuthButtonState(registerBtn, registerBadge);
+    } catch {
+        loginBadge.textContent = 'No disponible';
+        registerBadge.textContent = 'No disponible';
+    }
+})();
 
 // ── Mostrar / ocultar contraseña ──────────────────────────────────────────────
 

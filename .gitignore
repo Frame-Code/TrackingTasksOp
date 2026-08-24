@@ -13,6 +13,10 @@ Docs/superpowers/
 ##Config files
 Web/appsettings.Development.json
 
+##Custom files
+AUTH_DESIGN.md
+OAUTH_DESIGN.md
+
 ## Carpetas heredadas de un KeyRingPath de Data Protection con ruta Windows
 ## (en Linux/macOS se interpretan como nombre de carpeta literal). No deben versionarse.
 Web/C:*

@@ -171,6 +171,10 @@ function renderInstanceUrl() {
     link.textContent = instanceUrl || '—';
     if (instanceUrl) link.href = instanceUrl;
     else link.removeAttribute('href'); // sin URL, el enlace queda inerte (no navega a "#")
+
+    // Solo admins de OpenProject pueden conectar OAuth para la organización (el backend
+    // también lo valida — esto es nada más para no ofrecer una acción que va a rebotar).
+    document.getElementById('oauthConnectSection').classList.toggle('hidden', !store.userSettings?.isAdmin);
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────────

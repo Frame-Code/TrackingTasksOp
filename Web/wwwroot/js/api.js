@@ -13,6 +13,23 @@ const API = '/api/v1';
 const wpCache = new Map();
 const WP_CACHE_TTL = 60_000;
 
+/**
+ * Sesión expirada o no autenticado: redirige al login. El mensaje del servidor (ej. "La sesión
+ * de OpenProject expiró y no se puede renovar") queda en sessionStorage para que auth.html lo
+ * muestre — sin esto, un refresh de OAuth fallido desloguea sin ninguna explicación.
+ */
+async function redirectToLogin(res) {
+    let message = 'Tu sesión expiró. Iniciá sesión de nuevo.';
+    try {
+        const body = await res.json();
+        message = body.detail || body.message || message;
+    } catch (_) { /* sin body o no es JSON */ }
+
+    sessionStorage.removeItem('currentUser');
+    sessionStorage.setItem('authNotice', message);
+    window.location.replace('/auth.html');
+}
+
 async function apiFetch(url, options = {}) {
     const res = await fetch(url, {
         credentials: 'include',
@@ -20,10 +37,8 @@ async function apiFetch(url, options = {}) {
         ...options
     });
 
-    // Sesión expirada o no autenticado → redirigir al login
     if (res.status === 401) {
-        sessionStorage.removeItem('currentUser');
-        window.location.replace('/auth.html');
+        await redirectToLogin(res);
         return;
     }
 
@@ -154,8 +169,7 @@ export async function downloadDailyTaskReport(from, to, statusId) {
     const res = await fetch(`${API}/report/daily-tasks?${reportQuery(from, to, statusId)}`, { credentials: 'include' });
 
     if (res.status === 401) {
-        sessionStorage.removeItem('currentUser');
-        window.location.replace('/auth.html');
+        await redirectToLogin(res);
         return;
     }
 
@@ -183,6 +197,14 @@ export async function updateApiKey(apiKey) {
     return apiFetch(`${API}/auth/api-key`, {
         method: 'PUT',
         body: JSON.stringify({ apiKey })
+    });
+}
+
+/** Conecta OAuth para la organización del usuario autenticado. Requiere ser admin en OpenProject. */
+export async function connectOAuthInstance(alias, clientId, clientSecret) {
+    return apiFetch(`${API}/opinstance`, {
+        method: 'POST',
+        body: JSON.stringify({ alias, clientId, clientSecret })
     });
 }
 

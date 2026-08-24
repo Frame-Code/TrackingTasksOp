@@ -701,6 +701,31 @@
                     <i class="bi bi-check2"></i> Actualizar API key
                 </button>
             </div>
+
+            <!-- Solo visible para admins de OpenProject (ver settings-fields.js) -->
+            <div class="card hidden" id="oauthConnectSection">
+                <h3><i class="bi bi-box-arrow-in-right"></i> Conectar OpenProject (OAuth)</h3>
+                <p class="card-hint">
+                    Permite que cualquier usuario de tu organización inicie sesión con OpenProject
+                    en vez de registrar su API key a mano. Se crea en OpenProject:
+                    Administration → Authentication → OAuth applications.
+                </p>
+                <div class="field">
+                    <label for="oauthConnectAlias">Alias</label>
+                    <input type="text" id="oauthConnectAlias" autocomplete="off" placeholder="Nombre de tu organización">
+                </div>
+                <div class="field">
+                    <label for="oauthConnectClientId">Client ID</label>
+                    <input type="text" id="oauthConnectClientId" autocomplete="off">
+                </div>
+                <div class="field">
+                    <label for="oauthConnectClientSecret">Client Secret</label>
+                    <input type="password" id="oauthConnectClientSecret" autocomplete="off">
+                </div>
+                <button type="button" id="oauthConnectBtn" class="btn btn-primary">
+                    <i class="bi bi-check2"></i> Conectar
+                </button>
+            </div>
         </section>
 
         <!-- ── Asistente IA ── -->

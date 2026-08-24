@@ -4,7 +4,7 @@
 import {
     fetchUserSettings, fetchStatuses, setupTwoFactor, enableTwoFactor, changePassword,
     updateAvatar, deleteAvatar, regenerateRecoveryCodes, resetAuthenticator,
-    updateAiApiKey, updateApiKey
+    updateAiApiKey, updateApiKey, connectOAuthInstance
 } from './api.js';
 import { requireAuth } from './auth-guard.js';
 import { store } from './state.js';
@@ -324,6 +324,31 @@ function onSaveOpApiKey() {
     });
 }
 
+/** Solo se ve para admins de OpenProject (ver renderInstanceUrl en settings-fields.js). */
+function onConnectOAuth() {
+    return withBusy(el('oauthConnectBtn'), async () => {
+        clearMessages();
+        const alias = el('oauthConnectAlias').value.trim();
+        const clientId = el('oauthConnectClientId').value.trim();
+        const clientSecret = el('oauthConnectClientSecret').value.trim();
+
+        if (!alias || !clientId || !clientSecret)
+            return showError('Completá alias, client ID y client secret.');
+
+        try {
+            await connectOAuthInstance(alias, clientId, clientSecret);
+            el('oauthConnectAlias').value = '';
+            el('oauthConnectClientId').value = '';
+            el('oauthConnectClientSecret').value = '';
+            showOk('OpenProject conectado. Ya se puede iniciar sesión con OAuth.');
+        } catch (err) {
+            showError(err.message === 'Error 403'
+                ? 'No tenés permisos de administrador en OpenProject para hacer esto.'
+                : `No se pudo conectar: ${err.message}`);
+        }
+    });
+}
+
 // ── Asistente de IA ───────────────────────────────────────────────────────────────
 
 /**
@@ -434,6 +459,7 @@ el('accountResetCancelBtn').addEventListener('click', onResetAuthCancel);
 el('accountRecoveryDoneBtn').addEventListener('click', () => show('accountRecoveryCodes', false));
 el('accountPasswordBtn').addEventListener('click', onChangePassword);
 el('saveOpApiKeyBtn').addEventListener('click', onSaveOpApiKey);
+el('oauthConnectBtn').addEventListener('click', onConnectOAuth);
 el('saveAiApiKeyBtn').addEventListener('click', onSaveAiKey);
 el('clearAiApiKeyBtn').addEventListener('click', onClearAiKey);
 

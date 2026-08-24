@@ -8,4 +8,5 @@ public interface IUserOpService
     Task<User?> FindByName(string name);
     Task<List<User>> ListAssignees(int projectId);
     Task<User?> FindAssigneeByName(int projectId, string name);
+    Task<bool> IsAdmin(int userId);
 }
