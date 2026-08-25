@@ -1,6 +1,41 @@
-version: '3.8'
-
 services:
+  app:
+    build: .
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      # Afuera 5000 para no cambiar la URL que ya usan los colegas.
+      - "5000:8080"
+    environment:
+      ConnectionStrings__TrackingTasks: "Host=postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      RedisSettings__Configuration: "redis:6379,password=${REDIS_PASSWORD}"
+      # El arranque exige una key global aunque cada usuario cargue la suya después.
+      AIModel__Groq__ApiKey: "${GROQ_API_KEY}"
+      # Para servir HTTPS con el .pfx propio (LAN, sin Let's Encrypt), descomentar esto,
+      # montar el certificado y publicar el 8081:
+      # ASPNETCORE_Kestrel__Certificates__Default__Path: /https/cert.pfx
+      # ASPNETCORE_Kestrel__Certificates__Default__Password: ${CERT_PASSWORD}
+      # ASPNETCORE_HTTPS_PORTS: 8081
+    volumes:
+      # El key ring de Data Protection. Sin este volumen, cada rebuild genera claves nuevas
+      # y las API keys de OpenProject ya guardadas dejan de poder desencriptarse.
+      - keysdata:/app/Keys
+      # - ./Deploy/cert.pfx:/https/cert.pfx:ro
+    mem_limit: 512m
+
+  postgres:
+    image: postgres:17-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    mem_limit: 512m
+
   redis:
     image: redis:7-alpine
     restart: always
@@ -13,3 +48,5 @@ services:
 
 volumes:
   redisdata:
+  pgdata:
+  keysdata:
