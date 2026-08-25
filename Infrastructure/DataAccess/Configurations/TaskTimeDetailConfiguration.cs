@@ -18,14 +18,11 @@ public class TaskTimeDetailConfiguration : IEntityTypeConfiguration<TaskTimeDeta
             .HasMaxLength(450);
 
         builder.Property(t => t.StartTime)
-            .IsRequired()
-            .HasColumnType("datetime");
+            .IsRequired();
 
-        builder.Property(t => t.EndTime)
-            .HasColumnType("datetime");
+        builder.Property(t => t.EndTime);
 
-        builder.Property(t => t.Uploaded)
-            .HasColumnType("bit");
+        builder.Property(t => t.Uploaded);
 
         builder.HasOne<ApplicationUser>()
             .WithMany()

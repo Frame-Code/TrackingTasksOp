@@ -10,15 +10,13 @@ public class LocalCredentialConfiguration : IEntityTypeConfiguration<LocalCreden
     {
         builder.ToTable("LocalCredentials");
 
-        builder.Property(c => c.EncryptedApiKey)
-            .HasColumnType("nvarchar(max)");
+        builder.Property(c => c.EncryptedApiKey);
 
         builder.Property(c => c.ApiKeyStatus)
             .IsRequired()
             .HasConversion<string>();
 
-        builder.Property(c => c.ApiKeyLastValidatedAt)
-            .HasColumnType("datetime");
+        builder.Property(c => c.ApiKeyLastValidatedAt);
 
         builder.HasIndex(c => c.UserId);
             

@@ -32,12 +32,10 @@ public class AuthAuditLogConfiguration : IEntityTypeConfiguration<AuthAuditLog>
             .HasMaxLength(500);
 
         builder.Property(a => a.Detail)
-            .IsRequired()
-            .HasColumnType("nvarchar(max)");
+            .IsRequired();
 
         builder.Property(a => a.CreatedAt)
-            .IsRequired()
-            .HasColumnType("datetime");
+            .IsRequired();
 
         builder.HasIndex(a => new { a.UserId, a.CreatedAt })
             .IsDescending(false, true);

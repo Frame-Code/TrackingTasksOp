@@ -14,7 +14,7 @@ public static class InitDbContextExtensions
 
         services.AddDbContext<TrackingTasksDbContext>(options =>
         {
-            options.UseSqlServer(trackingTasksConnectionString, optionsBuilder =>
+            options.UseNpgsql(trackingTasksConnectionString, optionsBuilder =>
             {
                 optionsBuilder.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
                 //optionsBuilder.EnableRetryOnFailure();

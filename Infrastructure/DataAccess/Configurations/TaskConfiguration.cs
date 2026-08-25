@@ -27,8 +27,7 @@ public class TaskConfiguration : IEntityTypeConfiguration<Domain.Entities.Tracki
         builder.Property(t => t.Description)
             .HasMaxLength(500);
 
-        builder.Property(t => t.CreatedAt)
-            .HasColumnType("datetime");
+        builder.Property(t => t.CreatedAt);
 
         builder.HasOne<ApplicationUser>()
             .WithMany()

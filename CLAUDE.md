@@ -95,11 +95,12 @@ El proyecto tiene un `BotController` (en `Web/Controllers/`) que delega en servi
 
 ### Persistencia local
 
-- **ORM:** Entity Framework Core 8 con SQL Server
+- **ORM:** Entity Framework Core 8 con **PostgreSQL** (`Npgsql.EntityFrameworkCore.PostgreSQL`). Se migró desde SQL Server; no queda nada específico de ese motor en el código.
 - **DbContext:** `TrackingTasksDbContext` en `Infrastructure/DataAccess/`
 - **Configuración de entidades:** `Infrastructure/DataAccess/Configurations/`
 - Comportamiento por defecto: **NoTracking** + **SplitQuery**
-- Conexión: SQL Server local con Windows Authentication (`TrackingTasksDb`)
+- Conexión: PostgreSQL (`Host=…;Database=…;Username=…;Password=…`). Hay dos bases: `TrackingTasksDb` para desarrollo y `TrackingTasksDbProduccion` para el deploy.
+- **Fechas:** `ConfigureConventions` mapea todo `DateTime` a `timestamp without time zone` y le aplica `UnspecifiedDateTimeConverter`. Las dos cosas son necesarias juntas: Npgsql valida el `DateTimeKind` contra el tipo de columna en ambas direcciones, y la app mezcla `DateTime.Now` (StartTime/EndTime, que significan "reloj de pared") con `DateTime.UtcNow` (tokens OAuth, auditoría). Cubierto por `Tests/Infrastructure/DataAccess/DateTimeKindPersistenceTests.cs`.
 
 ### Registro de dependencias
 

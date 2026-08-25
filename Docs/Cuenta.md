@@ -176,9 +176,9 @@ Lo único nuevo es la tabla `UserAvatars` (migración `AddUserAvatar`):
 
 | Columna | Tipo | Notas |
 |---|---|---|
-| `UserId` | `nvarchar(450)` | PK y FK a `AspNetUsers`, borrado en cascada |
-| `Jpeg` | `varbinary(max)` | Imagen ya redimensionada, ~15KB |
-| `UpdatedAt` | `datetime2` | Alimenta el `Last-Modified` de `GET avatar` |
+| `UserId` | `character varying(450)` | PK y FK a `AspNetUsers`, borrado en cascada |
+| `Jpeg` | `bytea` | Imagen ya redimensionada, ~15KB |
+| `UpdatedAt` | `timestamp without time zone` | Alimenta el `Last-Modified` de `GET avatar` |
 
 ### Decisiones que conviene no revertir sin leer esto
 

@@ -1,0 +1,17 @@
+# bin/obj traen binarios compilados en Windows; copiarlos al build de Linux lo rompe.
+**/bin
+**/obj
+.git
+.vs
+.idea
+.claude
+.superpowers
+graphify-out
+Deploy
+Docs
+Tests
+# Secretos y estado local: el contenedor los recibe por variables de entorno y volúmenes.
+.env
+Web/Keys
+Web/logs
+Web/appsettings.Development.json

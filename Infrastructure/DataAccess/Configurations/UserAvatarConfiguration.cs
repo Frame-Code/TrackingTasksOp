@@ -16,9 +16,8 @@ public class UserAvatarConfiguration : IEntityTypeConfiguration<UserAvatar>
             .IsRequired()
             .HasMaxLength(450);
 
-        // Sin HasColumnType: EF ya mapea byte[] a varbinary(max) en SQL Server y a bytea en
-        // Postgres. Dejarlo al proveedor es justo lo que evita tener que tocar esta clase
-        // cuando se migre el motor.
+        // Sin HasColumnType: EF mapea byte[] a bytea solo. Dejarle el tipo al proveedor es lo
+        // que permitió migrar de SQL Server a Postgres sin tocar esta clase.
         builder.Property(a => a.Jpeg)
             .IsRequired();
 
