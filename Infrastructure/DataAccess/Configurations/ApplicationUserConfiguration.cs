@@ -23,8 +23,7 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
             .HasConversion<string>();
 
         builder.Property(u => u.CreatedAt)
-            .IsRequired()
-            .HasColumnType("datetime");
+            .IsRequired();
 
         builder.Property(u => u.PauseDefaultBehavior)
             .IsRequired()
@@ -37,11 +36,9 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
         builder.Property(u => u.AddRandomSlackTime)
             .IsRequired();
 
-        builder.Property(u => u.EncryptedGroqApiKey)
-            .HasColumnType("nvarchar(max)");
+        builder.Property(u => u.EncryptedGroqApiKey);
 
-        builder.Property(u => u.DefaultStatusFilterIds)
-            .HasColumnType("nvarchar(max)");
+        builder.Property(u => u.DefaultStatusFilterIds);
 
         builder.HasIndex(u => u.OpenProjectUserId);
 

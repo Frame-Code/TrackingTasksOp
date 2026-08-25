@@ -26,8 +26,7 @@ public class MigrationDataConfiguration : IEntityTypeConfiguration<MigrationData
             .HasMaxLength(1000);
 
         builder.Property(p => p.CreatedAt)
-            .IsRequired()
-            .HasColumnType("datetime");
+            .IsRequired();
 
         builder.HasOne<ApplicationUser>()
             .WithMany()

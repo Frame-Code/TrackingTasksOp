@@ -21,20 +21,16 @@ public class OpenProjectInstanceConfiguration : IEntityTypeConfiguration<OpenPro
             .HasMaxLength(500);
 
         builder.Property(o => o.CreatedAt)
-            .IsRequired()
-            .HasColumnType("datetime");
+            .IsRequired();
 
         builder.Property(o => o.Alias)
             .HasMaxLength(200);
 
-        builder.Property(o => o.OAuthClientId)
-            .HasColumnType("nvarchar(max)");
+        builder.Property(o => o.OAuthClientId);
 
-        builder.Property(o => o.EncryptedOAuthClientSecret)
-            .HasColumnType("nvarchar(max)");
+        builder.Property(o => o.EncryptedOAuthClientSecret);
 
-        builder.Property(o => o.OAuthConnectedAt)
-            .HasColumnType("datetime");
+        builder.Property(o => o.OAuthConnectedAt);
 
         builder.HasIndex(o => o.BaseUrl)
             .IsUnique();

@@ -10,21 +10,17 @@ public class OAuthCredentialConfiguration : IEntityTypeConfiguration<OAuthCreden
     {
         builder.ToTable("OAuthCredentials");
         
-        builder.Property(c => c.EncryptedOAuthAccessToken)
-            .HasColumnType("nvarchar(max)");
+        builder.Property(c => c.EncryptedOAuthAccessToken);
 
-        builder.Property(c => c.EncryptedOAuthRefreshToken)
-            .HasColumnType("nvarchar(max)");
+        builder.Property(c => c.EncryptedOAuthRefreshToken);
 
-        builder.Property(c => c.OAuthTokenExpiresAt)
-            .HasColumnType("datetime");
+        builder.Property(c => c.OAuthTokenExpiresAt);
 
         builder.Property(c => c.OAuthScope)
             .HasMaxLength(200);
 
         builder.Property(c => c.CreatedAt)
-            .IsRequired()
-            .HasColumnType("datetime");
+            .IsRequired();
 
         builder.HasOne(c => c.ApplicationUser)
             .WithOne()

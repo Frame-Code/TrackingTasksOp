@@ -33,7 +33,7 @@ public class StartTaskBotIntegrationTests
         Environment.GetEnvironmentVariable("OPENPROJECT_TEST_API_KEY") ?? "YOUR_OPENPROJECT_API_KEY";
     private static readonly string SqlConnectionString =
         Environment.GetEnvironmentVariable("TEST_SQL_CONNECTION_STRING")
-        ?? "Server=localhost;Database=TrackingTasksDb;TrustServerCertificate=True;User ID=sa;Password=YOUR_SQL_PASSWORD";
+        ?? "Host=localhost;Database=TrackingTasksDb;Username=postgres;Password=YOUR_POSTGRES_PASSWORD";
 
     // Usuario seed ya asociado a la instancia OpenProject .
     private static readonly string SeedUserId =
@@ -63,7 +63,7 @@ public class StartTaskBotIntegrationTests
     private static TrackingTasksDbContext BuildDbContext()
     {
         var options = new DbContextOptionsBuilder<TrackingTasksDbContext>()
-            .UseSqlServer(SqlConnectionString)
+            .UseNpgsql(SqlConnectionString)
             .Options;
         return new TrackingTasksDbContext(options);
     }
