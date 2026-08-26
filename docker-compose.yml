@@ -6,13 +6,19 @@ services:
       - postgres
       - redis
     ports:
-      # Afuera 5000 para no cambiar la URL que ya usan los colegas.
-      - "5000:8080"
+      # Solo loopback: la app no escucha en ninguna interfaz de red. El unico camino de
+      # entrada es "tailscale serve", que exige identidad del tailnet. Desde el host sin
+      # Tailscale: ssh -L 5000:localhost:5000 al server.
+      - "127.0.0.1:5000:8080"
     environment:
       ConnectionStrings__TrackingTasks: "Host=postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       RedisSettings__Configuration: "redis:6379,password=${REDIS_PASSWORD}"
       # El arranque exige una key global aunque cada usuario cargue la suya después.
       AIModel__Groq__ApiKey: "${GROQ_API_KEY}"
+      # La cookie de sesion solo viaja cifrada. Vale porque el unico camino de entrada es
+      # "tailscale serve", que termina TLS en la maquina; si algun dia se sirve por HTTP
+      # plano, el navegador dejaria de mandarla y nadie podria entrar.
+      CookieSettings__UseSecurePolicy: "true"
       # Para servir HTTPS con el .pfx propio (LAN, sin Let's Encrypt), descomentar esto,
       # montar el certificado y publicar el 8081:
       # ASPNETCORE_Kestrel__Certificates__Default__Path: /https/cert.pfx
@@ -38,9 +44,9 @@ services:
 
   redis:
     image: redis:7-alpine
+    # Sin ports publicados: la app le habla por la red interna de compose. Exponerlo no le
+    # servia a nadie y lo dejaba al alcance de cualquiera que llegara a la maquina.
     restart: always
-    ports:
-      - "6379:6379"
     volumes:
       - redisdata:/data
     mem_limit: 512m
