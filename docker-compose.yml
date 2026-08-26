@@ -36,6 +36,10 @@ services:
 
   postgres:
     image: postgres:17-alpine
+    ports:
+      # Solo loopback: no queda expuesto a ninguna red. Para conectar un cliente (DBeaver),
+      # se llega por tunel SSH, que ya exige clave y estar en el tailnet.
+      - "127.0.0.1:5432:5432"
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
