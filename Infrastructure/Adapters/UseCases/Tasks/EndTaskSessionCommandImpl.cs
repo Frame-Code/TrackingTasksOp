@@ -30,10 +30,12 @@ public class EndTaskSessionCommandImpl(
         var task = await repository.GetByIdForUserAsync(request.WorkPackageId, userId)
             ?? throw new ArgumentException($"Task with OpenProjectId {request.WorkPackageId} does not exist");
 
-        var lastTimeDetails = task.TasksTimeDetails.OrderBy(x => x.StartTime).LastOrDefault()
-            ?? throw new InvalidOperationException($"Task with OpenProjectId {request.WorkPackageId} haven't any details");
+        if (!task.TasksTimeDetails.Any())
+            throw new InvalidOperationException($"Task with OpenProjectId {request.WorkPackageId} haven't any details");
 
-        if (lastTimeDetails.EndTime == null)
+        var lastTimeDetails = task.GetActiveSession();
+
+        if (lastTimeDetails is not null)
         {
             lastTimeDetails.EndTime = DateTime.Now;
 

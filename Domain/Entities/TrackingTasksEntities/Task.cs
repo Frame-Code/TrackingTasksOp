@@ -15,6 +15,19 @@ public class Task
     public StatusTask StatusTask { get; set; } = null!;
     public IEnumerable<TaskTimeDetail> TasksTimeDetails { get; set; } = new List<TaskTimeDetail>();
 
+    /// <summary>
+    /// La sesion abierta, si hay alguna. NO es "la de StartTime mas grande": una entrada
+    /// manual con hora posterior hacia que esa consulta devolviera una sesion CERRADA, y el
+    /// sistema concluia que no habia ninguna activa. Sintomas reales: pausar tiraba "doesn`t
+    /// have an active session", y arrancar apilaba sesiones abiertas en vez de cerrar la
+    /// anterior. Si por datos viejos hay varias abiertas, devuelve la mas reciente.
+    /// </summary>
+    public TaskTimeDetail? GetActiveSession() =>
+        TasksTimeDetails
+            .Where(d => d.EndTime == null)
+            .OrderBy(d => d.StartTime)
+            .LastOrDefault();
+
     public double GetTotalHoursWorked()
     {
         return TasksTimeDetails
