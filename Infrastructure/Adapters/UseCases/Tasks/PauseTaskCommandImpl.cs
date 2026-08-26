@@ -22,9 +22,8 @@ public class PauseTaskCommandImpl(
         var task = await repository.GetByIdForUserAsync(request.WorkPackageId, userId)
             ?? throw new ArgumentException($"Task with OpenProjectId {request.WorkPackageId} does not exist");
 
-        var lastDetail = task.TasksTimeDetails.OrderBy(x => x.StartTime).LastOrDefault();
-        if (lastDetail is null || lastDetail.EndTime != null)
-            throw new InvalidOperationException($"Task with OpenProjectId {request.WorkPackageId} doesn't have an active session to pause.");
+        var lastDetail = task.GetActiveSession()
+            ?? throw new InvalidOperationException($"Task with OpenProjectId {request.WorkPackageId} doesn't have an active session to pause.");
 
         lastDetail.EndTime = DateTime.Now;
 

@@ -19,6 +19,9 @@ services:
       # "tailscale serve", que termina TLS en la maquina; si algun dia se sirve por HTTP
       # plano, el navegador dejaria de mandarla y nadie podria entrar.
       CookieSettings__UseSecurePolicy: "true"
+      # Reloj de pared del equipo. Sin esto el contenedor corre en UTC y las sesiones quedan
+      # con horas corridas respecto del reloj del usuario.
+      TZ: "${TZ:-America/Guayaquil}"
       # Para servir HTTPS con el .pfx propio (LAN, sin Let's Encrypt), descomentar esto,
       # montar el certificado y publicar el 8081:
       # ASPNETCORE_Kestrel__Certificates__Default__Path: /https/cert.pfx

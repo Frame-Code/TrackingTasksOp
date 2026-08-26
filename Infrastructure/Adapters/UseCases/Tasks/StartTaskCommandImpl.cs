@@ -120,11 +120,8 @@ namespace Infrastructure.Adapters.UseCases.Tasks;
 
         //Cerrar la última entrada si quedó abierta en esta misma tarea
         var details = task.TasksTimeDetails.ToList();
-        var lastDetail = details
-            .OrderBy(x => x.StartTime)
-            .LastOrDefault();
-
-        if (lastDetail is not null && lastDetail.EndTime == null)
+        var lastDetail = task.GetActiveSession();
+        if (lastDetail is not null)
         {
             lastDetail.EndTime = DateTime.Now;
 

@@ -7,6 +7,11 @@ COPY . .
 RUN dotnet publish Web/Web.csproj -c Release -o /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
+
+# La imagen de aspnet no trae tzdata, y sin eso .NET ignora TZ y se queda en UTC. StartTime y
+# EndTime significan "reloj de pared" (ver CLAUDE.md), asi que un contenedor en UTC registra
+# las sesiones cinco horas corridas respecto de lo que el usuario ve en su reloj.
+RUN apt-get update && apt-get install -y --no-install-recommends tzdata && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app .
 

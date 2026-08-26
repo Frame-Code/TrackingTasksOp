@@ -30,8 +30,7 @@ public class ResumeTaskCommandImpl(
         }
         else
         {
-            var lastDetail = task.TasksTimeDetails.OrderBy(x => x.StartTime).LastOrDefault();
-            if (lastDetail is not null && lastDetail.EndTime is null)
+            if (task.GetActiveSession() is not null)
                 throw new InvalidOperationException($"Task with OpenProjectId {request.WorkPackageId} already has an active session.");
 
             if (request.InProgressStatusId.HasValue && request.InProgressStatusId.Value > 0)
