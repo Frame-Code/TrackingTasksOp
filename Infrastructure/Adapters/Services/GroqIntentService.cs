@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Application.Dto.Conversation;
@@ -73,11 +74,65 @@ namespace Infrastructure.Adapters.Services
                     if (!string.IsNullOrWhiteSpace(textPart) && !textPart.StartsWith("{"))
                         finalResponse = $"{textPart}\n\n{finalResponse}";
 
-                    return await SaveContext(context, prompt, finalResponse, ct);
+                    return await SaveContext(context, prompt, finalResponse, ct,
+                        SummarizeForModel(finalResponse, textPart, jsonBlocks));
                 }
             }
 
             return await SaveContext(context, prompt, completion.Text, ct);
+        }
+
+        /// <summary>
+        /// A partir de acá, un resultado se considera "grande" y al modelo se le manda un
+        /// resumen en vez del texto completo. Por debajo del umbral viaja tal cual.
+        ///
+        /// El número separa dos poblaciones bien distintas: los mensajes de control rondan los
+        /// 100-300 caracteres y una lista de tareas arranca en más de mil. No hay nada en el
+        /// medio, así que el valor exacto no es delicado.
+        /// </summary>
+        private const int MaxHistoryCharsForModel = 600;
+
+        /// <summary>
+        /// Qué se le reenvía al modelo en los turnos siguientes, en lugar del resultado completo.
+        ///
+        /// Solo se resume lo grande, y eso NO es una optimización: los mensajes de control cortos
+        /// ("⏸️ Ya tienes ... corriendo", "🤔 Para crear esta tarea necesito...") tienen que
+        /// llegarle textuales, porque las reglas 11 y 12 del system prompt le piden reconocerlos
+        /// literalmente para continuar el flujo. Resumirlos rompería crear-tarea-con-campos-
+        /// faltantes y el conflicto de sesión activa.
+        ///
+        /// Devuelve null cuando no hace falta resumir: ahí el historial guarda un solo texto.
+        /// </summary>
+        private static string? SummarizeForModel(string fullResponse, string textPart, List<string> jsonBlocks)
+        {
+            if (fullResponse.Length <= MaxHistoryCharsForModel) return null;
+
+            var actions = string.Join(", ", jsonBlocks.Select(ActionNameOf)
+                                                      .Where(name => !string.IsNullOrEmpty(name))
+                                                      .Distinct());
+            var summary = string.IsNullOrEmpty(actions)
+                ? "[Resultado mostrado al usuario en pantalla; no lo repitas.]"
+                : $"[Ejecuté {actions}. El resultado completo ya se le mostró al usuario en pantalla; no lo repitas.]";
+
+            // El texto propio del modelo sí se conserva: es corto y es lo que mantiene el hilo
+            // de la conversación.
+            return string.IsNullOrWhiteSpace(textPart) || textPart.StartsWith('{')
+                ? summary
+                : $"{textPart}\n{summary}";
+        }
+
+        private static string? ActionNameOf(string jsonBlock)
+        {
+            try
+            {
+                return JsonNode.Parse(jsonBlock)?["action"]?.GetValue<string>();
+            }
+            catch (JsonException)
+            {
+                // Un bloque ilegible ya lo loguea BotActionExecutor al intentar ejecutarlo;
+                // acá solo significa que no aporta nombre al resumen.
+                return null;
+            }
         }
 
         /// <summary>
@@ -104,10 +159,11 @@ namespace Infrastructure.Adapters.Services
             return wrapper.ToJsonString();
         }
 
-        private async Task<string> SaveContext(ConversationContext context, string prompt, string response, CancellationToken ct)
+        private async Task<string> SaveContext(ConversationContext context, string prompt, string response,
+            CancellationToken ct, string? modelContent = null)
         {
             context.AddUserMessage(prompt);
-            context.AddTtmMessage(response);
+            context.AddTtmMessage(response, modelContent);
             await conversationContextService.SaveAsync(context, ct);
             return response;
         }

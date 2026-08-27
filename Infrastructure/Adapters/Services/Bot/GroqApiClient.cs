@@ -113,9 +113,12 @@ public class GroqApiClient(
     private List<object> BuildMessages(ConversationContext context, string prompt)
     {
         var messages = new List<object> { new { role = "system", content = BuildSystemPrompt() } };
-        // Historial para contexto (se limita para no exceder el TPM del modelo configurado)
+        // Historial para contexto (se limita para no exceder el TPM del modelo configurado).
+        // ContentForModel() y no Content: los resultados largos ya se guardaron resumidos para
+        // el modelo — arrastrar una lista de 30 tareas cuatro turnos seguidos era lo que
+        // reventaba el límite por minuto. El usuario sigue viendo el texto completo.
         foreach (var h in context.History.TakeLast(4))
-            messages.Add(new { role = h.Type == "user" ? "user" : "assistant", content = h.Content });
+            messages.Add(new { role = h.Type == "user" ? "user" : "assistant", content = h.ContentForModel() });
         messages.Add(new { role = "user", content = prompt });
         return messages;
     }
