@@ -44,9 +44,20 @@ public class ConversationContext
         LastUpdatedAt = DateTime.UtcNow;
     }
 
-    public void AddTtmMessage(string message)
+    /// <param name="modelContent">
+    /// Versión compacta que se le reenvía al LLM en los turnos siguientes, cuando el mensaje
+    /// completo es demasiado grande para arrastrarlo (ej. una lista de 30 tareas). Null =
+    /// se reenvía <paramref name="message"/> tal cual.
+    /// </param>
+    public void AddTtmMessage(string message, string? modelContent = null)
     {
-        History.Add(new HistoryItem { Type = "ttm", Content = message, Timestamp = DateTime.UtcNow });
+        History.Add(new HistoryItem
+        {
+            Type = "ttm",
+            Content = message,
+            ModelContent = modelContent,
+            Timestamp = DateTime.UtcNow
+        });
         LastUpdatedAt = DateTime.UtcNow;
     }
 }
@@ -54,8 +65,23 @@ public class ConversationContext
 public class HistoryItem
 {
     public string Type { get; set; } = string.Empty; // "user" o "ttm" (TrackingTasksOp Model)
+
+    /// <summary>Lo que se le muestra al usuario. Siempre completo.</summary>
     public string Content { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Lo que se le reenvía al LLM como contexto, cuando conviene que sea distinto de
+    /// <see cref="Content"/>. El historial alimenta a dos consumidores con necesidades
+    /// opuestas: la UI quiere el resultado completo, el modelo solo necesita saber qué pasó
+    /// y cada token que arrastra se paga contra el límite por minuto.
+    /// Null (y así quedan los contextos guardados antes de este campo) = se usa Content.
+    /// </summary>
+    public string? ModelContent { get; set; }
+
     public DateTime Timestamp { get; set; }
+
+    /// <summary>Lo que viaja al LLM.</summary>
+    public string ContentForModel() => ModelContent ?? Content;
 }
 
 /// <summary>

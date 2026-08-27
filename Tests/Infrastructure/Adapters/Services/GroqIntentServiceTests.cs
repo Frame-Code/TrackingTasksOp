@@ -150,6 +150,67 @@ public class GroqIntentServiceTests
     }
 
     [Fact]
+    public async Task GetIntentAsync_LongActionResult_ShouldKeepItForTheUserButSummarizeItForTheModel()
+    {
+        var context = new ConversationContext { SessionId = "session1" };
+        SetupContext("session1", context);
+        _interceptorMock.Setup(i => i.TryInterceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((string?)null);
+        _groqApiClientMock.Setup(c => c.IsConfigured).Returns(true);
+
+        // Una lista como la que devuelve list_tasks en la instancia real: 30 tareas.
+        var longList = string.Join("\n", Enumerable.Range(1000, 30)
+            .Select(id => $"#{id}: Tarea de ejemplo número {id} con un asunto largo — Developed"));
+
+        var aiResponse = "{\"action\": \"list_tasks\"}";
+        _groqApiClientMock.Setup(c => c.GetCompletionAsync(context, "lista mis tareas", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GroqCompletionResult { Text = aiResponse });
+        _botActionExecutorMock.Setup(e => e.ExecuteAllAsync(It.IsAny<IEnumerable<string>>(), context, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([longList]);
+
+        var service = BuildService();
+        var result = await service.GetIntentAsync("lista mis tareas", "session1");
+
+        var stored = context.History[1];
+
+        // El usuario ve todo.
+        Assert.Contains("#1029", result);
+        Assert.Contains("#1029", stored.Content);
+
+        // El modelo recibe solo el resumen: es lo que evitaba arrastrar la lista 4 turnos.
+        Assert.NotNull(stored.ModelContent);
+        Assert.Contains("list_tasks", stored.ContentForModel());
+        Assert.DoesNotContain("#1029", stored.ContentForModel());
+        Assert.True(stored.ContentForModel().Length < stored.Content.Length / 4);
+    }
+
+    [Fact]
+    public async Task GetIntentAsync_ShortControlMessage_ShouldReachTheModelVerbatim()
+    {
+        var context = new ConversationContext { SessionId = "session1" };
+        SetupContext("session1", context);
+        _interceptorMock.Setup(i => i.TryInterceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((string?)null);
+        _groqApiClientMock.Setup(c => c.IsConfigured).Returns(true);
+
+        // Las reglas 11 y 12 del system prompt le piden al modelo reconocer estos mensajes
+        // LITERALMENTE para continuar el flujo. Si se resumieran, se romperían el conflicto de
+        // sesión activa y la creación de tareas con campos faltantes.
+        const string conflict = "⏸️ Ya tienes la tarea #1134 corriendo. ¿Subo el tiempo a OpenProject o lo guardo en local?";
+
+        _groqApiClientMock.Setup(c => c.GetCompletionAsync(context, "empezá la #900", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GroqCompletionResult { Text = "{\"action\": \"start_task\"}" });
+        _botActionExecutorMock.Setup(e => e.ExecuteAllAsync(It.IsAny<IEnumerable<string>>(), context, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([conflict]);
+
+        var service = BuildService();
+        await service.GetIntentAsync("empezá la #900", "session1");
+
+        var stored = context.History[1];
+
+        Assert.Null(stored.ModelContent);
+        Assert.Contains("Ya tienes la tarea #1134 corriendo", stored.ContentForModel());
+    }
+
+    [Fact]
     public async Task GetIntentAsync_RateLimited_ShouldTellUserToWaitWithoutLeakingTheBody()
     {
         var context = new ConversationContext { SessionId = "session1" };
