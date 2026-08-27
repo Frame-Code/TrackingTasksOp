@@ -38,10 +38,19 @@ namespace Infrastructure.Adapters.Services
             {
                 completion = await groqApiClient.GetCompletionAsync(context, prompt, ct);
             }
+            catch (GroqApiException ex)
+            {
+                // El cuerpo crudo trae JSON, nombre del modelo e ID de organización: va al log,
+                // que es donde sirve, y nunca a la burbuja del chat.
+                logger.LogError(ex, "Groq API falló. Kind={Kind} Status={Status} Body={Body}",
+                    ex.Kind, ex.StatusCode, ex.Body);
+                return await SaveContext(context, prompt, UserFacingMessage(ex.Kind), ct);
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error calling Groq API");
-                return await SaveContext(context, prompt, $"❌ Error al conectar con el servicio de IA: {ex.Message}", ct);
+                return await SaveContext(context, prompt,
+                    "😕 No pude comunicarme con el asistente. Revisá tu conexión e intentá de nuevo.", ct);
             }
 
             // Tool calls nativas (ej. start_task) tienen prioridad: son estructuradas, no requieren
@@ -70,6 +79,20 @@ namespace Infrastructure.Adapters.Services
 
             return await SaveContext(context, prompt, completion.Text, ct);
         }
+
+        /// <summary>
+        /// Lo único que ve el usuario final: sin JSON, sin status codes y con algo que pueda
+        /// hacer al respecto. El detalle técnico ya quedó en el log.
+        /// </summary>
+        private static string UserFacingMessage(GroqFailureKind kind) => kind switch
+        {
+            GroqFailureKind.RateLimited =>
+                "⏳ El asistente está recibiendo muchas consultas seguidas. Esperá unos segundos y volvé a preguntar.",
+            GroqFailureKind.Authentication =>
+                "🔑 La clave del asistente no es válida o expiró. Revisala en Configuración → Asistente IA.",
+            _ =>
+                "😕 No pude procesar tu pedido. Probá reformulándolo con otras palabras."
+        };
 
         private static string BuildJsonBlockFromToolCall(GroqToolCall call)
         {
