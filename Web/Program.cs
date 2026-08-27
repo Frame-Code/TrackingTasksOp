@@ -40,6 +40,7 @@ try
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddProblemDetails();
     builder.Services.AddSwaggerGen();
+    builder.Services.AddProxyHeaders(builder.Configuration);
     builder.Services.AddTrackingDataProtection(builder.Configuration, builder.Environment.ContentRootPath);
     builder.Services.AddIdentityAndAuth(builder.Configuration);
     builder.Services.AddApiRateLimiting(builder.Configuration);
