@@ -8,7 +8,12 @@ public static class InitializeExtensions
     public static async Task<WebApplication> InitializeAsync(this WebApplication app)
     {
         await app.Services.MigrateAsync();
-        // Primero de todo: mide el request completo y publica Server-Timing (DevTools > Network > Timing).
+        // Antes que cualquier otro middleware: reescribe RemoteIpAddress y el esquema con lo que
+        // dice el proxy inverso. Tiene que correr antes de HttpsRedirection (que decide según el
+        // esquema) y antes del rate limiter (que particiona por IP). Sin proxies configurados no
+        // hace nada, así que en desarrollo es transparente.
+        app.UseForwardedHeaders();
+        // Mide el request completo y publica Server-Timing (DevTools > Network > Timing).
         app.UseMiddleware<Web.Middleware.ServerTimingMiddleware>();
         app.UseCors();
         app.UseExceptionHandler();

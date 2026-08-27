@@ -138,12 +138,56 @@ public class GroqIntentServiceTests
         _interceptorMock.Setup(i => i.TryInterceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((string?)null);
         _groqApiClientMock.Setup(c => c.IsConfigured).Returns(true);
         _groqApiClientMock.Setup(c => c.GetCompletionAsync(context, "hola", It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new Exception("timeout"));
+            .ThrowsAsync(new Exception("timeout at 10.0.0.5:443"));
 
         var service = BuildService();
         var result = await service.GetIntentAsync("hola", "session1");
 
-        Assert.Contains("❌ Error al conectar", result);
-        Assert.Contains("timeout", result);
+        Assert.Contains("No pude comunicarme con el asistente", result);
+        // El detalle técnico va al log, no al chat: acá viajaban IPs, puertos y stack traces.
+        Assert.DoesNotContain("timeout", result);
+        Assert.DoesNotContain("10.0.0.5", result);
+    }
+
+    [Fact]
+    public async Task GetIntentAsync_RateLimited_ShouldTellUserToWaitWithoutLeakingTheBody()
+    {
+        var context = new ConversationContext { SessionId = "session1" };
+        SetupContext("session1", context);
+        _interceptorMock.Setup(i => i.TryInterceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((string?)null);
+        _groqApiClientMock.Setup(c => c.IsConfigured).Returns(true);
+        _groqApiClientMock.Setup(c => c.GetCompletionAsync(context, "hola", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(GroqApiException.FromResponse(
+                System.Net.HttpStatusCode.TooManyRequests,
+                """{"error":{"message":"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kngd`","code":"rate_limit_exceeded"}}"""));
+
+        var service = BuildService();
+        var result = await service.GetIntentAsync("hola", "session1");
+
+        Assert.Contains("Esperá unos segundos", result);
+        // Nada de JSON, nombre de modelo ni ID de organización en pantalla.
+        Assert.DoesNotContain("rate_limit_exceeded", result);
+        Assert.DoesNotContain("org_01kngd", result);
+        Assert.DoesNotContain("{", result);
+    }
+
+    [Fact]
+    public async Task GetIntentAsync_BadApiKey_ShouldPointUserToSettings()
+    {
+        var context = new ConversationContext { SessionId = "session1" };
+        SetupContext("session1", context);
+        _interceptorMock.Setup(i => i.TryInterceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((string?)null);
+        _groqApiClientMock.Setup(c => c.IsConfigured).Returns(true);
+        _groqApiClientMock.Setup(c => c.GetCompletionAsync(context, "hola", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(GroqApiException.FromResponse(
+                System.Net.HttpStatusCode.Unauthorized,
+                """{"error":{"message":"Invalid API Key"}}"""));
+
+        var service = BuildService();
+        var result = await service.GetIntentAsync("hola", "session1");
+
+        // Un fallo de credenciales el usuario SÍ lo puede resolver: hay que decirle dónde.
+        Assert.Contains("Configuración", result);
+        Assert.DoesNotContain("Invalid API Key", result);
     }
 }

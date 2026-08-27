@@ -39,7 +39,7 @@ El proyecto sigue **Arquitectura Hexagonal (Ports & Adapters)** distribuida en *
 - **Web** — Referencia a los tres anteriores. Es la única capa con dependencia HTTP (`Microsoft.NET.Sdk.Web`). Contiene únicamente:
   - `Web/Controllers/`
   - `Web/Middleware/` — `GlobalExceptionHandler`
-  - `Web/Extensions/` — extensiones puramente HTTP (`CorsExtensions`, `InitializeExtensions`, `IdentityExtensions`)
+  - `Web/Extensions/` — extensiones puramente HTTP (`CorsExtensions`, `InitializeExtensions`, `IdentityExtensions`, `RateLimitingExtensions`, `ForwardedHeadersExtensions`)
   - `Web/Program.cs`
 
 ### Flujo de dependencias

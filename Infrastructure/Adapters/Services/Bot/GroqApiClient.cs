@@ -19,20 +19,55 @@ public class GroqApiClient(
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(_groqSettings.ApiKey);
 
+    /// <summary>
+    /// Tope de espera de un reintento. Groq suele pedir segundos, pero si pide minutos es
+    /// preferible fallar rápido que dejar al usuario mirando el chat sin señales de vida.
+    /// </summary>
+    private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(10);
+
     public async Task<GroqCompletionResult> GetCompletionAsync(ConversationContext context, string prompt, CancellationToken ct = default)
     {
-        var requestBody = new
+        try
         {
-            model = _groqSettings.Model,
-            messages = BuildMessages(context, prompt),
-            temperature = _groqSettings.Temperature,
-            max_tokens = 1024,
+            return await SendAsync(context, prompt, includeTools: true, ct);
+        }
+        catch (GroqApiException ex) when (ex.Kind == GroqFailureKind.ToolValidation)
+        {
+            // El modelo intentó llamar como función nativa una acción que en este diseño viaja
+            // como JSON embebido en el texto, y Groq rechaza el request entero. Sin el array
+            // "tools" no tiene esa opción y responde con el bloque JSON, que BotActionExecutor
+            // ya sabe leer. Se pierde el tool calling de create_task/start_task en ese intento,
+            // que es mucho mejor que devolver un error.
+            return await SendAsync(context, prompt, includeTools: false, ct);
+        }
+        catch (GroqApiException ex) when (ex.Kind == GroqFailureKind.RateLimited
+                                         && ex.RetryAfter is { } delay
+                                         && delay <= MaxRetryDelay)
+        {
+            // El límite del plan es por minuto y el system prompt consume casi todo el cupo, así
+            // que dos preguntas seguidas chocan siempre. Esperar lo que Groq indica convierte un
+            // error en una respuesta apenas más lenta.
+            await Task.Delay(delay, ct);
+            return await SendAsync(context, prompt, includeTools: true, ct);
+        }
+    }
+
+    private async Task<GroqCompletionResult> SendAsync(ConversationContext context, string prompt, bool includeTools, CancellationToken ct)
+    {
+        var requestBody = new Dictionary<string, object>
+        {
+            ["model"] = _groqSettings.Model,
+            ["messages"] = BuildMessages(context, prompt),
+            ["temperature"] = _groqSettings.Temperature,
+            ["max_tokens"] = 1024,
             // Específico de los modelos gpt-oss de Groq: limita el razonamiento interno para
             // reducir tokens/latencia (no nos hace falta razonamiento profundo, solo que cumpla
             // las reglas del prompt) y ayuda a no pasarnos del límite de TPM del plan gratuito.
-            reasoning_effort = "low",
-            tools = GroqTools.All
+            ["reasoning_effort"] = "low"
         };
+
+        if (includeTools)
+            requestBody["tools"] = GroqTools.All;
 
         var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, _groqSettings.BaseUrl) { Content = jsonContent };
@@ -44,7 +79,7 @@ public class GroqApiClient(
         if (!httpResponse.IsSuccessStatusCode)
         {
             var errorBody = await httpResponse.Content.ReadAsStringAsync(ct);
-            throw new Exception($"Groq API error ({httpResponse.StatusCode}): {errorBody}");
+            throw GroqApiException.FromResponse(httpResponse.StatusCode, errorBody);
         }
 
         var responseJson = await httpResponse.Content.ReadAsStringAsync(ct);
