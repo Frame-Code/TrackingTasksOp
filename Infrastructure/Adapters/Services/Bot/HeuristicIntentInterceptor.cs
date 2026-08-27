@@ -52,13 +52,16 @@ public class HeuristicIntentInterceptor(
             {
                 var today = DateOnly.FromDateTime(DateTime.Today);
                 var todayWps = wps.Where(wp => IsForToday(wp, today)).ToList();
+                var overdue = wps.Count(wp => IsOverdue(wp, today));
 
                 if (!todayWps.Any())
-                    return $"✅ No tienes tareas con fecha para hoy ({today:dd/MM/yyyy}).\n\n"
-                         + $"Tienes **{wps.Count}** tarea(s) abiertas en total; escribe **mis tareas** para verlas todas.";
+                    return $"✅ No tienes tareas con fecha para hoy ({today:dd/MM/yyyy})."
+                         + OverdueNote(overdue)
+                         + $"\n\nTienes **{wps.Count}** tarea(s) abiertas en total; escribe **mis tareas** para verlas todas.";
 
                 return WorkPackageFormatter.FormatGroupedByProject(
-                    todayWps, $"📅 **Tus tareas de hoy ({today:dd/MM/yyyy}):**");
+                    todayWps, $"📅 **Tus tareas de hoy ({today:dd/MM/yyyy}):**")
+                    + OverdueNote(overdue);
             }
 
             return WorkPackageFormatter.FormatGroupedByProject(wps);
@@ -77,19 +80,35 @@ public class HeuristicIntentInterceptor(
     }
 
     /// <summary>
-    /// Una tarea cuenta como "de hoy" si vence hoy o ya venció (sigue siendo trabajo
-    /// pendiente de hoy), si su ventana de fechas incluye hoy, o si ya arrancó y no
-    /// tiene fecha límite. Sin ninguna fecha no hay forma de saberlo, así que no entra.
+    /// Una tarea es "de hoy" si su ventana de fechas incluye hoy: ya arrancó (o no dice
+    /// cuándo) y todavía no venció. Sin ninguna fecha no hay forma de saberlo, así que no entra.
+    ///
+    /// Las vencidas quedan FUERA a propósito. Antes contaban como "de hoy" con el argumento de
+    /// que una tarea atrasada sigue siendo trabajo pendiente — cierto, pero con un backlog
+    /// normal casi todo está vencido y el filtro terminaba devolviendo la lista entera, que es
+    /// justo lo que la pregunta "¿qué tengo pendiente HOY?" quiere evitar. Se cuentan aparte
+    /// con <see cref="IsOverdue"/> para que no desaparezcan de la vista.
     /// </summary>
     internal static bool IsForToday(Domain.Entities.OpenProjectEntities.WorkPackage.WorkPackage wp, DateOnly today)
     {
         var start = ParseDate(wp.StartDate);
         var due = ParseDate(wp.DueDate);
 
-        if (due is not null && due <= today) return true;                    // vence hoy o vencida
-        if (start is null || start > today) return false;                    // aún no arranca
-        return due is null || today <= due;                                  // en curso hoy
+        if (due is not null && due < today) return false;                    // vencida: pendiente, pero no de hoy
+        if (start is not null) return start <= today;                        // arrancó y no venció
+        return due == today;                                                 // sin inicio: solo si vence hoy
     }
+
+    /// <summary>Venció antes de hoy y sigue abierta.</summary>
+    internal static bool IsOverdue(Domain.Entities.OpenProjectEntities.WorkPackage.WorkPackage wp, DateOnly today) =>
+        ParseDate(wp.DueDate) is { } due && due < today;
+
+    private static string OverdueNote(int count) => count switch
+    {
+        0 => "",
+        1 => "\n\n⚠️ Además tienes **1** tarea vencida; escribe **mis tareas** para verla.",
+        _ => $"\n\n⚠️ Además tienes **{count}** tareas vencidas; escribe **mis tareas** para verlas."
+    };
 
     private static DateOnly? ParseDate(string? value) =>
         DateOnly.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
