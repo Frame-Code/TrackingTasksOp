@@ -39,15 +39,15 @@ public class EndTaskSessionCommandImpl(
         {
             lastTimeDetails.EndTime = DateTime.Now;
 
-            // Holgura aleatoria: parametrizada desde el sidebar ("Comportamiento de tareas").
-            // Desactivada, se registran los minutos exactos trackeados.
+            // Redondeo al cuarto de hora: parametrizado desde Ajustes ("Tareas").
+            // Desactivado, se registran los minutos exactos trackeados.
+            //
+            // El resultado se calcula desde StartTime y no sumándole minutos a DateTime.Now:
+            // el margen es una propiedad de cuánto duró la sesión, no de cuándo se cerró.
             if (await ShouldAddRandomSlackTime())
             {
-                var time = lastTimeDetails.GetHoursWorked()!.Value.Minutes;
-                if (time is >= 10 and <= 60)
-                    lastTimeDetails.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(10, 20));
-                else if (time >= 60)
-                    lastTimeDetails.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(20, 40));
+                var tracked = lastTimeDetails.GetHoursWorked()!.Value;
+                lastTimeDetails.EndTime = lastTimeDetails.StartTime + TimeTrackService.RoundUpToQuarterHour(tracked);
             }
         }
 

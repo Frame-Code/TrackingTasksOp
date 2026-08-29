@@ -20,9 +20,14 @@ public class ApplicationUser : IdentityUser
     public bool SkipCancelConfirmation { get; set; } = false;
 
     /// <summary>
-    /// Si es true (default, comportamiento histórico), al finalizar una sesión se le suma un
-    /// margen aleatorio al tiempo registrado en OpenProject. Si es false, se envían los minutos
-    /// exactos trackeados.
+    /// Si es true (default), al finalizar una sesión el tiempo registrado en OpenProject se
+    /// redondea hacia arriba al siguiente cuarto de hora (ver
+    /// <see cref="Infrastructure.Adapters.Services.TimeTrackService.RoundUpToQuarterHour"/>).
+    /// Si es false, se envían los minutos exactos trackeados.
+    ///
+    /// ponytail: el nombre quedó de cuando el margen era aleatorio; ahora es determinista.
+    /// Renombrarlo cuesta una migración de columna más el contrato JSON con el front (28
+    /// referencias), así que se difiere hasta que haya otro motivo para tocar esa tabla.
     /// </summary>
     public bool AddRandomSlackTime { get; set; } = true;
 

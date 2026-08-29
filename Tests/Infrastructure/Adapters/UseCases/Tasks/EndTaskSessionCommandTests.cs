@@ -152,12 +152,15 @@ public class EndTaskSessionCommandTests
     [Fact]
     public async Task Execute_LastDetailWithoutEndTime_SetsEndTimeAndUploads()
     {
-        // StartTime muy reciente para que (DateTime.Now - StartTime).Minutes sea 0
-        // y no entre a las ramas con TimeTrackService.GetRandomMinutes (no determinista).
+        // Antes este test usaba StartTime = DateTime.Now para que la duración fuera de
+        // milisegundos y así esquivar el margen aleatorio, que no era determinista. Con el
+        // redondeo al cuarto de hora ya no hace falta: una duración realista da un resultado
+        // exacto. (Y una sesión de milisegundos hoy redondea a cero y no se sube, que es lo
+        // correcto — antes llegaba a OpenProject.)
         var detail = new TaskTimeDetail
         {
             Id = 1,
-            StartTime = DateTime.Now,
+            StartTime = DateTime.Now.AddMinutes(-30),
             EndTime = null,
             Uploaded = false
         };
@@ -174,20 +177,36 @@ public class EndTaskSessionCommandTests
     }
 
     [Fact]
-    public async Task Execute_AddRandomSlackTimeEnabled_PushesEndTimeForward()
+    public async Task Execute_AddRandomSlackTimeEnabled_RedondeaAlSiguienteCuartoDeHora()
     {
-        // 30 min trabajados -> cae en la rama de holgura de 10-20 min extra.
-        var detail = new TaskTimeDetail { Id = 1, StartTime = DateTime.Now.AddMinutes(-30), EndTime = null };
+        // 32 min trackeados -> el bloque siguiente es 45.
+        var start = DateTime.Now.AddMinutes(-32);
+        var detail = new TaskTimeDetail { Id = 1, StartTime = start, EndTime = null };
         var task = BuildTask(detail);
         var (useCase, _, _, _, _) = BuildUseCase(task, addRandomSlackTime: true);
-        var request = new EndTaskSessionRequest(1, 2, "con holgura");
-        var before = DateTime.Now;
+        var request = new EndTaskSessionRequest(1, 2, "con redondeo");
 
         await useCase.Execute(request);
 
-        // Sin holgura, EndTime quedaría pegado a "before"; con holgura activada se le suman
-        // entre 10 y 20 minutos más sobre "ahora".
-        Assert.True(detail.EndTime > before.AddMinutes(9));
+        // El resultado se calcula desde StartTime, así que es exacto y no depende de cuánto
+        // tardó la llamada.
+        Assert.Equal(start.AddMinutes(45), detail.EndTime);
+    }
+
+    [Fact]
+    public async Task Execute_AddRandomSlackTimeEnabled_DuracionYaMultiploDe15_NoLaToca()
+    {
+        // El defecto que motivó el cambio: 30 min exactos recibían de 10 a 20 minutos extra
+        // porque el algoritmo miraba TimeSpan.Minutes (el resto) en vez de la duración.
+        var start = DateTime.Now.AddMinutes(-30);
+        var detail = new TaskTimeDetail { Id = 1, StartTime = start, EndTime = null };
+        var task = BuildTask(detail);
+        var (useCase, _, _, _, _) = BuildUseCase(task, addRandomSlackTime: true);
+        var request = new EndTaskSessionRequest(1, 2, "ya cae justo");
+
+        await useCase.Execute(request);
+
+        Assert.Equal(start.AddMinutes(30), detail.EndTime);
     }
 
     [Fact]
