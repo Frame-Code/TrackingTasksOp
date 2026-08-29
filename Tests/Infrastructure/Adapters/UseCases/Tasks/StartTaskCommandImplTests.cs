@@ -49,7 +49,6 @@ public class StartTaskCommandImplTests
         return new StartTaskCommandImpl(
             repo.Object,
             projectRepo.Object,
-            new Mock<IAddTimeEntryCommand>().Object,
             new Mock<ICreateWorkPackageCommand>().Object,
             new Mock<IProjectOpService>().Object,
             new FakeCurrentUser());
@@ -130,7 +129,7 @@ public class StartTaskCommandImplTests
 
         var command = new StartTaskCommandImpl(
             repo.Object, projectRepo.Object,
-            new Mock<IAddTimeEntryCommand>().Object, new Mock<ICreateWorkPackageCommand>().Object,
+            new Mock<ICreateWorkPackageCommand>().Object,
             new Mock<IProjectOpService>().Object, new FakeCurrentUser());
 
         await command.Execute(Request(1134, startTracking: false));

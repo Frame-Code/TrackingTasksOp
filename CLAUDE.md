@@ -61,6 +61,7 @@ Web/Controllers → Application/Ports/UseCases → Infrastructure/Adapters/UseCa
 | Interface | Implementación | Descripción |
 |---|---|---|
 | `IStartTaskCommand` | `StartTaskCommandImpl` | Inicia sesión de tarea, cierra la anterior si existe |
+| `IRecordSessionHeartbeatCommand` | `RecordSessionHeartbeatCommandImpl` | Sella `LastHeartbeat` en la sesión abierta del usuario (el cliente late cada minuto) |
 | `IEndTaskSessionCommand` | `EndTaskSessionCommandImpl` | Cierra la sesión activa y sube time entry a OpenProject |
 | `IAddTimeEntry` | `AddTimeEntryImpl` | Llama a la API de OpenProject para registrar horas |
 | `IListsWorkPackagesCommand` | `ListsWorkPackagesCommandImpl` | Consulta work packages desde OpenProject |
@@ -77,6 +78,7 @@ Web/Controllers → Application/Ports/UseCases → Infrastructure/Adapters/UseCa
 | `IUserOpService` | `UserOpServiceImpl` | Lee información de usuario desde OpenProject |
 | `IGeminiIntentService` | `GroqIntentService` (default) | Servicio de detección de intenciones; existen impl alternativas: `GeminiIntentService`, `OllamaIntentService`, `GoogleAIStudioIntentService` |
 | `IConversationContextService` | `RedisConversationService` | Persiste contexto de conversación del bot en Redis |
+| `IOrphanedSessionReconciler` | `OrphanedSessionReconcilerImpl` | Al arrancar, cierra con su último latido las sesiones que quedaron abiertas |
 
 ### Integración con OpenProject
 
@@ -124,7 +126,7 @@ Middleware global en `Web/Middleware/GlobalExceptionHandler.cs`, devuelve respue
 
 - **Task** — entidad central; PK compuesta `(UserId, WorkPackageId)` (`WorkPackageId` no es identity, viene de OpenProject; `UserId` la aísla por usuario/tenant); también tiene `OpenProjectInstanceId` para scoping multi-tenant en sus relaciones con `Project`/`StatusTask`; tiene método `GetTotalHoursWorked()`.
 - **OpenProjectInstance** — representa la instancia/organización de OpenProject a la que pertenece un usuario/tarea (soporte multi-tenant, ver `AUTH_DESIGN.md`).
-- **TaskTimeDetail** — registra intervalos de tiempo (`StartTime`/`EndTime`) por tarea; `Uploaded` indica si ya fue enviado a OpenProject
+- **TaskTimeDetail** — registra intervalos de tiempo (`StartTime`/`EndTime`) por tarea; `Uploaded` indica si ya fue enviado a OpenProject. `EndTime` significa **"último momento con evidencia de actividad"**, no "cuándo nos enteramos": una sesión que el usuario no cerró se cierra con `CloseAsUnconfirmed()`, que usa `LastHeartbeat` (sellado por el servidor cada minuto vía `IRecordSessionHeartbeatCommand`) y marca `EndTimeInferred` para que ese tiempo estimado **no se suba solo** a OpenProject y pase por la cola de pendientes. Antes se cerraba con `DateTime.Now`, lo que con el apagado nocturno del servidor publicaba jornadas enteras de trabajo inexistente.
 - **StatusTask** — estado de la tarea; `IsClosed` controla si acepta nuevas sesiones
 - **Project** — proyecto local (cache de OpenProject)
 - **MigrationData** — entidad de soporte para migraciones de datos

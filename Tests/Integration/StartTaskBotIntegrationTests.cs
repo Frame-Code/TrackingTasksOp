@@ -86,7 +86,6 @@ public class StartTaskBotIntegrationTests
         var startTaskCommand = new StartTaskCommandImpl(
             taskRepository,
             projectRepository,
-            addTimeEntryCommand,
             createWorkPackageCommand,
             projectOpService,
             new FakeCurrentUser());

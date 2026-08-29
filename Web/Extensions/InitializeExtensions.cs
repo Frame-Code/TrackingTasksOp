@@ -1,4 +1,5 @@
-﻿using Infrastructure.Extensions;
+﻿using Application.Ports.Services;
+using Infrastructure.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Web.Extensions;
@@ -8,6 +9,17 @@ public static class InitializeExtensions
     public static async Task<WebApplication> InitializeAsync(this WebApplication app)
     {
         await app.Services.MigrateAsync();
+
+        // Después de migrar y antes de aceptar tráfico: si el proceso anterior se detuvo con
+        // sesiones abiertas (apagado programado del servidor, corte, crash), se cierran acá con
+        // su último latido. Si no, quedarían abiertas e invisibles hasta que el usuario volviera
+        // a iniciar esa misma tarea — y hasta entonces nadie sabría que existen.
+        using (var scope = app.Services.CreateScope())
+        {
+            await scope.ServiceProvider
+                .GetRequiredService<IOrphanedSessionReconciler>()
+                .ReconcileAsync();
+        }
         // Antes que cualquier otro middleware: reescribe RemoteIpAddress y el esquema con lo que
         // dice el proxy inverso. Tiene que correr antes de HttpsRedirection (que decide según el
         // esquema) y antes del rate limiter (que particiona por IP). Sin proxies configurados no

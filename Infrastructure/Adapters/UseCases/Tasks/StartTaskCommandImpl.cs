@@ -18,7 +18,6 @@ namespace Infrastructure.Adapters.UseCases.Tasks;
     public class StartTaskCommandImpl(
         ITaskRepository repository,
            IProjectRepository projectRepository,
-          IAddTimeEntryCommand addTimeEntryCommand,
           ICreateWorkPackageCommand createWorkPackageCommand,
           IProjectOpService projectOpService,
           CurrentUser currentUser
@@ -118,36 +117,19 @@ namespace Infrastructure.Adapters.UseCases.Tasks;
             throw new ActiveSessionConflictException(running.WorkPackageId, running.Name, openDetail.StartTime);
         }
 
-        //Cerrar la última entrada si quedó abierta en esta misma tarea
+        // Cerrar la última entrada si quedó abierta en esta misma tarea.
+        //
+        // Esta sesión NO la cerró el usuario: la encontramos abierta al arrancar otra. No
+        // sabemos cuándo dejó de trabajar, solo hasta cuándo hubo evidencia de actividad, así
+        // que la cerramos con el último latido y la marcamos como inferida.
+        //
+        // Antes se cerraba con DateTime.Now y, si venía ActivityId, se subía sola a OpenProject
+        // (con hasta 40 minutos aleatorios de holgura encima). Una sesión que quedó abierta
+        // anoche se publicaba hoy como una jornada entera de trabajo que nunca ocurrió. Un
+        // tiempo estimado no se publica: va a pendientes para que el usuario lo confirme.
         var details = task.TasksTimeDetails.ToList();
         var lastDetail = task.GetActiveSession();
-        if (lastDetail is not null)
-        {
-            lastDetail.EndTime = DateTime.Now;
-
-            // Solo intentamos subir a OpenProject si tenemos el ID de actividad
-            if (request.ActivityId.HasValue && request.ActivityId.Value > 0)
-            {
-                //Agregando más tiempo de holgura ._. (Lógica de main)
-                var time = lastDetail.GetHoursWorked()!.Value.Minutes;
-                if (time is >= 10 and <= 60)
-                    lastDetail.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(10, 20));
-                else if (time >= 60)
-                    lastDetail.EndTime = DateTime.Now.AddMinutes(TimeTrackService.GetRandomMinutes(20, 40));
-
-                var timeEntryRequest = new AddTimeEntryRequest(task.WorkPackageId, request.ActivityId.Value,
-                    lastDetail.GetHoursWorked()!.Value.TotalHours, request.Comment ?? string.Empty,
-                    DateOnly.FromDateTime(lastDetail.StartTime));
-
-                await addTimeEntryCommand.Execute(timeEntryRequest);
-                lastDetail.Uploaded = true;
-            }
-            else
-            {
-                // Se queda como guardado localmente pero no subido a OP
-                lastDetail.Uploaded = false;
-            }
-        }
+        lastDetail?.CloseAsUnconfirmed();
 
         //Crear la nueva entrada de tiempo
         var detail = new TaskTimeDetail

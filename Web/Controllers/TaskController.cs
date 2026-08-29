@@ -17,6 +17,7 @@ public class TaskController(
     ICancelTaskSessionCommand cancelTaskSessionCommand,
     IPauseTaskCommand pauseTaskCommand,
     IResumeTaskCommand resumeTaskCommand,
+    IRecordSessionHeartbeatCommand recordSessionHeartbeatCommand,
     IUploadPendingSessionsCommand uploadPendingSessionsCommand,
     IGetPendingSessionsSummaryQuery getPendingSessionsSummaryQuery,
     IGetPendingSessionsListQuery getPendingSessionsListQuery,
@@ -35,6 +36,20 @@ public class TaskController(
     public async Task<TaskEntity> EndTaskSession([FromBody] EndTaskSessionRequest request)
     {
         return await endTaskSessionCommand.Execute(request);
+    }
+
+    /// <summary>
+    /// Marca que la sesión abierta del usuario sigue viva. El cliente lo llama cada minuto
+    /// mientras corre el cronómetro; el servidor sella la hora (no el cliente).
+    ///
+    /// Es lo que permite cerrar una sesión huérfana con el último momento en que hubo evidencia
+    /// de actividad, en vez de asumir que se trabajó hasta que alguien se dio cuenta.
+    /// </summary>
+    [HttpPost("heartbeat")]
+    public async Task<IActionResult> Heartbeat(CancellationToken ct)
+    {
+        var alive = await recordSessionHeartbeatCommand.Execute(ct);
+        return alive ? NoContent() : NotFound(new { message = "No hay sesión activa." });
     }
 
     [HttpPost("cancel_session")]

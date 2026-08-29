@@ -58,6 +58,8 @@ public static class ServicesExtensions
         collection.AddScoped<IUpdateWorkPackageCommand, UpdateWorkPackageCommandImpl>();
         collection.AddScoped<IGetWorkPackageCommand, GetWorkPackageCommandImpl>();
         collection.AddScoped<IStartTaskCommand, StartTaskCommandImpl>();
+        collection.AddScoped<IRecordSessionHeartbeatCommand, RecordSessionHeartbeatCommandImpl>();
+        collection.AddScoped<IOrphanedSessionReconciler, OrphanedSessionReconcilerImpl>();
         collection.AddScoped<IEndTaskSessionCommand, EndTaskSessionCommandImpl>();
         collection.AddScoped<ICancelTaskSessionCommand, CancelTaskSessionCommandImpl>();
         collection.AddScoped<IPauseTaskCommand, PauseTaskCommandImpl>();

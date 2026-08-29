@@ -3,12 +3,17 @@
 import { getActiveSession, store, NOTIFICATION_TYPES } from './state.js';
 import { formatDuration } from './helpers.js';
 import { updateNavbar } from './render.js';
-import { fetchPendingSummary } from './api.js';
+import { fetchPendingSummary, postSessionHeartbeat } from './api.js';
 import { refreshPendingBadge, openPendingSessionsModal } from './pending-sessions.js';
 
-let timerInterval   = null;
-let notifInterval   = null;
-let pendingInterval = null;
+let timerInterval     = null;
+let notifInterval     = null;
+let pendingInterval   = null;
+let heartbeatInterval = null;
+
+// Cada minuto: suficientemente fino para que el redondeo al cerrar una sesión huérfana sea
+// despreciable, y suficientemente espaciado para que sea un UPDATE por usuario por minuto.
+const HEARTBEAT_MS = 60 * 1000;
 
 const DEFAULT_NOTIF_MINUTES = 15;
 
@@ -110,11 +115,37 @@ export function refreshNotificationTimers() {
     startPendingReminder();
 }
 
+/**
+ * Late mientras la sesión esté abierta. Un fallo de red se ignora: perder un latido solo
+ * recorta un minuto de la estimación si justo después se cae todo, y no hay nada que el
+ * usuario pueda hacer con ese error.
+ */
+async function sendHeartbeat() {
+    if (!getActiveSession()) return;
+    try {
+        await postSessionHeartbeat();
+    } catch { /* el próximo latido reintenta */ }
+}
+
+function startHeartbeat() {
+    stopHeartbeat();
+    sendHeartbeat(); // uno inmediato: si el server se cae en el primer minuto, ya hay evidencia
+    heartbeatInterval = setInterval(sendHeartbeat, HEARTBEAT_MS);
+}
+
+function stopHeartbeat() {
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+    }
+}
+
 export function startTimer() {
     stopTimer();
     updateTimerDisplay();
     timerInterval = setInterval(updateTimerDisplay, 1000);
     startNotifInterval();
+    startHeartbeat();
     updateNavbar();
 }
 
@@ -124,6 +155,7 @@ export function stopTimer() {
         timerInterval = null;
     }
     stopNotifInterval();
+    stopHeartbeat();
     updateNavbar();
 }
 
