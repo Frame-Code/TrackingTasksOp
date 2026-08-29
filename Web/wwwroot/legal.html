@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title>TrackingTasksOp — Términos, Privacidad y Cookies</title>
+    <script>
+        document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('appTheme') || 'dark');
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="/css/app.css" rel="stylesheet">
+    <style>
+        .legal-body { max-width: 820px; }
+        .legal-body h2 { font-size: 1.35rem; margin-top: 2.5rem; margin-bottom: .9rem; }
+        .legal-body h3 { font-size: 1.05rem; margin-top: 1.6rem; margin-bottom: .6rem; font-weight: 600; }
+        .legal-body p, .legal-body li { line-height: 1.7; }
+        .legal-body ul { margin-bottom: 1rem; }
+        .legal-toc a { text-decoration: none; }
+        .legal-toc a:hover { text-decoration: underline; }
+        .legal-updated { font-size: .82rem; }
+        @media (min-width: 992px) {
+            .legal-toc { position: sticky; top: 1.5rem; }
+        }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+    <nav class="navbar" id="mainNav">
+        <div class="container-fluid px-4">
+            <a href="/" class="navbar-brand fw-bold fs-5 text-decoration-none">
+                <i class="bi bi-clock-history me-2 text-primary"></i>TrackingTasksOp
+            </a>
+        </div>
+    </nav>
+
+    <main class="flex-grow-1 py-5">
+        <div class="container">
+            <div class="row justify-content-center g-5">
+
+                <div class="col-lg-3 d-none d-lg-block">
+                    <nav class="legal-toc small">
+                        <div class="text-uppercase text-muted fw-semibold mb-2" style="font-size:.72rem; letter-spacing:.5px;">En esta página</div>
+                        <ul class="list-unstyled">
+                            <li class="mb-2"><a href="#terminos" class="text-body-secondary">Términos de uso</a></li>
+                            <li class="mb-2"><a href="#privacidad" class="text-body-secondary">Política de privacidad</a></li>
+                            <li class="mb-2"><a href="#cookies" class="text-body-secondary">Política de cookies</a></li>
+                            <li class="mb-2"><a href="#derechos" class="text-body-secondary">Tus derechos</a></li>
+                            <li class="mb-2"><a href="#contacto" class="text-body-secondary">Contacto</a></li>
+                        </ul>
+                    </nav>
+                </div>
+
+                <div class="col-lg-8 legal-body">
+
+                    <h1 class="fw-bold mb-2">Términos, privacidad y cookies</h1>
+                    <p class="text-muted legal-updated mb-0">Última actualización: 29 de agosto de 2026</p>
+                    <p class="text-muted legal-updated">Responsable del tratamiento: DarS Lab.</p>
+
+                    <hr class="my-4">
+
+                    <!-- ─────────────── TÉRMINOS ─────────────── -->
+                    <h2 id="terminos"><i class="bi bi-file-text me-2 text-primary"></i>Términos de uso</h2>
+
+                    <h3>1. Qué es TrackingTasksOp</h3>
+                    <p>
+                        TrackingTasksOp es una herramienta que registra el tiempo dedicado a tareas de
+                        OpenProject. Permite iniciar y finalizar una sesión de trabajo sobre una tarea
+                        asignada, calcula automáticamente las horas invertidas y crea la entrada de
+                        tiempo correspondiente en la instancia de OpenProject del usuario.
+                    </p>
+                    <p>
+                        El servicio actúa como complemento de OpenProject: no lo reemplaza ni almacena
+                        de forma autoritativa la información de proyectos. La fuente de verdad de las
+                        tareas, los proyectos y las horas registradas sigue siendo tu instancia de
+                        OpenProject.
+                    </p>
+
+                    <h3>2. Cuenta y credenciales</h3>
+                    <p>
+                        Para usar el servicio necesitás una cuenta y una clave de API (API key) de tu
+                        propia instancia de OpenProject. Sos responsable de:
+                    </p>
+                    <ul>
+                        <li>Mantener la confidencialidad de tu contraseña y de tu clave de API.</li>
+                        <li>Toda la actividad que ocurra bajo tu cuenta.</li>
+                        <li>Contar con autorización para acceder a la instancia de OpenProject que configures.</li>
+                    </ul>
+                    <p>
+                        Podés revocar la clave de API desde OpenProject en cualquier momento; al hacerlo,
+                        TrackingTasksOp deja de poder operar en tu nombre.
+                    </p>
+
+                    <h3>3. Uso aceptable</h3>
+                    <p>No está permitido:</p>
+                    <ul>
+                        <li>Acceder a instancias de OpenProject o a datos de terceros sin autorización.</li>
+                        <li>Intentar vulnerar, sobrecargar o interferir con el funcionamiento del servicio.</li>
+                        <li>Usar el servicio para actividades ilícitas o que infrinjan derechos de terceros.</li>
+                        <li>Automatizar el registro de horas de forma que falsee el tiempo realmente trabajado.</li>
+                    </ul>
+
+                    <h3>4. Disponibilidad y límites de responsabilidad</h3>
+                    <p>
+                        El servicio se ofrece «tal cual», sin garantía de disponibilidad ininterrumpida.
+                        Puede haber interrupciones por mantenimiento, fallos de infraestructura o de la
+                        instancia de OpenProject de destino.
+                    </p>
+                    <p>
+                        <strong>Verificá siempre tus entradas de tiempo en OpenProject.</strong> No nos
+                        hacemos responsables de horas mal registradas, no registradas o duplicadas
+                        derivadas de fallos de red, de la API de OpenProject o de un uso incorrecto de la
+                        herramienta.
+                    </p>
+
+                    <h3>5. Cambios y terminación</h3>
+                    <p>
+                        Podemos modificar estos términos; los cambios relevantes se anunciarán en esta
+                        misma página con una nueva fecha de actualización. Podés dejar de usar el servicio
+                        y solicitar la eliminación de tu cuenta en cualquier momento.
+                    </p>
+
+                    <!-- ─────────────── PRIVACIDAD ─────────────── -->
+                    <h2 id="privacidad"><i class="bi bi-shield-lock me-2 text-primary"></i>Política de privacidad</h2>
+
+                    <h3>Qué datos guardamos</h3>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Dato</th>
+                                    <th scope="col">Para qué</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Correo electrónico y contraseña</td>
+                                    <td>Identificarte e iniciar sesión. La contraseña se guarda como <em>hash</em>, nunca en claro.</td>
+                                </tr>
+                                <tr>
+                                    <td>Clave de API y URL de tu OpenProject</td>
+                                    <td>Operar en tu nombre contra tu instancia. La clave se guarda <strong>cifrada</strong>.</td>
+                                </tr>
+                                <tr>
+                                    <td>Tareas y sesiones de trabajo</td>
+                                    <td>Calcular las horas invertidas y crear las entradas de tiempo.</td>
+                                </tr>
+                                <tr>
+                                    <td>Segundo factor (2FA), si lo activás</td>
+                                    <td>Proteger el acceso a tu cuenta.</td>
+                                </tr>
+                                <tr>
+                                    <td>Avatar y preferencias</td>
+                                    <td>Personalizar la interfaz y las notificaciones.</td>
+                                </tr>
+                                <tr>
+                                    <td>Registros de acceso (fecha, resultado)</td>
+                                    <td>Seguridad de la cuenta y detección de accesos indebidos.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3>Cómo se protege tu clave de API</h3>
+                    <p>
+                        Tu clave de API de OpenProject se almacena cifrada y solo se descifra en memoria,
+                        en el momento de hacer una petición a tu instancia. No se muestra de nuevo en la
+                        interfaz después de guardarla ni se registra en los logs del sistema.
+                    </p>
+
+                    <h3>Con quién se comparten los datos</h3>
+                    <p>El servicio no vende ni cede datos personales. Se comunican datos únicamente a:</p>
+                    <ul>
+                        <li>
+                            <strong>Tu instancia de OpenProject</strong> — se le envían las entradas de
+                            tiempo que generás y se leen tus tareas, proyectos y estados. Es la instancia
+                            que vos configurás y está bajo el control de tu organización.
+                        </li>
+                        <li>
+                            <strong>Groq, Inc. (proveedor de IA)</strong> — <em>solo si usás el asistente
+                            conversacional.</em> El texto de tus mensajes al asistente se envía a la API de
+                            Groq para interpretar la intención y, si usás dictado por voz, el audio se
+                            envía para transcribirlo. Estos datos se procesan en servidores fuera del país.
+                            Si no usás el asistente, no se envía nada a este proveedor.
+                        </li>
+                        <li>
+                            <strong>jsDelivr (CDN)</strong> — la interfaz carga hojas de estilo e iconos
+                            desde esta red de distribución, que recibe la dirección IP de tu navegador como
+                            parte de la petición. No se le envía ningún dato de tu cuenta.
+                        </li>
+                    </ul>
+
+                    <h3>Conversaciones con el asistente</h3>
+                    <p>
+                        El contexto de tu conversación con el asistente se guarda de forma temporal para
+                        dar continuidad al diálogo y <strong>se elimina automáticamente a los 60 minutos</strong>
+                        de inactividad. No se usa para entrenar modelos.
+                    </p>
+
+                    <h3>Cuánto tiempo se conservan</h3>
+                    <p>
+                        Los datos de tu cuenta y tus registros de tiempo se conservan mientras la cuenta
+                        esté activa. Si solicitás la eliminación de la cuenta, se borran junto con sus
+                        tareas y sesiones asociadas. Las entradas de tiempo que ya se hayan enviado a
+                        OpenProject <strong>permanecen en tu instancia de OpenProject</strong>: su
+                        eliminación depende de tu organización, no de este servicio.
+                    </p>
+
+                    <!-- ─────────────── COOKIES ─────────────── -->
+                    <h2 id="cookies"><i class="bi bi-cookie me-2 text-primary"></i>Política de cookies</h2>
+
+                    <p>
+                        TrackingTasksOp usa <strong>una única cookie, estrictamente necesaria</strong> para
+                        que puedas mantener la sesión iniciada. No usamos cookies de publicidad, de
+                        analítica ni de seguimiento, ni compartimos cookies con terceros.
+                    </p>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Nombre</th>
+                                    <th scope="col">Finalidad</th>
+                                    <th scope="col">Duración</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>TrackingTaskOp.Auth</code></td>
+                                    <td>
+                                        Mantener tu sesión iniciada. Es <code>HttpOnly</code> (el JavaScript
+                                        de la página no puede leerla), viaja cifrada por HTTPS y usa
+                                        <code>SameSite=Lax</code> para mitigar peticiones falsificadas
+                                        desde otros sitios.
+                                    </td>
+                                    <td>7 días, renovables mientras sigas usando la aplicación</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3>Almacenamiento local del navegador</h3>
+                    <p>
+                        Además de la cookie, la aplicación guarda en el <code>localStorage</code> de tu
+                        navegador tu preferencia de tema (claro u oscuro) y el aviso de cookies ya leído.
+                        Esa información no sale de tu equipo y podés borrarla limpiando los datos del sitio.
+                    </p>
+
+                    <h3>¿Por qué no hay un botón de «aceptar cookies»?</h3>
+                    <p>
+                        Porque las cookies estrictamente necesarias para prestar un servicio que el usuario
+                        solicita expresamente —como mantener la sesión iniciada— requieren
+                        <strong>información, no consentimiento</strong>. No usamos ninguna cookie que sí lo
+                        requeriría. Si eso cambiara, se pedirá tu consentimiento previo.
+                    </p>
+
+                    <!-- ─────────────── DERECHOS ─────────────── -->
+                    <h2 id="derechos"><i class="bi bi-person-check me-2 text-primary"></i>Tus derechos</h2>
+                    <p>Sobre tus datos personales podés ejercer los derechos de:</p>
+                    <ul>
+                        <li><strong>Acceso</strong> — saber qué datos tuyos tratamos.</li>
+                        <li><strong>Rectificación</strong> — corregir datos inexactos.</li>
+                        <li><strong>Eliminación</strong> — solicitar el borrado de tu cuenta y tus datos.</li>
+                        <li><strong>Oposición y limitación</strong> — pedir que dejemos de tratar ciertos datos.</li>
+                        <li><strong>Portabilidad</strong> — obtener una copia de tus datos en formato legible.</li>
+                    </ul>
+                    <p>
+                        Buena parte de esto lo podés hacer vos mismo desde
+                        <a href="/settings.html">Configuración</a>: actualizar tus datos, cambiar o quitar
+                        tu clave de API, y revisar tu actividad. Para lo demás, escribinos.
+                    </p>
+
+                    <!-- ─────────────── CONTACTO ─────────────── -->
+                    <h2 id="contacto"><i class="bi bi-envelope me-2 text-primary"></i>Contacto</h2>
+                    <p>
+                        Para cualquier consulta sobre estos términos, tus datos o para ejercer los derechos
+                        descritos arriba, escribí a
+                        <a href="mailto:CORREO_DE_CONTACTO">CORREO_DE_CONTACTO</a>.
+                    </p>
+
+                    <hr class="my-5">
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-arrow-left me-1"></i><a href="/" class="text-body-secondary">Volver a la aplicación</a>
+                    </p>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center text-muted small py-3">
+        <span class="opacity-50">DarS Lab &copy; 2026. Todos los derechos reservados.</span>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

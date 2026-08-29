@@ -41,7 +41,7 @@ try
     builder.Services.AddProblemDetails();
     builder.Services.AddSwaggerGen();
     builder.Services.AddProxyHeaders(builder.Configuration);
-    builder.Services.AddTrackingDataProtection(builder.Configuration, builder.Environment.ContentRootPath);
+    builder.Services.AddTrackingDataProtection(builder.Configuration);
     builder.Services.AddIdentityAndAuth(builder.Configuration);
     builder.Services.AddApiRateLimiting(builder.Configuration);
     builder.Services.AddHttpClients(builder.Configuration, builder.Environment.IsDevelopment());

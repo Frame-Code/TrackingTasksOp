@@ -1,5 +1,6 @@
 using Domain.Entities.TrackingTasksEntities;
 using Infrastructure.DataAccess.Entities;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Task = Domain.Entities.TrackingTasksEntities.Task;
@@ -7,8 +8,19 @@ using Task = Domain.Entities.TrackingTasksEntities.Task;
 namespace Infrastructure.DataAccess;
 
 public class TrackingTasksDbContext(DbContextOptions<TrackingTasksDbContext> options)
-    : IdentityDbContext<ApplicationUser>(options)
+    : IdentityDbContext<ApplicationUser>(options), IDataProtectionKeyContext
 {
+    /// <summary>
+    /// El key ring de Data Protection, que descifra <c>LocalCredentials.EncryptedApiKey</c>.
+    /// Vive en la misma base que los datos que protege a propósito: cuando estaba en el disco
+    /// (volumen <c>keysdata</c>) eran DOS artefactos que había que respaldar juntos, y un
+    /// backup que capturaba solo la base dejaba las API keys de OpenProject indescifrables.
+    /// Ahora un único <c>pg_dump</c> se lleva las dos mitades y no se pueden desincronizar.
+    /// El ring va cifrado con certificado (ver <c>DataProtectionExtensions</c>) para que ese
+    /// mismo dump no exponga las API keys si el archivo se filtra.
+    /// </summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
+
     public DbSet<Project> Projects { get; set; } = null!;
     public DbSet<Task> Tasks { get; set; } = null!;
     public DbSet<TaskTimeDetail> TasksTimeDetails { get; set; } = null!;
