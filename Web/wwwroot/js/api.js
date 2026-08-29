@@ -230,6 +230,17 @@ export async function postUploadPending(workPackageId) {
     });
 }
 
+/**
+ * Avisa al servidor que la sesión abierta sigue viva. El servidor sella la hora; acá no se
+ * manda ningún timestamp a propósito, para que el reloj del navegador no pueda inflar horas.
+ *
+ * Es la evidencia con la que se cierra una sesión que quedó abierta (server apagado, pestaña
+ * cerrada): sin latidos no hay forma de saber hasta cuándo se trabajó de verdad.
+ */
+export async function postSessionHeartbeat() {
+    return apiFetch(`${API}/task/heartbeat`, { method: 'POST' });
+}
+
 /** Registra tiempo a mano en OpenProject (sesión que no se cronometró). */
 export async function postLogTime(payload) {
     return apiFetch(`${API}/task/log_time`, {
