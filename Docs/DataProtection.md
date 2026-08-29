@@ -13,90 +13,110 @@ un `IDataProtector` a partir del *key ring* configurado en
 
 ## Dónde se guardan las claves (key ring)
 
-Las claves criptográficas (los archivos `key-<guid>.xml`) se guardan en
-**`Web/Keys/`**, dentro del propio proyecto (`ContentRootPath`), independientemente
-del SO, de la terminal o del usuario que ejecute la app.
+En la **tabla `DataProtectionKeys` de la propia base de datos**, vía
+`PersistKeysToDbContext<TrackingTasksDbContext>()`. El `DbContext` implementa
+`IDataProtectionKeyContext` y expone el `DbSet<DataProtectionKey>`.
 
-**No se necesita configurar ninguna ruta** — la carpeta se crea sola en el primer
-arranque (`Directory.CreateDirectory`). `Web/Keys/` está en `.gitignore`: es local
-de cada copia del repo y nunca debe commitearse.
+**No requiere configuración.** La tabla la crea la migración `DataProtectionKeysToDb`, y
+ASP.NET Core genera la primera clave sola cuando se necesita cifrar algo.
 
 ```jsonc
 // Web/appsettings.json
 "DataProtectionSettings": {
-  "ApplicationName": "TrackingTaskOp"
+  "ApplicationName": "TrackingTaskOp",
+  "KeyRingCertificatePath": "",      // opcional, ver abajo
+  "KeyRingCertificatePassword": ""
 }
 ```
 
-## ¿Por qué se cambió esto?
+### Por qué en la base y no en disco
 
-Antes, `DataProtectionSettings` tenía además un campo `KeyRingPath` con una ruta de
-**Windows hardcodeada** (`"C:\\ProgramData\\TrackingTaskOp\\Keys"`).
+Esto es lo importante y la razón del cambio. El cifrado de las API keys es *envelope
+encryption*: hay **dos mitades** —el dato cifrado y la clave que lo descifra— y ambas
+tienen que existir juntas para que sirvan de algo.
 
-En Linux/macOS, `\` no es separador de directorios, así que .NET interpretaba toda esa
-cadena como **un solo nombre de carpeta literal** (con `:` y `\` incluidos) y la creaba
-dentro de `Web/`, generando carpetas con nombres como:
-
-```
-Web/C:\ProgramData\TrackingTaskOp\Keys/
-```
-
-Si alguien cambiaba ese valor (por ejemplo, de `TrackingTaskOp` a `TrackingTaskOpDevelop`),
-se generaba **otra carpeta nueva con otra clave**, y el API key cifrado anteriormente
-en la base de datos dejaba de poder descifrarse:
+Antes el key ring vivía en disco (`Web/Keys/`, montado en el volumen Docker `keysdata`) y
+el dato cifrado en Postgres. Eran **dos artefactos que había que respaldar juntos**, y
+nada lo garantizaba: un `pg_dump` capturaba una mitad y dejaba la otra atrás. Cuando ese
+dump se restauraba, las API keys quedaban indescifrables:
 
 ```
 System.Security.Cryptography.CryptographicException: The key {xxxxxxxx-...} was not found in the key ring.
 ```
 
-Se evaluó primero usar `Environment.SpecialFolder.LocalApplicationData`
-(`~/.local/share` en Linux, `%LOCALAPPDATA%` en Windows), pero en Linux esa ruta
-depende de la variable de entorno `XDG_DATA_HOME`, que algunas terminales
-(p. ej. la integrada de VS Code instalado como *snap*) sobreescriben a una ruta
-distinta (`~/snap/code/<rev>/.local/share`). Esto provocaba que, según desde qué
-terminal se ejecutara `dotnet run`, la app generara/buscara el keyring en una
-carpeta distinta — mismo problema de fondo, distinto disfraz.
+y **todos los usuarios tenían que volver a cargar su API key a mano** — lo cual es
+especialmente doloroso porque OpenProject muestra la clave **una sola vez**: el usuario ni
+siquiera puede recuperar la anterior, tiene que generar una nueva.
 
-La solución final usa `Web/Keys/` (relativo al `ContentRootPath` del proyecto):
-siempre la misma ruta, sin importar el SO, la terminal, variables de entorno o el
-usuario que ejecute la app.
+Con el ring en la base, un solo `pg_dump` se lleva las dos mitades. No se pueden
+desincronizar porque ya no son dos cosas.
 
-## Configuración para un dev nuevo
+### El certificado (opcional pero recomendado en producción)
 
-**No requiere ninguna configuración manual.** Al clonar el repo y ejecutar la app por
-primera vez:
+La contrapartida de meter el ring en la base es que un dump filtrado traería las claves
+en claro **junto a los datos que protegen** — o sea, el cifrado dejaría de valer contra
+cualquiera que consiga una copia del backup.
 
-1. `Directory.CreateDirectory` crea automáticamente `Web/Keys/` si no existe.
-2. ASP.NET Core genera ahí una clave nueva la primera vez que se necesita cifrar/descifrar
-   algo.
-3. Mientras `DataProtectionSettings:ApplicationName` no cambie y `Web/Keys/` no se borre,
-   los API keys de OpenProject que el usuario registre seguirán siendo descifrables en
-   reinicios sucesivos de la app, sin importar desde qué terminal se ejecute.
+Para taparlo, `ProtectKeysWithCertificate` envuelve el ring con un `.pfx` que vive fuera
+de la base. A diferencia del ring (que rota solo cada 90 días), el certificado es un
+archivo **estático**: se respalda una vez y no vuelve a cambiar.
+
+Generarlo:
+
+```bash
+openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 3650 -nodes \
+  -subj "/CN=TrackingTasksOp KeyRing"
+openssl pkcs12 -export -out Deploy/keyring.pfx -inkey key.pem -in cert.pem \
+  -passout pass:LA_PASSWORD
+rm key.pem cert.pem
+```
+
+Después, en `docker-compose.yml`, descomentar las dos variables
+`DataProtectionSettings__KeyRingCertificate*` y el volumen que monta el `.pfx`, y agregar
+`KEYRING_CERT_PASSWORD` al `.env`.
+
+> **Si se pierde el `.pfx`, el ring queda ilegible y volvés al problema original.**
+> Respaldalo una vez, fuera del dump de la base (gestor de contraseñas o almacenamiento
+> aparte). Guardarlo *dentro* del mismo backup que la base anula el propósito.
+
+## Backup
+
+Con el ring en la base, el backup es un solo artefacto:
+
+```bash
+docker exec trackingtasksop-postgres-1 pg_dump -U trackingtasks TrackingTasksDb > backup.sql
+```
+
+Ese archivo contiene ya las API keys cifradas **y** las claves para descifrarlas. Dos
+consecuencias:
+
+- **Restaurarlo funciona solo**, sin coordinar nada más (ese era el objetivo).
+- **Tratalo como material sensible.** Sin el certificado, quien tenga el dump tiene las
+  API keys de OpenProject de todos los usuarios.
+
+Probá el restore de verdad al menos una vez. Un backup no verificado no es un backup.
 
 ### Importante: no cambiar `ApplicationName` a la ligera
 
 El valor de `ApplicationName` se usa como "discriminador" en la derivación de claves.
 Si lo cambias, **los datos cifrados con el `ApplicationName` anterior dejan de poder
-descifrarse**, aunque el archivo de clave siga existiendo. Si necesitas renombrarlo,
-los usuarios existentes tendrán que volver a ingresar su API key de OpenProject
-(re-registro de credenciales).
+descifrarse**, aunque la clave siga existiendo en la tabla. Si necesitas renombrarlo,
+los usuarios existentes tendrán que volver a ingresar su API key de OpenProject.
 
-### Si perdiste el acceso a tu key ring (p. ej. borraste la carpeta)
+## Historial: por qué el key ring no está en `Web/Keys/`
 
-Vas a ver el mismo `CryptographicException` al intentar listar proyectos / work
-packages. La única solución es volver a registrar tu API key de OpenProject
-(re-login/registro local), ya que la clave para descifrar la anterior se perdió.
+Antes de vivir en la base, el `KeyRingPath` era una ruta de **Windows hardcodeada**
+(`"C:\\ProgramData\\TrackingTaskOp\\Keys"`). En Linux/macOS `\` no es separador de
+directorios, así que .NET interpretaba toda esa cadena como **un solo nombre de carpeta
+literal** y la creaba dentro de `Web/`:
 
-## Despliegue como servicio (producción)
+```
+Web/C:\ProgramData\TrackingTaskOp\Keys/
+```
 
-Al correr como **servicio de Windows**, `ContentRootPath` es la carpeta donde se
-publicó la app (`./publish`), así que el keyring quedará en `./publish/Keys`.
-Asegúrate de que la cuenta con la que corre el servicio tenga permisos de escritura
-sobre esa carpeta.
-
-Si en el futuro se necesita **compartir el key ring entre varias instancias/máquinas**
-(por ejemplo, balanceo de carga), se debe volver a introducir una ruta explícita
-configurable (`KeyRingPath`) apuntando a un recurso compartido, y considerar
-`ProtectKeysWithCertificate` en vez de `PersistKeysToFileSystem` para no depender del
-sistema de archivos local. Eso queda fuera del alcance de la configuración actual
-(pensada para desarrollo local de un solo dev).
+Se evaluó `Environment.SpecialFolder.LocalApplicationData`, pero en Linux esa ruta depende
+de `XDG_DATA_HOME`, que algunas terminales (p. ej. VS Code instalado como *snap*)
+sobreescriben — mismo problema de fondo, distinto disfraz. Se pasó entonces a `Web/Keys/`
+(relativo al `ContentRootPath`), que resolvió la inestabilidad de la ruta pero no el
+problema de fondo: **seguían siendo dos artefactos que un backup podía separar.** Eso es
+lo que resuelve la persistencia en base.

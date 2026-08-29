@@ -109,7 +109,7 @@ Todo el DI se configura mediante **métodos de extensión** que `Web/Program.cs`
 - `Infrastructure/Extensions/ServicesExtensions.cs` — `AddServices()` registra Settings, casos de uso, servicios y repositorios (todos `Scoped`); inicializa el cliente Redis como `Singleton`
 - `Infrastructure/Extensions/DbContextExtensions.cs` — `AddDbContext()` registra EF Core
 - `Infrastructure/Extensions/HttpClientExtensions.cs` — `AddHttpClients()` registra el `HttpClient` de OpenProject (`OpenProjectAuthHandler` inyecta Basic Auth por usuario) y el de Groq (con Bearer)
-- `Infrastructure/Extensions/DataProtectionExtensions.cs` — `AddTrackingDataProtection()` persiste el key ring en `Web/Keys/` (ver `Docs/DataProtection.md`)
+- `Infrastructure/Extensions/DataProtectionExtensions.cs` — `AddTrackingDataProtection()` persiste el key ring en la tabla `DataProtectionKeys` de la propia base, para que viaje en el mismo backup que las API keys que descifra; opcionalmente lo cifra con un `.pfx` (ver `Docs/DataProtection.md`)
 - `Infrastructure/Extensions/DatabaseExtensions.cs` — utilidades de inicialización/migración
 - `Infrastructure/Extensions/GoogleClientsExtensions.cs` — opcional, inyecta clientes de Google Cloud (actualmente comentado)
 - `Web/Extensions/CorsExtensions.cs` — `ConfigureCors()` (vive en Web porque es puramente HTTP)
@@ -140,7 +140,7 @@ Software que permite comenzar y terminar sesiones de trabajo a una tarea especí
 ## Documentos relacionados
 
 - `AUTH_DESIGN.md` — diseño y estado real del sistema de autenticación (Identity local + OAuth contra OpenProject), modelo de datos, flujos, middleware de invalidación de API key, y qué falta (OAuth) del roadmap original en 4 fases.
-- `Docs/DataProtection.md` — cómo y dónde se cifran las API keys de OpenProject (Data Protection API), por qué el key ring vive en `Web/Keys/`, y qué hacer si se pierde.
+- `Docs/DataProtection.md` — cómo y dónde se cifran las API keys de OpenProject (Data Protection API), por qué el key ring vive en la base y no en disco, el certificado opcional que lo envuelve, y cómo respaldarlo.
 - `Docs/Cuenta.md` — la vista `/settings.html`, que concentra toda la configuración (cuenta, seguridad, notificaciones, apariencia, tareas, OpenProject, asistente IA). Incluye guía para usuarios finales del 2FA con TOTP, qué pasa si se pierde el teléfono, el reset de 2FA por SQL, y las decisiones de diseño del avatar y del segundo factor. El dashboard ya no tiene sidebar: sus acciones viven en una barra superior.
 - `Docs/OpenProjectEntities.md` — mapeo de las respuestas JSON de la API de OpenProject a las entidades de `Domain/Entities/OpenProjectEntities/`.
 - `Docs/Bot.md` — diseño del bot conversacional (intents, adapters de LLM, acciones).

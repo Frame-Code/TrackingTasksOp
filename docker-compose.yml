@@ -22,16 +22,23 @@ services:
       # Reloj de pared del equipo. Sin esto el contenedor corre en UTC y las sesiones quedan
       # con horas corridas respecto del reloj del usuario.
       TZ: "${TZ:-America/Guayaquil}"
+      # El key ring ahora vive en la base (tabla DataProtectionKeys), no en disco: se respalda
+      # junto con los datos que descifra y ya no puede quedar desincronizado por un pg_dump.
+      # Para ademas cifrarlo y que un dump filtrado no exponga las API keys, generar el .pfx
+      # (ver Docs/DataProtection.md), descomentar estas dos lineas y el volumen de abajo.
+      # OJO: si se pierde el .pfx, el ring queda ilegible — respaldarlo una vez, fuera del dump.
+      # DataProtectionSettings__KeyRingCertificatePath: /keys/keyring.pfx
+      # DataProtectionSettings__KeyRingCertificatePassword: "${KEYRING_CERT_PASSWORD}"
       # Para servir HTTPS con el .pfx propio (LAN, sin Let's Encrypt), descomentar esto,
       # montar el certificado y publicar el 8081:
       # ASPNETCORE_Kestrel__Certificates__Default__Path: /https/cert.pfx
       # ASPNETCORE_Kestrel__Certificates__Default__Password: ${CERT_PASSWORD}
       # ASPNETCORE_HTTPS_PORTS: 8081
-    volumes:
-      # El key ring de Data Protection. Sin este volumen, cada rebuild genera claves nuevas
-      # y las API keys de OpenProject ya guardadas dejan de poder desencriptarse.
-      - keysdata:/app/Keys
-      # - ./Deploy/cert.pfx:/https/cert.pfx:ro
+    # Sin volumenes: el key ring ya no va en disco, vive en la tabla DataProtectionKeys de
+    # Postgres. Para montar el .pfx que lo cifra (o el de HTTPS), reponer aqui:
+    # volumes:
+    #   - ./Deploy/keyring.pfx:/keys/keyring.pfx:ro
+    #   - ./Deploy/cert.pfx:/https/cert.pfx:ro
     mem_limit: 512m
 
   postgres:
@@ -62,4 +69,3 @@ services:
 volumes:
   redisdata:
   pgdata:
-  keysdata:
