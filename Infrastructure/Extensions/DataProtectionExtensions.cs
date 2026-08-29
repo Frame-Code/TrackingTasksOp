@@ -27,6 +27,18 @@ public static class DataProtectionExtensions
         // (que rota solo cada 90 días) es un archivo estático: se respalda una vez y listo.
         if (!string.IsNullOrWhiteSpace(settings.KeyRingCertificatePath))
         {
+            // Sin este guard, un .pfx ausente revienta dentro de OpenSSL con
+            // "BIO routines::no such file", que no dice ni qué archivo ni por qué, y la app
+            // queda en crash-loop. El caso típico es el volumen sin montar en el compose.
+            if (!File.Exists(settings.KeyRingCertificatePath))
+            {
+                throw new FileNotFoundException(
+                    $"No se encontró el certificado del key ring en '{settings.KeyRingCertificatePath}'. " +
+                    "En Docker, revisar que el volumen que monta el .pfx esté activo en docker-compose.yml. " +
+                    "Para arrancar sin cifrar el key ring, dejar KeyRingCertificatePath vacío.",
+                    settings.KeyRingCertificatePath);
+            }
+
             var certificate = new X509Certificate2(
                 settings.KeyRingCertificatePath,
                 settings.KeyRingCertificatePassword ?? string.Empty,
