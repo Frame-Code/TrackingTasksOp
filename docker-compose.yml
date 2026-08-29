@@ -1,3 +1,9 @@
+# Fijo, y no derivado del nombre del directorio como hace Compose por defecto. Los volumenes
+# se llaman <proyecto>_pgdata, asi que renombrar o mover la carpeta del deploy cambiaria el
+# proyecto, Compose crearia volumenes nuevos y vacios, y la app levantaria con la base en
+# blanco sin un solo error. Con el nombre fijo, el deploy puede vivir en cualquier ruta.
+name: trackingtasksop
+
 services:
   app:
     build: .
