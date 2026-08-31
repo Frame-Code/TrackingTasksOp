@@ -1,10 +1,11 @@
 // Manejo del temporizador de sesión activa
 
-import { getActiveSession, store, NOTIFICATION_TYPES } from './state.js';
+import { getActiveSession, clearSession, store, NOTIFICATION_TYPES } from './state.js';
 import { formatDuration } from './helpers.js';
-import { updateNavbar } from './render.js';
+import { updateNavbar, renderCards } from './render.js';
 import { fetchPendingSummary, postSessionHeartbeat } from './api.js';
 import { refreshPendingBadge, openPendingSessionsModal } from './pending-sessions.js';
+import { showToast } from './ui.js';
 
 let timerInterval     = null;
 let notifInterval     = null;
@@ -119,12 +120,25 @@ export function refreshNotificationTimers() {
  * Late mientras la sesión esté abierta. Un fallo de red se ignora: perder un latido solo
  * recorta un minuto de la estimación si justo después se cae todo, y no hay nada que el
  * usuario pueda hacer con ese error.
+ *
+ * Un 404 es distinto: el servidor ya no tiene sesión abierta para este usuario (se cerró
+ * como huérfana en un restart, o se cerró desde otra pestaña/dispositivo). Sin esto, el
+ * cronómetro local seguía corriendo indefinidamente sobre una sesión que ya no existe, y
+ * Cancelar/Pausar/Finalizar fallaban todos con "no hay sesión activa".
  */
 async function sendHeartbeat() {
     if (!getActiveSession()) return;
     try {
         await postSessionHeartbeat();
-    } catch { /* el próximo latido reintenta */ }
+    } catch (e) {
+        if (e.status === 404) {
+            clearSession();
+            stopTimer();
+            renderCards();
+            showToast('La sesión se cerró en el servidor. Iniciá una nueva si seguís trabajando.', 'warning');
+        }
+        /* otros errores: el próximo latido reintenta */
+    }
 }
 
 function startHeartbeat() {
