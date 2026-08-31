@@ -48,7 +48,9 @@ async function apiFetch(url, options = {}) {
             const body = await res.json();
             msg = body.detail || body.message || body.title || msg;
         } catch (_) { /* ignorar errores de parseo */ }
-        throw new Error(msg);
+        const err = new Error(msg);
+        err.status = res.status;
+        throw err;
     }
 
     // Cualquier mutación invalida las páginas cacheadas: el estado, el progreso o las fechas
@@ -179,7 +181,9 @@ export async function downloadDailyTaskReport(from, to, statusId) {
             const body = await res.json();
             msg = body.detail || body.message || body.title || msg;
         } catch (_) { /* ignorar errores de parseo */ }
-        throw new Error(msg);
+        const err = new Error(msg);
+        err.status = res.status;
+        throw err;
     }
 
     const blob = await res.blob();
