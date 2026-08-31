@@ -87,6 +87,7 @@ public static class ServicesExtensions
         collection.AddScoped<IRegenerateRecoveryCodesCommand, RegenerateRecoveryCodesCommandImpl>();
         collection.AddScoped<IResetAuthenticatorCommand, ResetAuthenticatorCommandImpl>();
         collection.AddScoped<IChangePasswordCommand, ChangePasswordCommandImpl>();
+        collection.AddScoped<IAdminResetPasswordCommand, AdminResetPasswordCommandImpl>();
         collection.AddScoped<IUpdateAvatarCommand, UpdateAvatarCommandImpl>();
         collection.AddScoped<IGetAvatarQuery, GetAvatarQueryImpl>();
 

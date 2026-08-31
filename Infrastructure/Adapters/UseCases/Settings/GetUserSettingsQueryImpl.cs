@@ -50,6 +50,7 @@ public class GetUserSettingsQueryImpl(
             DefaultStatusIds = ParseStatusIds(appUser.DefaultStatusFilterIds),
             HasCustomAiApiKey = !string.IsNullOrEmpty(appUser.EncryptedGroqApiKey),
             IsAdmin = isAdmin,
+            IsAppAdmin = appUser.IsAppAdmin,
             TwoFactorEnabled = appUser.TwoFactorEnabled,
             HasAvatar = hasAvatar
         };

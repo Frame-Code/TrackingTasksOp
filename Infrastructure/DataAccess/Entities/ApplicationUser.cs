@@ -13,6 +13,14 @@ public class ApplicationUser : IdentityUser
     public AuthMethod AuthMethod { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
+    /// <summary>
+    /// Admin de esta app (no de OpenProject: ver <see cref="OpenProjectUserId"/> para ese otro
+    /// rol, que gatilla la config de OAuth). Habilita operaciones locales sobre otros usuarios,
+    /// como <see cref="Application.Ports.UseCases.Account.IAdminResetPasswordCommand"/>.
+    /// No hay UI para otorgarlo (bootstrap): se activa a mano por SQL, ver Docs/Cuenta.md.
+    /// </summary>
+    public bool IsAppAdmin { get; set; } = false;
+
     /// <summary>Qué hacer al pausar una tarea sin preguntar cada vez. "Ask" = sigue preguntando (default).</summary>
     public PauseDefaultBehavior PauseDefaultBehavior { get; set; } = PauseDefaultBehavior.Ask;
 
