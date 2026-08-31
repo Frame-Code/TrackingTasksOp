@@ -121,6 +121,38 @@ public class AccountSecurityTests
     }
 
     [Fact]
+    public async Task Resetear_contrasena_ajena_sin_ser_admin_falla()
+    {
+        var admin = new ApplicationUser { Id = "admin-1", UserName = "admin@test.com", OpenProjectInstanceId = 1, IsAppAdmin = false };
+        var target = new ApplicationUser { Id = "user-2", UserName = "user2@test.com", Email = "user2@test.com", OpenProjectInstanceId = 1 };
+        var userManager = UserManagerFor(admin);
+        userManager.Setup(m => m.FindByEmailAsync(target.Email)).ReturnsAsync(target);
+
+        var command = new AdminResetPasswordCommandImpl(userManager.Object, new FakeCurrentUser(admin.Id));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            command.Execute(new AdminResetPasswordRequest(target.Email, "NuevaPass123!")));
+
+        userManager.Verify(m => m.AddPasswordAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Resetear_contrasena_de_usuario_de_otra_instancia_falla()
+    {
+        var admin = new ApplicationUser { Id = "admin-1", UserName = "admin@test.com", OpenProjectInstanceId = 1, IsAppAdmin = true };
+        var target = new ApplicationUser { Id = "user-2", UserName = "user2@test.com", Email = "user2@test.com", OpenProjectInstanceId = 2 };
+        var userManager = UserManagerFor(admin);
+        userManager.Setup(m => m.FindByEmailAsync(target.Email)).ReturnsAsync(target);
+
+        var command = new AdminResetPasswordCommandImpl(userManager.Object, new FakeCurrentUser(admin.Id));
+
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            command.Execute(new AdminResetPasswordRequest(target.Email, "NuevaPass123!")));
+
+        userManager.Verify(m => m.AddPasswordAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Avatar_que_no_es_jpeg_se_rechaza()
     {
         var db = new TrackingTasksDbContext(

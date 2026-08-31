@@ -17,6 +17,7 @@ public class AccountController(
     IRegenerateRecoveryCodesCommand regenerateRecoveryCodesCommand,
     IResetAuthenticatorCommand resetAuthenticatorCommand,
     IChangePasswordCommand changePasswordCommand,
+    IAdminResetPasswordCommand adminResetPasswordCommand,
     IUpdateAvatarCommand updateAvatarCommand,
     IGetAvatarQuery getAvatarQuery) : ControllerBase
 {
@@ -71,6 +72,19 @@ public class AccountController(
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken ct)
     {
         await changePasswordCommand.Execute(request, ct);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Resetea la contraseña de otro usuario de la misma instancia OpenProject. Lo llama un
+    /// admin cuando alguien perdió el acceso: no hay auto-recuperación por correo porque el
+    /// proyecto no tiene envío de mail (ver Docs/Cuenta.md, deuda conocida).
+    /// </summary>
+    [HttpPost("admin/reset-password")]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> AdminResetPassword([FromBody] AdminResetPasswordRequest request, CancellationToken ct)
+    {
+        await adminResetPasswordCommand.Execute(request, ct);
         return NoContent();
     }
 

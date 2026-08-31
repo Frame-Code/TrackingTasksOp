@@ -33,6 +33,9 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
         builder.Property(u => u.SkipCancelConfirmation)
             .IsRequired();
 
+        builder.Property(u => u.IsAppAdmin)
+            .IsRequired();
+
         builder.Property(u => u.AddRandomSlackTime)
             .IsRequired();
 

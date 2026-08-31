@@ -325,6 +325,14 @@ export async function changePassword(currentPassword, newPassword, twoFactorCode
     });
 }
 
+/** Solo admins de OpenProject. Resetea la contraseña de otro usuario de la misma instancia. */
+export async function adminResetPassword(email, newPassword) {
+    return apiFetch(`${API}/account/admin/reset-password`, {
+        method: 'POST',
+        body: JSON.stringify({ email, newPassword })
+    });
+}
+
 /** jpegBase64 sin el prefijo "data:". El navegador ya lo redimensionó a 256px. */
 export async function updateAvatar(jpegBase64) {
     return apiFetch(`${API}/account/avatar`, {

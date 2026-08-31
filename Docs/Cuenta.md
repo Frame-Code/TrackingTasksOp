@@ -123,6 +123,29 @@ Lo que no vas a poder hacer hasta que alguien te destrabe:
 
 Escribile a quien administre la instancia para que te resetee el segundo factor.
 
+### Perdí u olvidé la contraseña
+
+Escribile a un admin de la app (no es lo mismo que admin de OpenProject, ver abajo). En
+**Ajustes → Seguridad** le aparece una tarjeta **Resetear contraseña de otro usuario** (solo
+la ven los admins) donde pone tu correo y una contraseña nueva, y te la pasa por fuera. No hay
+recuperación por correo self-service porque el proyecto no manda mail — ver "Deuda conocida"
+abajo.
+
+### Cómo se otorga el rol de admin de la app
+
+Es un rol local (`IsAppAdmin` en `AspNetUsers`), separado del admin de OpenProject: uno
+habilita resetear contraseñas de otros usuarios, el otro habilita conectar OAuth para la
+organización. No hay pantalla para otorgarlo — es el mismo problema del huevo y la gallina que
+el reset de 2FA — así que el primer admin se activa a mano:
+
+```sql
+UPDATE AspNetUsers SET "IsAppAdmin" = true WHERE "Email" = 'usuario@ejemplo.com';
+```
+
+Una vez que hay al menos un admin, no hace falta volver a tocar SQL: no hay un flujo para que
+un admin ascienda a otro usuario desde la UI, pero puede pedirle a quien administre la base
+que corra el mismo UPDATE.
+
 ### Reset del 2FA (para quien administra la instancia)
 
 > **Pendiente:** todavía no hay pantalla de administrador para esto. Como el proyecto no
@@ -155,6 +178,7 @@ Los de contraseña y 2FA llevan además `[EnableRateLimiting("auth")]`.
 | `POST` | `2fa/recovery-codes` | Emite códigos nuevos e invalida los anteriores |
 | `POST` | `2fa/reset` | Desvincula la app y desactiva el 2FA. Pide contraseña + código |
 | `PUT` | `password` | Cambia la contraseña. Pide la actual + código |
+| `POST` | `admin/reset-password` | Resetea la contraseña de otro usuario (mismo `OpenProjectInstanceId`). Exige que quien llama sea admin en OpenProject |
 | `PUT` | `avatar` | Sube el avatar (JPEG en base64) |
 | `DELETE` | `avatar` | Borra el avatar |
 | `GET` | `avatar` | Devuelve los bytes. `404` si no tiene |
@@ -227,5 +251,9 @@ Infrastructure/DataAccess/Entities/UserAvatar.cs
 ### Deuda conocida
 
 - **No hay reset de 2FA por administrador.** Hoy es SQL a mano (ver arriba).
+- **No hay recuperación de contraseña self-service por correo.** El proyecto no tiene
+  infraestructura de envío de mail (SMTP). Cuando la haya, agregar `forgot-password` /
+  `reset-password` con el token que ya genera `AddDefaultTokenProviders()` en
+  `IdentityExtensions.cs` — no hace falta tocar Identity, solo la entrega del link.
 - **Faltan las pruebas**: que se rechace el TOTP incorrecto, la contraseña actual incorrecta,
   la contraseña incorrecta en el reset, y que el avatar rechace lo que no sea JPEG.

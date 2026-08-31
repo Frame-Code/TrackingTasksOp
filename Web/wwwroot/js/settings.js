@@ -3,6 +3,7 @@
 
 import {
     fetchUserSettings, fetchStatuses, setupTwoFactor, enableTwoFactor, changePassword,
+    adminResetPassword,
     updateAvatar, deleteAvatar, regenerateRecoveryCodes, resetAuthenticator,
     updateAiApiKey, updateApiKey, connectOAuthInstance
 } from './api.js';
@@ -189,6 +190,8 @@ async function renderSecurity() {
     show('accountPasswordForm', enabled);
     show('accountPasswordLocked', !enabled);
 
+    show('adminResetPasswordCard', store.userSettings?.isAppAdmin ?? false);
+
     if (enabled) return;
 
     try {
@@ -274,6 +277,28 @@ function onResetAuthConfirm() {
 
             await renderSecurity();
             showOk('App desvinculada. Escaneá el código nuevo con tu otro teléfono.');
+        } catch (err) {
+            showError(err.message);
+        }
+    });
+}
+
+// ── Reset de contraseña por admin ───────────────────────────────────────────────────
+
+function onAdminResetPassword() {
+    return withBusy(el('adminResetPasswordBtn'), async () => {
+        clearMessages();
+
+        const email = el('adminResetEmail').value.trim();
+        const newPassword = el('adminResetNewPassword').value;
+        if (!email) return showError('Escribí el correo del usuario.');
+        if (!newPassword) return showError('Escribí la contraseña nueva.');
+
+        try {
+            await adminResetPassword(email, newPassword);
+            el('adminResetEmail').value = '';
+            el('adminResetNewPassword').value = '';
+            showOk('Contraseña reseteada. Pasásela a la persona por fuera.');
         } catch (err) {
             showError(err.message);
         }
@@ -459,6 +484,7 @@ el('accountResetConfirmBtn').addEventListener('click', onResetAuthConfirm);
 el('accountResetCancelBtn').addEventListener('click', onResetAuthCancel);
 el('accountRecoveryDoneBtn').addEventListener('click', () => show('accountRecoveryCodes', false));
 el('accountPasswordBtn').addEventListener('click', onChangePassword);
+el('adminResetPasswordBtn').addEventListener('click', onAdminResetPassword);
 el('saveOpApiKeyBtn').addEventListener('click', onSaveOpApiKey);
 el('oauthConnectBtn').addEventListener('click', onConnectOAuth);
 el('saveAiApiKeyBtn').addEventListener('click', onSaveAiKey);
