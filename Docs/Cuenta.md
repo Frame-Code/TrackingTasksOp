@@ -125,11 +125,13 @@ Escribile a quien administre la instancia para que te resetee el segundo factor.
 
 ### Perdí u olvidé la contraseña
 
-Escribile a un admin de la app (no es lo mismo que admin de OpenProject, ver abajo). En
-**Ajustes → Seguridad** le aparece una tarjeta **Resetear contraseña de otro usuario** (solo
-la ven los admins) donde pone tu correo y una contraseña nueva, y te la pasa por fuera. No hay
-recuperación por correo self-service porque el proyecto no manda mail — ver "Deuda conocida"
-abajo.
+Desde `auth.html` (pantalla de login), enlace **¿Olvidaste tu contraseña?**: pedís un código de
+6 dígitos por correo (vence en 15 minutos, un solo uso) y con ese código ponés una contraseña
+nueva. No requiere sesión iniciada ni segundo factor — es la vía para cuando perdiste ambos.
+
+Si además perdiste el acceso a tu correo, la alternativa sigue siendo pedirle a un admin de la
+app (no es lo mismo que admin de OpenProject, ver abajo) que en **Ajustes → Seguridad** use la
+tarjeta **Resetear contraseña de otro usuario** (solo la ven los admins).
 
 ### Cómo se otorga el rol de admin de la app
 
@@ -251,9 +253,20 @@ Infrastructure/DataAccess/Entities/UserAvatar.cs
 ### Deuda conocida
 
 - **No hay reset de 2FA por administrador.** Hoy es SQL a mano (ver arriba).
-- **No hay recuperación de contraseña self-service por correo.** El proyecto no tiene
-  infraestructura de envío de mail (SMTP). Cuando la haya, agregar `forgot-password` /
-  `reset-password` con el token que ya genera `AddDefaultTokenProviders()` en
-  `IdentityExtensions.cs` — no hace falta tocar Identity, solo la entrega del link.
+- **Envío de correo vía Gmail SMTP.** `POST /api/v1/auth/forgot-password` y `/reset-password`
+  (`AuthController`) usan un código propio de 6 dígitos (hash SHA-256 + expiración en
+  `AspNetUsers.PasswordResetCodeHash`/`PasswordResetCodeExpiresAt`), no el token largo de
+  `AddDefaultTokenProviders()` — más cómodo para pegar en un formulario. El envío pasa por
+  `IEmailSender` → `SmtpEmailSender` (`System.Net.Mail.SmtpClient`, sin dependencias nuevas)
+  contra `smtp.gmail.com:587` con una cuenta de Gmail + contraseña de aplicación
+  (`EmailSettings` en `appsettings.json`; requiere 2FA activado en esa cuenta de Gmail y generar
+  la contraseña de 16 caracteres en Cuenta de Google → Seguridad → Contraseñas de aplicaciones).
+  A diferencia de un proveedor transaccional sin dominio verificado (Resend/Brevo en modo
+  sandbox), Gmail SMTP entrega a cualquier destinatario sin configuración de DNS — cambio hecho
+  a propósito porque el reset de contraseña tiene que llegarle a cualquier usuario, no solo al
+  dueño de la cuenta del proveedor. Para producción con volumen alto, Gmail tiene un límite
+  diario de envíos (~500/día en cuentas normales); si eso se vuelve un problema, cambiar de
+  proveedor es una nueva implementación de `IEmailSender` + swap en `ServicesExtensions`, sin
+  tocar los use cases.
 - **Faltan las pruebas**: que se rechace el TOTP incorrecto, la contraseña actual incorrecta,
   la contraseña incorrecta en el reset, y que el avatar rechace lo que no sea JPEG.

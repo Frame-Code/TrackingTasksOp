@@ -21,6 +21,15 @@ services:
       RedisSettings__Configuration: "redis:6379,password=${REDIS_PASSWORD}"
       # El arranque exige una key global aunque cada usuario cargue la suya después.
       AIModel__Groq__ApiKey: "${GROQ_API_KEY}"
+      # Envío del código de "olvidé mi contraseña". Cuenta de Gmail con verificación en dos
+      # pasos activada y una contraseña de aplicación (myaccount.google.com → Seguridad →
+      # Contraseñas de aplicaciones), no la contraseña normal. El arranque exige ambas variables.
+      EmailSettings__Host: "smtp.gmail.com"
+      EmailSettings__Port: "587"
+      EmailSettings__User: "${EMAIL_USER}"
+      EmailSettings__Password: "${EMAIL_PASSWORD}"
+      EmailSettings__From: "${EMAIL_USER}"
+      EmailSettings__FromName: "TrackingTasksOp"
       # La cookie de sesion solo viaja cifrada. Vale porque el unico camino de entrada es
       # "tailscale serve", que termina TLS en la maquina; si algun dia se sirve por HTTP
       # plano, el navegador dejaria de mandarla y nadie podria entrar.

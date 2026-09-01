@@ -23,6 +23,8 @@ public class AuthController(
     IOAuthService oAuthService,
     IOAuthLoginCommand oAuthLoginCommand,
     IRevokeOAuthSessionCommand revokeOAuthSessionCommand,
+    IForgotPasswordCommand forgotPasswordCommand,
+    IResetPasswordCommand resetPasswordCommand,
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
     CurrentUser currentUser,
@@ -123,6 +125,29 @@ public class AuthController(
         }
 
         return Ok(response.Data);
+    }
+
+    /// <summary>
+    /// Manda un código de 6 dígitos por correo si ese email existe. Responde igual exista o no
+    /// el usuario, para no filtrar qué correos están registrados.
+    /// </summary>
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> ForgotPasswordAsync(ForgotPasswordHttpRequest request, CancellationToken ct)
+    {
+        await forgotPasswordCommand.ExecuteAsync(new ForgotPasswordRequest(request.Email), ct);
+        return Ok(new { message = "Si el correo existe, vas a recibir un código de recuperación." });
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> ResetPasswordAsync(ResetPasswordHttpRequest request, CancellationToken ct)
+    {
+        await resetPasswordCommand.ExecuteAsync(
+            new ResetPasswordRequest(request.Email, request.Code, request.NewPassword), ct);
+        return NoContent();
     }
 
     [HttpPost("logout")]

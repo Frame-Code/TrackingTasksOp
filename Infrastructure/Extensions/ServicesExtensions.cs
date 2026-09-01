@@ -49,6 +49,10 @@ public static class ServicesExtensions
             .First();
         collection.Configure<GroqSettings>(aiModel);
         collection.Configure<OAuthSettings>(configuration.GetSection("OAuthSettings"));
+        var emailSection = configuration.GetSection("EmailSettings");
+        if (string.IsNullOrEmpty(emailSection["User"]) || string.IsNullOrEmpty(emailSection["Password"]))
+            throw new ArgumentException("EmailSettings:User / EmailSettings:Password no están configurados");
+        collection.Configure<EmailSettings>(emailSection);
         //collection.Configure<GeminiSettings>(aiModel);
         //collection.Configure<OllamaSettings>(aiModel);
 
@@ -75,6 +79,8 @@ public static class ServicesExtensions
         collection.AddScoped<IUpdateApiKeyCommand, UpdateApiKeyCommandImpl>();
         collection.AddScoped<IOAuthLoginCommand, OAuthLoginCommandImpl>();
         collection.AddScoped<IRevokeOAuthSessionCommand, RevokeOAuthSessionCommandImpl>();
+        collection.AddScoped<IForgotPasswordCommand, ForgotPasswordCommandImpl>();
+        collection.AddScoped<IResetPasswordCommand, ResetPasswordCommandImpl>();
         collection.AddScoped<IGenerateDailyTaskReportCommand, GenerateDailyTaskReportCommandImpl>();
         collection.AddScoped<IGetUserSettingsQuery, GetUserSettingsQueryImpl>();
         collection.AddScoped<IUpdateNotificationSettingCommand, UpdateNotificationSettingCommandImpl>();
@@ -103,6 +109,7 @@ public static class ServicesExtensions
         collection.AddScoped<IOAuthService, OAuthServiceImpl>();
         collection.AddScoped<IRedisCache, RedisCacheImpl>();
         collection.AddScoped<IApiKeyEncryptorService, DataProtectionApiKeyEncryptorImpl>();
+        collection.AddScoped<IEmailSender, SmtpEmailSender>();
         // Scoped: memoiza la credencial de OpenProject por request (ver la clase).
         collection.AddScoped<Infrastructure.Adapters.Http.OpenProjectAuthHeaderProvider>();
         // Singleton a propósito: el lock de refresh de OAuth tiene que sobrevivir entre requests.

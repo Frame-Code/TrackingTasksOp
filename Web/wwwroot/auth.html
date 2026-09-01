@@ -70,6 +70,9 @@
                     <button type="submit" id="loginBtn" class="btn btn-primary w-100 py-2 fw-semibold mb-3">
                         <i class="bi bi-box-arrow-in-right me-2"></i>Entrar
                     </button>
+                    <button type="button" id="forgotPasswordLink" class="btn btn-link btn-sm w-100 text-muted mb-3">
+                        ¿Olvidaste tu contraseña?
+                    </button>
 
                     <!-- Separador OAuth -->
                     <div class="auth-divider my-3">
@@ -78,6 +81,58 @@
                     <button type="button" id="oauthLoginBtn" class="btn btn-openproject w-100 py-2" disabled>
                         <img src="/assets/open-project-logo.png" alt="" class="btn-openproject-icon">Iniciar sesión con OpenProject
                         <span id="oauthLoginBadge" class="badge bg-light text-dark ms-2 fw-normal" style="font-size: 0.65rem;">Cargando...</span>
+                    </button>
+                </form>
+
+                <!-- ── Formulario Recuperar contraseña (paso 1: pedir código) ── -->
+                <form id="forgotPasswordForm" class="d-none" novalidate>
+                    <p class="text-muted small">Ingresá tu correo y te mandamos un código de recuperación.</p>
+                    <div class="mb-4">
+                        <label class="form-label small text-muted" for="forgotEmail">
+                            <i class="bi bi-envelope me-1"></i>Correo electrónico
+                        </label>
+                        <input type="email" class="form-control" id="forgotEmail"
+                               placeholder="usuario@ejemplo.com" autocomplete="email" required>
+                        <div class="invalid-feedback">Ingresa un correo válido.</div>
+                    </div>
+                    <button type="submit" id="forgotPasswordBtn" class="btn btn-primary w-100 py-2 fw-semibold mb-2">
+                        <i class="bi bi-envelope-paper me-2"></i>Enviar código
+                    </button>
+                    <button type="button" id="backToLoginFromForgot" class="btn btn-link btn-sm w-100 text-muted">
+                        Volver a iniciar sesión
+                    </button>
+                </form>
+
+                <!-- ── Formulario Recuperar contraseña (paso 2: código + nueva contraseña) ── -->
+                <form id="resetPasswordForm" class="d-none" novalidate>
+                    <p class="text-muted small">Revisá tu correo e ingresá el código que te enviamos.</p>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted" for="resetCode">
+                            <i class="bi bi-shield-lock me-1"></i>Código de recuperación
+                        </label>
+                        <input type="text" class="form-control" id="resetCode" inputmode="numeric"
+                               maxlength="6" pattern="\d{6}" placeholder="123456" autocomplete="one-time-code" required>
+                        <div class="invalid-feedback">Ingresá el código de 6 dígitos.</div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small text-muted" for="resetNewPassword">
+                            <i class="bi bi-lock me-1"></i>Nueva contraseña
+                        </label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="resetNewPassword"
+                                   placeholder="••••••••" autocomplete="new-password" required>
+                            <button class="btn btn-outline-secondary toggle-password" type="button"
+                                    data-target="resetNewPassword" tabindex="-1" title="Mostrar/ocultar">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">La contraseña es requerida.</div>
+                    </div>
+                    <button type="submit" id="resetPasswordBtn" class="btn btn-primary w-100 py-2 fw-semibold mb-2">
+                        <i class="bi bi-check-circle me-2"></i>Cambiar contraseña
+                    </button>
+                    <button type="button" id="backToLoginFromReset" class="btn btn-link btn-sm w-100 text-muted">
+                        Volver a iniciar sesión
                     </button>
                 </form>
 
