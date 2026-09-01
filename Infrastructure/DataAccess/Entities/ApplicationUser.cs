@@ -52,4 +52,13 @@ public class ApplicationUser : IdentityUser
     /// por defecto (comportamiento actual).
     /// </summary>
     public string? DefaultStatusFilterIds { get; set; }
+
+    /// <summary>
+    /// Hash SHA-256 del código de recuperación de contraseña de 6 dígitos enviado por correo
+    /// (nunca se guarda el código en texto plano). Null = no hay un reset pendiente.
+    /// </summary>
+    public string? PasswordResetCodeHash { get; set; }
+
+    /// <summary>Vencimiento del código de <see cref="PasswordResetCodeHash"/> (UTC).</summary>
+    public DateTime? PasswordResetCodeExpiresAt { get; set; }
 }

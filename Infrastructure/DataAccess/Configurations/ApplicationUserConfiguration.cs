@@ -43,6 +43,11 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
 
         builder.Property(u => u.DefaultStatusFilterIds);
 
+        builder.Property(u => u.PasswordResetCodeHash)
+            .HasMaxLength(64);
+
+        builder.Property(u => u.PasswordResetCodeExpiresAt);
+
         builder.HasIndex(u => u.OpenProjectUserId);
 
         builder.HasOne(u => u.OpenProjectInstance)

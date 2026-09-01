@@ -12,8 +12,11 @@ if (sessionStorage.getItem('currentUser')) {
 
 // ── Referencias DOM ───────────────────────────────────────────────────────────
 
-const loginForm    = document.getElementById('loginForm');
-const registerForm = document.getElementById('registerForm');
+const loginForm         = document.getElementById('loginForm');
+const registerForm      = document.getElementById('registerForm');
+const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+const resetPasswordForm  = document.getElementById('resetPasswordForm');
+const authTabs           = document.getElementById('authTabs');
 const authAlert    = document.getElementById('authAlert');
 
 // ── Aviso de sesión expirada (ej. falló el refresh de OAuth) ──────────────────
@@ -32,6 +35,9 @@ function switchTab(tab) {
     const isLogin = tab === 'login';
     loginForm.classList.toggle('d-none', !isLogin);
     registerForm.classList.toggle('d-none', isLogin);
+    forgotPasswordForm.classList.add('d-none');
+    resetPasswordForm.classList.add('d-none');
+    authTabs.classList.remove('d-none');
     document.getElementById('tab-login').classList.toggle('active', isLogin);
     document.getElementById('tab-register').classList.toggle('active', !isLogin);
     loginForm.classList.remove('was-validated');
@@ -39,9 +45,108 @@ function switchTab(tab) {
     hideAlert();
 }
 
-document.getElementById('authTabs').addEventListener('click', (e) => {
+authTabs.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-tab]');
     if (btn) switchTab(btn.dataset.tab);
+});
+
+// ── Recuperar contraseña ──────────────────────────────────────────────────────
+
+let forgotEmailValue = '';
+
+function showForgotForm() {
+    authTabs.classList.add('d-none');
+    loginForm.classList.add('d-none');
+    registerForm.classList.add('d-none');
+    resetPasswordForm.classList.add('d-none');
+    forgotPasswordForm.classList.remove('d-none');
+    forgotPasswordForm.classList.remove('was-validated');
+    hideAlert();
+}
+
+function showResetForm() {
+    authTabs.classList.add('d-none');
+    loginForm.classList.add('d-none');
+    registerForm.classList.add('d-none');
+    forgotPasswordForm.classList.add('d-none');
+    resetPasswordForm.classList.remove('d-none');
+    resetPasswordForm.classList.remove('was-validated');
+    hideAlert();
+}
+
+document.getElementById('forgotPasswordLink').addEventListener('click', showForgotForm);
+document.getElementById('backToLoginFromForgot').addEventListener('click', () => switchTab('login'));
+document.getElementById('backToLoginFromReset').addEventListener('click', () => switchTab('login'));
+
+forgotPasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAlert();
+
+    forgotEmailValue = document.getElementById('forgotEmail').value.trim();
+
+    forgotPasswordForm.classList.add('was-validated');
+    if (!forgotPasswordForm.checkValidity()) return;
+
+    const btn          = document.getElementById('forgotPasswordBtn');
+    const originalHtml = btn.innerHTML;
+    setSubmitting(btn, true, originalHtml);
+
+    try {
+        const res = await fetch(`${API}/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: forgotEmailValue })
+        });
+
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            showAlert(data.message ?? data.detail ?? 'No se pudo enviar el código. Intenta nuevamente.');
+            return;
+        }
+
+        showResetForm();
+        showAlert('Si el correo existe, vas a recibir un código de recuperación.', 'success');
+    } catch {
+        showAlert('No se pudo conectar con el servidor. Intenta nuevamente.');
+    } finally {
+        setSubmitting(btn, false, originalHtml);
+    }
+});
+
+resetPasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAlert();
+
+    const code        = document.getElementById('resetCode').value.trim();
+    const newPassword = document.getElementById('resetNewPassword').value;
+
+    resetPasswordForm.classList.add('was-validated');
+    if (!resetPasswordForm.checkValidity()) return;
+
+    const btn          = document.getElementById('resetPasswordBtn');
+    const originalHtml = btn.innerHTML;
+    setSubmitting(btn, true, originalHtml);
+
+    try {
+        const res = await fetch(`${API}/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: forgotEmailValue, code, newPassword })
+        });
+
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            showAlert(data.message ?? data.detail ?? 'Código inválido o vencido.');
+            return;
+        }
+
+        switchTab('login');
+        showAlert('Contraseña actualizada. Iniciá sesión con tu nueva contraseña.', 'success');
+    } catch {
+        showAlert('No se pudo conectar con el servidor. Intenta nuevamente.');
+    } finally {
+        setSubmitting(btn, false, originalHtml);
+    }
 });
 
 // ── OAuth con OpenProject ─────────────────────────────────────────────────────
