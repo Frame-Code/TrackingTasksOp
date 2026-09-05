@@ -1,0 +1,53 @@
+# Ambiente de test: el mismo stack de docker-compose.yml + una instancia VACIA de OpenProject
+# para probar contra datos desechables antes de tocar produccion.
+#
+#   docker compose -p trackingtasksop-test \
+#     -f docker-compose.yml -f docker-compose.test.yml \
+#     --env-file .env.test up -d --build
+#
+# El "-p" es lo unico que separa test de produccion: cambia el nombre del proyecto Compose,
+# asi que los contenedores, la red y sobre todo los VOLUMENES son otros. Nunca levantar este
+# archivo sin "-p": pisaria los contenedores de produccion con la config de test.
+#
+# Los puertos del host los define .env.test (APP_PORT/PG_PORT/OP_PORT) para no chocar con
+# el stack de produccion, que corre en los valores por defecto (5000/5432).
+services:
+  openproject:
+    # Imagen all-in-one: si no se le pasa DATABASE_URL arranca su propio PostgreSQL y su
+    # memcached dentro del contenedor. Es mas pesada, pero para un test desechable evita
+    # mantener tres servicios mas aca.
+    # Pinneada a proposito: el test solo sirve si corre la MISMA version mayor que la
+    # instancia real contra la que se usa la app. Cambiar el tag si esa version es otra.
+    image: openproject/openproject:15
+    restart: always
+    environment:
+      # Obligatoria; cualquier cadena larga sirve. Si cambia, se invalidan las sesiones.
+      OPENPROJECT_SECRET__KEY__BASE: "${OP_SECRET_KEY_BASE}"
+      # Debe coincidir con como se llega desde el navegador, o OpenProject rechaza el host.
+      # Por tunel SSH alcanza el default; publicado con "tailscale serve" hay que ponerle el
+      # nombre del tailnet con su puerto (ver .env.test.example).
+      OPENPROJECT_HOST__NAME: "${OP_HOST_NAME:-localhost:${OP_PORT:-8081}}"
+      # Con "false" genera links http://. Detras de "tailscale serve", que termina TLS, tiene
+      # que ser "true" o los redirects sacan al navegador del HTTPS.
+      OPENPROJECT_HTTPS: "${OP_HTTPS:-false}"
+      OPENPROJECT_DEFAULT__LANGUAGE: "es"
+      TZ: "${TZ:-America/Guayaquil}"
+    ports:
+      # Loopback, igual que todo lo demas: se llega por tunel SSH o tailscale serve.
+      - "127.0.0.1:${OP_PORT:-8081}:80"
+    volumes:
+      - opdata:/var/openproject/assets
+      - oppgdata:/var/openproject/pgdata
+    # El primer arranque corre las migraciones de OpenProject y tarda varios minutos.
+    # Con menos de ~2g la imagen all-in-one se queda sin memoria a mitad de seed.
+    mem_limit: 3g
+
+  # La app le habla por la red interna del proyecto Compose, asi que la URL de la instancia
+  # que se registra en la app es http://openproject (sin puerto: adentro escucha en el 80).
+  app:
+    depends_on:
+      - openproject
+
+volumes:
+  opdata:
+  oppgdata:
