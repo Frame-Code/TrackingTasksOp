@@ -86,7 +86,7 @@ curl -I http://127.0.0.1:8081
 
 ## 4. Configurar OpenProject vacío
 
-Túnel desde la máquina local (o `tailscale serve --bg --https=8444 http://127.0.0.1:8081`):
+Túnel desde la máquina local (o publicarlo en el tailnet, paso 5b):
 
 ```bash
 ssh -L 8081:localhost:8081 <usuario>@<server>
@@ -113,17 +113,24 @@ llega ahí. Pegar la API key del paso 4.
 
 > La cookie de sesión es `Secure` (`CookieSettings__UseSecurePolicy: true`), así que por
 > `http://localhost:5001` el navegador **sí** la manda: `localhost` cuenta como origen seguro.
-> Por una IP o un dominio en HTTP plano, no. Si se quiere acceso sin túnel, publicarlo con
-> `tailscale serve --bg --https=8443 http://127.0.0.1:5001`, que termina TLS.
+> Por una IP o un dominio en HTTP plano, no. Si se quiere acceso sin túnel, publicarlo en el
+> tailnet (paso 5b), que termina TLS.
 
 ## 5b. Publicar en el tailnet (opcional, en vez de túneles SSH)
 
-Tailscale solo acepta 443, 8443 y 10000 para HTTPS, y producción ya ocupa el 443
-(`tailscale serve status` muestra lo que hay):
+`tailscale serve` acepta cualquier puerto (la restricción a 443 / 8443 / 10000 es de **Funnel**,
+que es otra cosa: publica en internet abierto, no en el tailnet). Mirar primero qué hay ocupado,
+que en esta máquina no es solo lo de esta app:
 
 ```bash
-tailscale serve --bg --https=8443 http://127.0.0.1:5001    # app de test
-tailscale serve --bg --https=10000 http://127.0.0.1:8081   # OpenProject de test
+tailscale serve status
+```
+
+Y usar el mismo número que el puerto local, para no recordar equivalencias:
+
+```bash
+tailscale serve --bg --https=5001 http://127.0.0.1:5001    # app de test
+tailscale serve --bg --https=8081 http://127.0.0.1:8081    # OpenProject de test
 ```
 
 La app anda tal cual. **OpenProject no**: rechaza cualquier host que no sea su
@@ -136,7 +143,7 @@ OP_HOST_NAME=<host-del-tailnet>:10000
 OP_HTTPS=true
 ```
 
-Para dejar de publicarlos: `tailscale serve --https=8443 off` (ídem 10000).
+Para dejar de publicarlos: `tailscale serve --https=5001 off` (ídem el de OpenProject).
 
 ## 6. Ciclo de trabajo
 
