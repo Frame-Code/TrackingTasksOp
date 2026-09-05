@@ -27,7 +27,7 @@ terminar (paso 6).
 Un clon distinto del de producción, para poder tener test en otra rama sin tocar el deploy vivo:
 
 ```bash
-cd ~/publicaciones/TrackingTaskOp
+cd <directorio-del-deploy>
 git clone <url-del-repo> test
 cd test
 git checkout test_AI_Stin
@@ -73,7 +73,7 @@ curl -I http://127.0.0.1:8081
 Túnel desde la máquina local (o `tailscale serve --bg --https=8444 http://127.0.0.1:8081`):
 
 ```bash
-ssh -L 8081:localhost:8081 darslabadm@100.116.205.79
+ssh -L 8081:localhost:8081 <usuario>@<server>
 ```
 
 Y en el navegador `http://localhost:8081`:
@@ -87,7 +87,7 @@ Y en el navegador `http://localhost:8081`:
 Túnel a la app y registrarse en ella:
 
 ```bash
-ssh -L 5001:localhost:5001 darslabadm@100.116.205.79
+ssh -L 5001:localhost:5001 <usuario>@<server>
 ```
 
 En `http://localhost:5001`, al registrar el usuario, la **URL de la instancia de OpenProject es
@@ -100,11 +100,32 @@ llega ahí. Pegar la API key del paso 4.
 > Por una IP o un dominio en HTTP plano, no. Si se quiere acceso sin túnel, publicarlo con
 > `tailscale serve --bg --https=8443 http://127.0.0.1:5001`, que termina TLS.
 
+## 5b. Publicar en el tailnet (opcional, en vez de túneles SSH)
+
+Tailscale solo acepta 443, 8443 y 10000 para HTTPS, y producción ya ocupa el 443
+(`tailscale serve status` muestra lo que hay):
+
+```bash
+tailscale serve --bg --https=8443 http://127.0.0.1:5001    # app de test
+tailscale serve --bg --https=10000 http://127.0.0.1:8081   # OpenProject de test
+```
+
+La app anda tal cual. **OpenProject no**: rechaza cualquier host que no sea su
+`OPENPROJECT_HOST__NAME`, y con `OPENPROJECT_HTTPS=false` genera links `http://` detrás del TLS
+que termina Tailscale. Descomentar en `.env.test` y recrear el contenedor:
+
+```bash
+OP_HOST_NAME=<host-del-tailnet>:10000
+OP_HTTPS=true
+```
+
+Para dejar de publicarlos: `tailscale serve --https=8443 off` (ídem 10000).
+
 ## 6. Ciclo de trabajo
 
 ```bash
 # Actualizar test con lo último de la rama
-cd ~/publicaciones/TrackingTaskOp/test && git pull
+cd <directorio-del-deploy>/test && git pull
 docker compose -p trackingtasksop-test -f docker-compose.yml -f docker-compose.test.yml \
   --env-file .env.test up -d --build
 

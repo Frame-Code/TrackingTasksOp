@@ -24,9 +24,12 @@ services:
       # Obligatoria; cualquier cadena larga sirve. Si cambia, se invalidan las sesiones.
       OPENPROJECT_SECRET__KEY__BASE: "${OP_SECRET_KEY_BASE}"
       # Debe coincidir con como se llega desde el navegador, o OpenProject rechaza el host.
-      OPENPROJECT_HOST__NAME: "localhost:${OP_PORT:-8081}"
-      # Se llega por tunel SSH / tailscale serve, no por TLS propio del contenedor.
-      OPENPROJECT_HTTPS: "false"
+      # Por tunel SSH alcanza el default; publicado con "tailscale serve" hay que ponerle el
+      # nombre del tailnet con su puerto (ver .env.test.example).
+      OPENPROJECT_HOST__NAME: "${OP_HOST_NAME:-localhost:${OP_PORT:-8081}}"
+      # Con "false" genera links http://. Detras de "tailscale serve", que termina TLS, tiene
+      # que ser "true" o los redirects sacan al navegador del HTTPS.
+      OPENPROJECT_HTTPS: "${OP_HTTPS:-false}"
       OPENPROJECT_DEFAULT__LANGUAGE: "es"
       TZ: "${TZ:-America/Guayaquil}"
     ports:
