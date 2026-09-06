@@ -53,17 +53,28 @@ services:
   app:
     depends_on:
       - openproject
-    # La app NO puede usar el nombre interno "openproject": su filtro anti-SSRF
-    # (SsrfSafeHttpHandler) bloquea 172.16/12, que es donde vive la red de Compose, y el
-    # registro falla con "No se pudo conectar a OpenProject". Fuera de Development ese filtro
-    # es justo lo que se quiere, asi que en vez de desactivarlo la app entra por la MISMA URL
-    # publica que el navegador: TLS real, IP del tailnet (100.64/10, que el filtro no bloquea)
-    # y el host que OpenProject espera. De paso el test se parece mas a produccion.
-    #
-    # El mapeo es a mano porque el contenedor no resuelve MagicDNS. Los dos valores salen del
-    # .env; el default apunta a loopback y nunca se usa, es solo para que Compose no falle.
-    extra_hosts:
-      - "${OP_PUBLIC_HOST:-openproject.invalid}:${OP_PUBLIC_IP:-127.0.0.1}"
+    environment:
+      # La app registra la instancia por la red interna de Compose: http://openproject
+      #
+      # Eso exige apagar SsrfSafeHttpHandler, que bloquea 172.16/12 — justo donde vive la red
+      # de Compose. Program.cs lo ata a IsDevelopment(), asi que este es el interruptor.
+      #
+      # El plan anterior era que la app entrara por la MISMA URL publica del tailnet que usa el
+      # navegador, para no apagar el filtro. No funciona en esta maquina: Tailscale pone en la
+      # cadena "ts-input" un DROP para todo lo que llegue a 100.64.0.0/10 por una interfaz que
+      # no sea tailscale0, o sea que el bridge de Docker nunca alcanza 100.x:8082 y el registro
+      # moria con "Timeout al conectar a OpenProject". Comprobado: curl desde el host da 302,
+      # el mismo curl desde un contenedor de esta red da timeout.
+      # Abrir esa regla pedia sudo MAS una unidad de systemd que la reinyecte en cada arranque
+      # de tailscaled (que reconstruye la cadena), para sostener un salto que produccion ni
+      # siquiera hace: alli cada usuario registra su instancia externa y se llega por internet.
+      #
+      # Lo que test deja de ejercitar con esto: el filtro SSRF, y nada mas. Program.cs solo
+      # consulta IsDevelopment() en dos puntos — ese filtro y habilitar Swagger. No existe
+      # appsettings.Development.json, asi que no hay deriva de configuracion, y
+      # GlobalExceptionHandler + ProblemDetails estan registrados siempre, asi que tampoco
+      # aparecen paginas de error con stack traces.
+      ASPNETCORE_ENVIRONMENT: "Development"
 
 volumes:
   opdata:

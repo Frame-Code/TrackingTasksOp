@@ -106,17 +106,33 @@ Túnel a la app y registrarse en ella:
 ssh -L 5001:localhost:5001 <usuario>@<server>
 ```
 
-Al registrar el usuario, la **URL de la instancia de OpenProject es la misma URL pública que usa
-el navegador** (`https://<host-del-tailnet>:8082`), no el nombre interno `openproject`. Pegar
-también la API key del paso 4.
+Al registrar el usuario, la **URL de la instancia de OpenProject es el nombre interno de Compose**
+(`http://openproject`), no la URL pública del tailnet. Pegar también la API key del paso 4.
 
-> Cuesta creerlo estando los dos contenedores en la misma red, pero el nombre interno **no
-> sirve**: el filtro anti-SSRF de la propia app (`SsrfSafeHttpHandler`) bloquea `172.16/12`,
-> que es donde vive la red de Compose, y el registro falla con *"No se pudo conectar a
-> OpenProject"*. Fuera de `Development` ese filtro es deliberado — la URL de instancia la
-> declara el usuario — así que el ambiente de test entra por la URL pública: TLS real, IP del
-> tailnet (`100.64/10`, que el filtro sí permite) y el host que OpenProject espera. Por eso el
-> compose declara `extra_hosts` en el servicio `app`: el contenedor no resuelve MagicDNS.
+> Ese nombre interno solo funciona porque el compose le pone `ASPNETCORE_ENVIRONMENT=Development`
+> al servicio `app`: el filtro anti-SSRF (`SsrfSafeHttpHandler`) bloquea `172.16/12`, que es
+> donde vive la red de Compose, y `Program.cs` lo ata a `IsDevelopment()`. Fuera de test ese
+> filtro es deliberado — la URL de instancia la declara el usuario.
+>
+> El plan anterior era entrar por la MISMA URL pública que usa el navegador, para no apagar el
+> filtro. **No funciona en esta máquina**: Tailscale mete en la cadena `ts-input` un DROP para
+> todo lo que llegue a `100.64.0.0/10` por una interfaz que no sea `tailscale0`, así que el
+> bridge de Docker nunca alcanza `100.x:8082` y el registro moría con *"Timeout al conectar a
+> OpenProject"*. Comprobado: `curl` desde el host da 302, el mismo `curl` desde un contenedor de
+> esa red da timeout. Abrir la regla pedía `sudo` **más** una unidad de systemd que la reinyecte
+> en cada arranque de `tailscaled` (que reconstruye la cadena), para sostener un salto que
+> producción ni siquiera hace: allí cada usuario registra su instancia externa y se llega por
+> internet.
+>
+> Lo que test deja de ejercitar con esto: el filtro SSRF, y nada más. `Program.cs` solo consulta
+> `IsDevelopment()` en dos puntos — ese filtro y habilitar Swagger. No existe
+> `appsettings.Development.json`, así que no hay deriva de configuración, y
+> `GlobalExceptionHandler` + `ProblemDetails` están registrados siempre.
+
+> El formulario de registro trae marcado *"Validar que la URL corresponde a una instancia de
+> OpenProject"*: esa validación exige que la URL contenga `open`, `project` o `localhost`.
+> `http://openproject` pasa. Una URL de tailnet como `https://<host>.ts.net:8082` **no**, y el
+> registro falla con *"Invalid Open Project Instance Url"* — hay que desmarcar el checkbox.
 
 > Dos cosas más que hacen fallar el registro, ambas ya cubiertas en el compose y el `.env`:
 > desde OpenProject 14.3 se valida el header `Host` y se responde **400** a todo lo que no
