@@ -30,6 +30,11 @@ services:
       # Con "false" genera links http://. Detras de "tailscale serve", que termina TLS, tiene
       # que ser "true" o los redirects sacan al navegador del HTTPS.
       OPENPROJECT_HTTPS: "${OP_HTTPS:-false}"
+      # Desde OpenProject 14.3 se valida el header Host y se responde 400 a todo lo que no sea
+      # OPENPROJECT_HOST__NAME. La app le habla por la red de Compose, o sea con Host "openproject",
+      # que nunca es el host publico: sin esta linea el registro falla con "No se pudo conectar
+      # a OpenProject en http://openproject".
+      OPENPROJECT_ADDITIONAL__HOST__NAMES: '["openproject"]'
       OPENPROJECT_DEFAULT__LANGUAGE: "es"
       TZ: "${TZ:-America/Guayaquil}"
     ports:

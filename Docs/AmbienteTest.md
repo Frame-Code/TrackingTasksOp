@@ -111,6 +111,11 @@ En `http://localhost:5001`, al registrar el usuario, la **URL de la instancia de
 escucha en el 80). No `localhost:8081`: eso es la vista desde el host, el contenedor de la app no
 llega ahí. Pegar la API key del paso 4.
 
+> Desde OpenProject 14.3 se valida el header `Host`: todo lo que no coincida con
+> `OPENPROJECT_HOST__NAME` recibe un **400**. Como la app le habla como `openproject` y el
+> navegador con el host público, el compose declara `OPENPROJECT_ADDITIONAL__HOST__NAMES` para
+> aceptar los dos. Si el registro falla con *"No se pudo conectar a OpenProject"*, es eso.
+
 > La cookie de sesión es `Secure` (`CookieSettings__UseSecurePolicy: true`), así que por
 > `http://localhost:5001` el navegador **sí** la manda: `localhost` cuenta como origen seguro.
 > Por una IP o un dominio en HTTP plano, no. Si se quiere acceso sin túnel, publicarlo en el
