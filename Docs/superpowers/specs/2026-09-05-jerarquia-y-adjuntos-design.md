@@ -1,7 +1,7 @@
 # Jerarquía de work packages y adjuntos — Diseño
 
 **Fecha:** 2026-09-05
-**Estado:** Aprobado — documentado, **sin implementar**
+**Estado:** Etapas 1 y 2 **implementadas** (2026-09-06). Etapas 3 y 4 (modal, adjuntos, subida por el bot) siguen sin implementar. El spike del §3 no se corrió: ninguna de las dos etapas hechas dependía de él (ver §13).
 
 ## 1. Contexto y problema
 
@@ -453,3 +453,70 @@ Siguiendo lo que ya existe en `Tests/`:
 6. **La subida de fotos ocurre en el bot al crear la tarea**, no en el modal. El modal es de solo lectura.
 7. **Sin falsos positivos:** el mensaje de éxito se emite después de los adjuntos y solo por el handler.
 8. **Opción A** para las fotos pendientes (viajan con el mensaje del chat). Opción B queda como mejora si el spike la habilita.
+
+## 13. Lo que se construyó (2026-09-06) y en qué se apartó del plan
+
+Etapas 1 y 2 completas. El spike del §3 quedó pendiente porque ninguna de las dos lo
+necesitaba: las dos incógnitas que lo bloqueaban afectan a la miga de pan y a los adjuntos,
+y la miga se resolvió **degradando sola** en vez de esperar la respuesta.
+
+### Etapa 1 — subtarea por bot
+
+| Pieza | Dónde |
+|---|---|
+| `ParentId` en el request de creación | `Application/Dto/WorkPackages/CreateWorkPackageRequest.cs`, `Application/Dto/Tasks/StarTaskRequest.cs`, `PendingStartTaskDraft` |
+| `_links.parent` en el POST | `CreateWorkPackageCommandImpl` |
+| Resolución del padre (número, asunto, ambigüedad) | `StartTaskRequestBuilder` + `OpenProjectEntityResolver.FindWorkPackagesBySubject` |
+| Proyecto deducido del padre | `OpenProjectEntityResolver.GetProjectIdOfWorkPackage` |
+| `parentId` / `parentName` en el schema | `GroqTools`, regla 13 del system prompt |
+| 422 con el motivo real | `OpenProjectError.ExtractMessage`, compartido con `UpdateWorkPackageCommandImpl` |
+
+Desviaciones:
+
+- **`projectName` dejó de ser obligatorio en el schema** de `create_task`. Era la única forma
+  de que "creá una subtarea dentro de la #412 llamada Acta de firma" no repreguntara el
+  proyecto. Si no hay padre ni proyecto, el error lo da el sistema, no el schema.
+- **El `contextWpId` NO se usa como padre**, al revés de lo que sugería el §5.2. En
+  `create_task` ese campo ya significa otra cosa (registrar un WP existente), así que
+  reutilizarlo habría cambiado un comportamiento que hoy funciona. La tercera forma
+  ("y crea una tarea hija acá") se cubre por el prompt: el modelo toma del historial el ID
+  que ya apareció y lo manda como `parentId`.
+- **`FindWorkPackagesBySubject` no filtra por asignado**: se agregó `OnlyMine` a
+  `ListsWorkPackagesRequest` (default `true`, así ningún llamador cambia). El padre suele
+  ser de otra persona.
+
+### Etapa 2 — jerarquía
+
+| Pieza | Dónde |
+|---|---|
+| `parent`, `children`, `ancestors` | `WorkPackageLinks`; `LinkObject.Id` extrae el número del href |
+| Hijos de un nodo, **sin** filtro de asignado | `IGetWorkPackageChildrenQuery` → `GetWorkPackageChildrenQueryImpl` |
+| Endpoint | `GET /api/v1/workpackage/{id}/children` |
+| Vista Árbol | `Web/wwwroot/js/tree.js` (nuevo), toggle Grilla \| Árbol en `index.html`, estilos en `app.css` |
+| Miga de pan | `buildBreadcrumb` en `render.js` |
+
+Desviaciones:
+
+- **La miga de pan resuelve sola la incógnita 1.** Si la respuesta de colección trae
+  `ancestors`, se pinta la cadena completa; si no, cae al `parent` directo, que sí viene
+  siempre. Lo mismo hace el árbol al deducir raíces. No hay nada que esperar del spike.
+- **`[+ Crear subtarea aquí]` abre el bot con el mensaje escrito** (`/bot.html?ask=…`) en vez
+  de un formulario propio. El asistente ya sabe resolver proyecto, tipo y campos
+  obligatorios; un formulario sería la segunda implementación de eso. No se envía solo:
+  falta el nombre, que lo pone el usuario.
+- **El árbol se repinta desde `renderCards()`**, no desde cada handler: hay diez llamadas a
+  `renderCards()` repartidas por `app.js` y las diez tienen que dejar las dos vistas al día.
+- **El caché de hijos vive en `tree.js`**, no en `state.js`: es estado de esa vista y de nadie
+  más.
+
+### Verificación
+
+- 436 tests en verde (`dotnet test`, sin los de integración, que piden OpenProject vivo).
+  Nuevos: el filtro de hijos sin `assignee`, `_links.parent` al crear, el 422 propagado con
+  su motivo, y la resolución del padre por número / por asunto / ambigua / inexistente.
+- La lógica del árbol (raíces deducidas sin llamadas, una llamada por nodo, caché al
+  reabrir, propias vs. ajenas) se verificó con un arnés de Node contra `tree.js` real y
+  módulos stub. **No quedó como test del repo**: sumar un runner de JS por un archivo no se
+  paga. Si `tree.js` crece, ese arnés es el punto de partida.
+- **La UI no se probó contra una instancia real**: no había OpenProject ni Postgres
+  levantados en la máquina donde se implementó.

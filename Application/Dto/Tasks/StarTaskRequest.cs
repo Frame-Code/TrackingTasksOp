@@ -20,6 +20,9 @@ public class StarTaskRequest
     /// <summary>Tipo de work package (DESARROLLO, ERROR, etc.). Si es null, OpenProject resuelve uno por defecto.</summary>
     public int? TypeId { get; init; }
 
+    /// <summary>Padre del que cuelga la tarea al crearla. Null = tarea raíz (lo de siempre).</summary>
+    public int? ParentId { get; init; }
+
     /// <summary>Horas estimadas de trabajo. Opcional: si es null la tarea queda sin estimación.</summary>
     public double? EstimatedHours { get; init; }
     public int? AssigneeId { get; init; }

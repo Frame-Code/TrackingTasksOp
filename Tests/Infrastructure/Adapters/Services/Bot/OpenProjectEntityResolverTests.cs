@@ -1,5 +1,6 @@
 using Application.Ports.Auth;
 using Application.Ports.Services;
+using Application.Ports.UseCases.WorkPackages;
 using Domain.Entities.OpenProjectEntities.Project;
 using Domain.Entities.OpenProjectEntities.Status;
 using Domain.Entities.OpenProjectEntities.User;
@@ -24,10 +25,15 @@ public class OpenProjectEntityResolverTests
         public override int? OpenProjectUserId => openProjectUserId;
     }
 
+    private readonly Mock<IListsWorkPackagesCommand> _listsWorkPackagesMock = new();
+    private readonly Mock<IGetWorkPackageCommand> _getWorkPackageMock = new();
+
     private OpenProjectEntityResolver BuildResolver(int? currentOpenProjectUserId = 7) => new(
         _projectOpServiceMock.Object,
         _statusOpServiceMock.Object,
         _userOpServiceMock.Object,
+        _listsWorkPackagesMock.Object,
+        _getWorkPackageMock.Object,
         new FakeCurrentUser(currentOpenProjectUserId));
 
     [Fact]

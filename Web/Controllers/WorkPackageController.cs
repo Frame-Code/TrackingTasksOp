@@ -10,8 +10,17 @@ namespace Web.Controllers;
 [Route("api/v1/[controller]")]
 public class WorkPackageController(
     IListsWorkPackagesCommand listCommand,
-    IUpdateWorkPackageCommand updateCommand) : ControllerBase
+    IUpdateWorkPackageCommand updateCommand,
+    IGetWorkPackageChildrenQuery childrenQuery) : ControllerBase
 {
+    /// <summary>
+    /// Hijos directos de una tarea, para expandir un nodo del árbol. Sin filtro de asignado:
+    /// el árbol muestra la jerarquía completa que el usuario puede ver en OpenProject.
+    /// </summary>
+    [HttpGet("{id:int}/children")]
+    public async Task<ActionResult<List<WorkPackage>>> GetChildren(int id, CancellationToken ct)
+        => await childrenQuery.ExecuteAsync(id, ct);
+
     /// <summary>
     /// Una página de tareas. El estado y la búsqueda se filtran en OpenProject: traer las
     /// ~200 tareas para mostrar 12 costaba ~9 s, porque OpenProject cobra por cada work

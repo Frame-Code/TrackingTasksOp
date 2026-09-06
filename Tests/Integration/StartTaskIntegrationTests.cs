@@ -4,6 +4,7 @@ using Application.Dto.WorkPackages;
 using Application.Ports.Auth;
 using Infrastructure.Adapters.Services;
 using Infrastructure.Adapters.Services.Bot;
+using Application.Ports.UseCases.WorkPackages;
 using Infrastructure.Adapters.UseCases.WorkPackages;
 using Infrastructure.Settings;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -54,6 +55,8 @@ public class StartTaskIntegrationTests
             new ProjectOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
             new StatusOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
             new UserOpServiceImpl(factory, NullLogger<UserOpServiceImpl>.Instance),
+            Mock.Of<IListsWorkPackagesCommand>(),
+            Mock.Of<IGetWorkPackageCommand>(),
             new FakeCurrentUser());
 
         var projectId = await resolver.ResolveProjectId("sexitoanalsito");
@@ -73,6 +76,8 @@ public class StartTaskIntegrationTests
             new ProjectOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
             new StatusOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
             new UserOpServiceImpl(factory, NullLogger<UserOpServiceImpl>.Instance),
+            Mock.Of<IListsWorkPackagesCommand>(),
+            Mock.Of<IGetWorkPackageCommand>(),
             new FakeCurrentUser());
 
         var ex = await Assert.ThrowsAsync<Exception>(() => resolver.ResolveUserId("Stin Sanchez"));
@@ -91,6 +96,8 @@ public class StartTaskIntegrationTests
             new ProjectOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
             new StatusOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
             new UserOpServiceImpl(factory, NullLogger<UserOpServiceImpl>.Instance),
+            Mock.Of<IListsWorkPackagesCommand>(),
+            Mock.Of<IGetWorkPackageCommand>(),
             new FakeCurrentUser());
         var createCommand = new CreateWorkPackageCommandImpl(factory, NullLogger<CreateWorkPackageCommandImpl>.Instance);
 
@@ -114,6 +121,8 @@ public class StartTaskIntegrationTests
             new ProjectOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
             new StatusOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance),
             new UserOpServiceImpl(factory, NullLogger<UserOpServiceImpl>.Instance),
+            Mock.Of<IListsWorkPackagesCommand>(),
+            Mock.Of<IGetWorkPackageCommand>(),
             new FakeCurrentUser());
         var createCommand = new CreateWorkPackageCommandImpl(factory, NullLogger<CreateWorkPackageCommandImpl>.Instance);
 

@@ -10,4 +10,11 @@ public class LinkObject
     
     [JsonPropertyName("title")]
     public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// El ID que va al final del href ("/api/v3/work_packages/412" → 412). 0 si el link
+    /// viene vacío, que es como OpenProject expresa "sin padre", "sin asignado", etc.
+    /// </summary>
+    [JsonIgnore]
+    public int Id => int.TryParse(Href?.TrimEnd('/').Split('/').LastOrDefault(), out var id) ? id : 0;
 }

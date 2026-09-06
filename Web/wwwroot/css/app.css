@@ -495,6 +495,138 @@
 .type-phase          { --type: #94a3b8; }  /* fase           — pizarra */
 .type-default        { --type: #adb5bd; }  /* sin categoría  — neutro  */
 
+/* ── Miga de pan de la tarjeta ──────────────────────────────────── */
+/* Un renglón atenuado entre el eyebrow y el título: dice de qué cuelga la tarea
+   sin competir con el asunto, que es lo que se lee primero. */
+.wp-crumbs {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    color: var(--bs-secondary-color);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 0.25rem;
+}
+
+.wp-crumb-sep { opacity: 0.4; }
+
+.wp-crumb-link {
+    color: var(--bs-secondary-color);
+    line-height: 1;
+    opacity: 0.7;
+}
+
+.wp-crumb-link:hover { opacity: 1; }
+
+/* ── Vista Árbol ────────────────────────────────────────────────── */
+/* Filas, no tarjetas: en el árbol lo que importa es la relación entre tareas, y
+   una fila por nodo deja ver varios niveles de un vistazo. La sangría se hace con
+   padding y una variable de profundidad, sin anidar contenedores. */
+.tree-wrap {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.tree-node {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    padding-left: calc(0.75rem + var(--tree-depth, 0) * 1.35rem);
+    border-bottom: 1px solid var(--bs-border-color);
+    font-size: 0.875rem;
+}
+
+.tree-node:last-child { border-bottom: 0; }
+.tree-node:hover { background: rgba(255, 255, 255, 0.04); }
+
+/* Las tareas ajenas se ven pero no se accionan: se atenúan para que la mirada
+   caiga en las propias, que son las únicas con botón de Iniciar. */
+.tree-node:not(.tree-node--mine) { color: var(--bs-secondary-color); }
+
+.tree-node--focus {
+    background: rgba(13, 110, 253, 0.12);
+    box-shadow: inset 3px 0 0 var(--bs-primary);
+}
+
+.tree-toggle {
+    background: none;
+    border: 0;
+    color: var(--bs-secondary-color);
+    padding: 0 0.15rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.tree-toggle--leaf { width: 1.1rem; display: inline-block; }
+.tree-toggle:hover { color: var(--bs-body-color); }
+
+.tree-person-icon { opacity: 0.6; font-size: 0.85rem; }
+
+.tree-id {
+    font-variant-numeric: tabular-nums;
+    color: var(--bs-secondary-color);
+    flex-shrink: 0;
+}
+
+.tree-subject {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tree-status { font-size: 0.7rem; flex-shrink: 0; }
+
+.tree-assignee {
+    font-size: 0.75rem;
+    color: var(--bs-secondary-color);
+    max-width: 9rem;
+    flex-shrink: 0;
+}
+
+.tree-pct {
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--bs-secondary-color);
+    width: 2.6rem;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.tree-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.tree-start { padding: 0.1rem 0.45rem; line-height: 1.2; }
+.tree-running { font-size: 0.7rem; }
+
+.tree-note {
+    padding: 0.35rem 0.75rem;
+    padding-left: calc(0.75rem + var(--tree-depth, 0) * 1.35rem);
+    font-size: 0.8rem;
+    color: var(--bs-secondary-color);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.tree-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.6rem;
+    font-size: 0.75rem;
+    color: var(--bs-secondary-color);
+}
+
+.spin { display: inline-block; animation: spin 0.8s linear infinite; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ── Impresión: solo la vista previa del reporte ────────────────── */
 /* ponytail: se usa window.print() del navegador; estas reglas recortan la página
    al contenido del reporte en vez de sumar una librería de PDF. */

@@ -25,7 +25,24 @@ public class GroqToolsTests
         var required = function.GetProperty("parameters").GetProperty("required")
             .EnumerateArray().Select(e => e.GetString()).ToList();
         Assert.Contains("name", required);
-        Assert.Contains("projectName", required);
+
+        // El proyecto NO es obligatorio en el schema: una subtarea lo hereda del padre, y
+        // exigirlo hacía que el bot repreguntara un dato que ya puede deducir.
+        Assert.DoesNotContain("projectName", required);
+    }
+
+    [Fact]
+    public void CreateTask_DeclaraElPadreParaCrearSubtareas()
+    {
+        var json = JsonSerializer.Serialize(GroqTools.All);
+        using var doc = JsonDocument.Parse(json);
+
+        var properties = doc.RootElement[0].GetProperty("function")
+            .GetProperty("parameters").GetProperty("properties");
+
+        Assert.True(properties.TryGetProperty("parentId", out var parentId));
+        Assert.Equal("integer", parentId.GetProperty("type").GetString());
+        Assert.True(properties.TryGetProperty("parentName", out _));
     }
 
     [Fact]

@@ -27,7 +27,11 @@ public class CreateTaskActionHandler(
         // StartTracking queda en false (default): crear no arranca el tiempo.
         var task = await startTaskCommand.Execute(built.Request!);
 
-        var message = $"✅ Tarea **{task.Name}** creada (ID: {task.WorkPackageId}). " +
+        var parentNote = built.Request!.ParentId is > 0
+            ? $" como subtarea de la **#{built.Request.ParentId}**"
+            : "";
+
+        var message = $"✅ Tarea **{task.Name}** creada{parentNote} (ID: {task.WorkPackageId}). " +
                       $"El cronómetro **no** está corriendo — dime \"inicia la #{task.WorkPackageId}\" cuando quieras empezar.";
 
         // Prevención de errores (heurística de Nielsen): si se creó una tarea nueva sin asignar

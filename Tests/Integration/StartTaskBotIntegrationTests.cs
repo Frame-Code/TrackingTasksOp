@@ -10,6 +10,7 @@ using Infrastructure.Adapters.Services.Bot;
 using Infrastructure.Adapters.Services.Bot.Actions;
 using Infrastructure.Adapters.UseCases.Tasks;
 using Infrastructure.Adapters.UseCases.TimeEntry;
+using Application.Ports.UseCases.WorkPackages;
 using Infrastructure.Adapters.UseCases.WorkPackages;
 using Infrastructure.DataAccess;
 using Infrastructure.Settings;
@@ -75,7 +76,7 @@ public class StartTaskBotIntegrationTests
         var projectOpService = new ProjectOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance);
         var statusOpService = new StatusOpServiceImpl(factory, NullLogger<StatusOpServiceImpl>.Instance);
         var userOpService = new UserOpServiceImpl(factory, NullLogger<UserOpServiceImpl>.Instance);
-        var entityResolver = new OpenProjectEntityResolver(projectOpService, statusOpService, userOpService, new FakeCurrentUser());
+        var entityResolver = new OpenProjectEntityResolver(projectOpService, statusOpService, userOpService, Mock.Of<IListsWorkPackagesCommand>(), Mock.Of<IGetWorkPackageCommand>(), new FakeCurrentUser());
         var createWorkPackageCommand = new CreateWorkPackageCommandImpl(factory, NullLogger<CreateWorkPackageCommandImpl>.Instance);
         var addTimeEntryCommand = new AddTimeEntryCommandImpl(factory, NullLogger<AddTimeEntryCommandImpl>.Instance);
 

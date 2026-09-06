@@ -1,5 +1,9 @@
+using Application.Dto.ListWorkPackages;
 using Application.Ports.Auth;
 using Application.Ports.Services;
+using Application.Ports.UseCases.WorkPackages;
+using Domain.Entities.OpenProjectEntities;
+using Domain.Entities.OpenProjectEntities.WorkPackage;
 
 namespace Infrastructure.Adapters.Services.Bot;
 
@@ -7,6 +11,8 @@ public class OpenProjectEntityResolver(
     IProjectOpService projectOpService,
     IStatusOpService statusOpService,
     IUserOpService userOpService,
+    IListsWorkPackagesCommand listsWorkPackagesCommand,
+    IGetWorkPackageCommand getWorkPackageCommand,
     CurrentUser currentUser) : IOpenProjectEntityResolver
 {
     /// <summary>
@@ -50,5 +56,32 @@ public class OpenProjectEntityResolver(
             ? await userOpService.FindAssigneeByName(projectId.Value, name)
             : await userOpService.FindByName(name);
         return user?.Id;
+    }
+
+    public async Task<List<WorkPackage>> FindWorkPackagesBySubject(string subject)
+    {
+        if (string.IsNullOrWhiteSpace(subject)) return [];
+
+        // Una sola página corta: si el asunto da más de un puñado de coincidencias, la
+        // respuesta correcta es preguntar cuál, no traer 200 tareas para elegir.
+        var page = await listsWorkPackagesCommand.ExecutePageAsync(
+            new ListsWorkPackagesRequest(null, 1, 10, Search: subject, OnlyMine: false));
+
+        // OpenProject busca por asunto O por ID ("subjectOrId"), así que empareja parcial.
+        // Un asunto exacto gana: si el usuario escribió el nombre completo, no debería tener
+        // que elegir entre esa tarea y las otras que apenas la contienen.
+        var exact = page.Items
+            .Where(wp => wp.Subject.Equals(subject.Trim(), StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return exact.Count > 0 ? exact : page.Items;
+    }
+
+    public async Task<int?> GetProjectIdOfWorkPackage(int workPackageId)
+    {
+        if (workPackageId <= 0) return null;
+        var wp = await getWorkPackageCommand.Execute(workPackageId);
+        var projectId = wp?.Links.Project.Id ?? 0;
+        return projectId > 0 ? projectId : null;
     }
 }

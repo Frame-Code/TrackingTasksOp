@@ -139,4 +139,50 @@ public class CreateWorkPackageCommandImplTests
         Assert.Contains("\"customField3\":{\"href\":\"/api/v3/custom_options/7\"}", body);
         Assert.Contains("\"customField5\":{\"href\":\"/api/v3/custom_options/11\"}", body);
     }
+
+    [Fact]
+    public async Task Execute_WithParentId_ShouldEmitParentLink()
+    {
+        // Una línea fácil de perder en un merge, y sin ella la subtarea se crea suelta:
+        // OpenProject no falla, simplemente la deja como raíz.
+        var (command, getRequest) = BuildCommand("""{ "id": 432, "subject": "Acta de firma" }""");
+
+        var workPackage = await command.Execute(new CreateWorkPackageRequest(
+            Subject: "Acta de firma", ProjectId: 4, ParentId: 412));
+
+        Assert.Equal(432, workPackage.Id);
+        var body = await getRequest()!.Content!.ReadAsStringAsync();
+        Assert.Contains("\"parent\":{\"href\":\"/api/v3/work_packages/412\"}", body);
+    }
+
+    [Fact]
+    public async Task Execute_SinParentId_NoDebeMandarElLink()
+    {
+        var (command, getRequest) = BuildCommand("""{ "id": 433, "subject": "Tarea suelta" }""");
+
+        await command.Execute(new CreateWorkPackageRequest(Subject: "Tarea suelta", ProjectId: 4));
+
+        var body = await getRequest()!.Content!.ReadAsStringAsync();
+        Assert.DoesNotContain("\"parent\"", body);
+    }
+
+    [Fact]
+    public async Task Execute_CuandoOpenProjectRechaza_PropagaSuMotivo()
+    {
+        // El 422 de una jerarquía inválida trae el motivo redactado por OpenProject. Es lo que
+        // el bot le muestra al usuario: el JSON crudo no le sirve a nadie.
+        const string errorJson = """
+            {
+                "_type": "Error",
+                "errorIdentifier": "urn:openproject-org:api:v3:errors:PropertyConstraintViolation",
+                "message": "El padre no es válido porque pertenece a otro proyecto."
+            }
+            """;
+        var (command, _) = BuildCommand(errorJson, HttpStatusCode.UnprocessableEntity);
+
+        var ex = await Assert.ThrowsAsync<Exception>(() => command.Execute(
+            new CreateWorkPackageRequest(Subject: "Acta", ProjectId: 4, ParentId: 412)));
+
+        Assert.Equal("El padre no es válido porque pertenece a otro proyecto.", ex.Message);
+    }
 }

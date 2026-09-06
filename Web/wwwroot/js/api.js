@@ -94,6 +94,15 @@ export async function fetchWorkPackages({ projectId, page = 1, pageSize = 12, se
     return data;
 }
 
+/**
+ * Hijos directos de una tarea, para expandir un nodo del árbol. Sin filtro de asignado:
+ * trae los hijos de cualquier persona (los que el usuario pueda ver en OpenProject).
+ * El árbol cachea lo que recibe, así que colapsar y reabrir no vuelve a pedirlos.
+ */
+export async function fetchWorkPackageChildren(workPackageId) {
+    return apiFetch(`${API}/workpackage/${workPackageId}/children`);
+}
+
 export async function fetchActivities(workPackageId) {
     return apiFetch(`${API}/activity?workPackageId=${workPackageId}`);
 }

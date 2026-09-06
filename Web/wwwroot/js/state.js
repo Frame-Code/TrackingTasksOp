@@ -29,6 +29,7 @@ export const store = {
     projectId: null,
     currentPage: 1,
     pageSize: getStoredPageSize(),
+    viewMode: 'grid',                // 'grid' (mis tareas, accionables) | 'tree' (la jerarquía completa)
     userSettings: null               // null hasta que loadUserSettings() resuelva (ver app.js)
 };
 
