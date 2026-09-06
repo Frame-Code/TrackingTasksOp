@@ -334,7 +334,25 @@
 
         .footer-copyright { text-align:center; font-size:.72rem; color:var(--text-secondary); margin-top:10px; }
 
-        @media (max-width:640px) { #sidebar { display:none; } }
+        .sidebar-toggle-btn {
+            display: none;
+            background: none; border: 0; color: var(--text-main);
+            font-size: 1.3rem; padding: 4px 10px; margin-right: 8px;
+            border-radius: 6px; cursor: pointer;
+        }
+        .sidebar-toggle-btn:hover { background: var(--hover-bg); }
+
+        /* Bajo 640px el sidebar deja de ocupar espacio en el layout y pasa a
+           superponerse como drawer, controlado por la clase .open (JS). Antes
+           quedaba con display:none fijo y sin forma de volver a abrirlo. */
+        .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 999; }
+        .sidebar-backdrop.open { display: block; }
+
+        @media (max-width:640px) {
+            .sidebar-toggle-btn { display: inline-flex; align-items: center; }
+            #sidebar { display: none; position: fixed; top: 0; left: 0; bottom: 0; width: 260px; max-width: 85vw; z-index: 1000; box-shadow: 2px 0 18px rgba(0,0,0,.4); }
+            #sidebar.open { display: flex; }
+        }
     </style>
 </head>
 <body>
@@ -349,9 +367,11 @@
             <a href="/" class="nav-back"><i class="bi bi-grid-1x2"></i> Dashboard</a>
         </div>
     </aside>
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
 
     <div id="main">
         <div class="header">
+            <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar"><i class="bi bi-list"></i></button>
             <div class="header-title">
                 <div class="header-avatar"><i class="bi bi-stars"></i></div>
                 <div>
@@ -398,6 +418,22 @@
         const micBtn       = document.getElementById('mic-btn');
         const chatList     = document.getElementById('chat-list');
         const newChatBtn   = document.getElementById('new-chat-btn');
+        const sidebar         = document.getElementById('sidebar');
+        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+        const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+
+        function closeSidebar() {
+            sidebar.classList.remove('open');
+            sidebarBackdrop.classList.remove('open');
+            sidebarToggleBtn.setAttribute('aria-expanded', 'false');
+        }
+        sidebarToggleBtn.addEventListener('click', () => {
+            const opening = !sidebar.classList.contains('open');
+            sidebar.classList.toggle('open', opening);
+            sidebarBackdrop.classList.toggle('open', opening);
+            sidebarToggleBtn.setAttribute('aria-expanded', String(opening));
+        });
+        sidebarBackdrop.addEventListener('click', closeSidebar);
 
         // Clave por usuario, no global: una sola clave compartida hacía que el último usuario
         // en abrir el bot en este navegador pisara el "chat actualmente abierto" del anterior
@@ -450,6 +486,7 @@
         }
 
         async function switchSession(sid) {
+            closeSidebar();
             sessionId = sid;
             localStorage.setItem(CHAT_SESSION_STORAGE_KEY, sid);
             document.querySelectorAll('.chat-item').forEach(el =>
@@ -478,7 +515,7 @@
             document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
         }
 
-        newChatBtn.addEventListener('click', () => { newChat(); loadChats(); });
+        newChatBtn.addEventListener('click', () => { closeSidebar(); newChat(); loadChats(); });
 
         // ── Rendering ────────────────────────────────────────────────────────
 
