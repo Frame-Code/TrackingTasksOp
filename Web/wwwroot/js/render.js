@@ -1,8 +1,9 @@
 // Renderizado del DOM. Solo genera HTML y actualiza elementos;
 // no realiza llamadas API ni maneja eventos.
 
-import { escHtml, statusClass, typeClass, formatDuration, formatDateTime } from './helpers.js';
+import { escHtml, extractId, statusClass, typeClass, formatDuration, formatDateTime } from './helpers.js';
 import { store, getActiveSession, getPausedIds } from './state.js';
+import { renderTree } from './tree.js';
 
 // ── Navbar ────────────────────────────────────────────────────────────────────
 
@@ -60,6 +61,11 @@ export function renderStatusFilters() {
 // ── Work package cards ────────────────────────────────────────────────────────
 
 export function renderCards() {
+    // La vista Árbol comparte el estado de sesión con la grilla (qué está corriendo, qué es
+    // mío), así que se repinta junto con ella. Acá y no en cada handler: son diez llamadas a
+    // renderCards() repartidas por la app y las diez tienen que dejar las dos vistas al día.
+    if (store.viewMode === 'tree') renderTree();
+
     const grid       = document.getElementById('wpGrid');
     const empty      = document.getElementById('emptyState');
     const countBadge = document.getElementById('wpCount');
@@ -102,6 +108,13 @@ export function renderCards() {
 export function renderPagination(total, pageCount) {
     const el = document.getElementById('pagination');
     if (!el) return;
+
+    // En el árbol no hay páginas: se navega expandiendo. Sin esto reaparecía sola, porque
+    // renderCards() sigue corriendo (pinta la grilla oculta) mientras se mira el árbol.
+    if (store.viewMode === 'tree') {
+        el.classList.add('d-none');
+        return;
+    }
 
     if (pageCount <= 1) {
         el.classList.add('d-none');
@@ -206,6 +219,38 @@ function buildPersonChip(icon, label, name) {
             <span class="opacity-75">${label}:</span>
             <span class="${muted}">${escHtml(value)}</span>
         </span>`;
+}
+
+/**
+ * Miga de pan: de qué cuelga la tarea. Sale de "_links.ancestors", que ya viene en el mismo
+ * payload — cero llamadas extra. La jerarquía completa vive en la vista Árbol: acá hay
+ * señal y un enlace, no una segunda implementación del árbol.
+ *
+ * Si la instancia de OpenProject no manda "ancestors" en la respuesta de colección, queda
+ * el padre directo ("_links.parent"), que sí viene siempre.
+ */
+function buildBreadcrumb(wp) {
+    const ancestors = wp._links?.ancestors ?? [];
+    const parent = wp._links?.parent;
+
+    const chain = ancestors.length
+        ? ancestors
+        : (parent?.href ? [parent] : []);
+
+    if (!chain.length) return '';
+
+    const crumbs = chain
+        .map(a => `<span title="${escHtml(a.title)}">#${extractId(a.href)}</span>`)
+        .join('<span class="wp-crumb-sep" aria-hidden="true">›</span>');
+
+    return `
+        <div class="wp-crumbs" title="${escHtml(chain.map(a => a.title).join(' › '))}">
+            ${crumbs}
+            <button class="btn btn-link btn-sm p-0 wp-crumb-link btn-view-tree" data-id="${wp.id}"
+                    title="Ver en el árbol" aria-label="Ver la tarea ${wp.id} en el árbol">
+                <i class="bi bi-diagram-3" aria-hidden="true"></i>
+            </button>
+        </div>`;
 }
 
 function buildCard(wp, session) {
@@ -323,6 +368,8 @@ function buildCard(wp, session) {
                         </div>
                         ${buildStatusDropdown(wp, statusTitle)}
                     </div>
+
+                    ${buildBreadcrumb(wp)}
 
                     <h6 class="wp-title mb-2" title="${escHtml(wp.subject)}">${escHtml(wp.subject)}</h6>
 

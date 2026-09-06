@@ -165,7 +165,9 @@ public class ListsWorkPackagesCommandImpl(
             ? $"/api/v3/projects/{request.ProjectId}/work_packages"
             : $"/api/v3/work_packages";
 
-        var filterParts = new List<string> { "{\"assignee\":{\"operator\":\"=\",\"values\":[\"me\"]}}" };
+        var filterParts = new List<string>();
+        if (request.OnlyMine)
+            filterParts.Add("{\"assignee\":{\"operator\":\"=\",\"values\":[\"me\"]}}");
 
         // Varios estados (pildoras de la UI) > un estado > solo abiertas > todos.
         // El default es "*": con "o" OpenProject omitia las tareas cerradas y faltaban en la UI.

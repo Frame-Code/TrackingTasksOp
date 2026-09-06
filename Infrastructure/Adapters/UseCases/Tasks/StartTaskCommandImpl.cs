@@ -85,7 +85,8 @@ namespace Infrastructure.Adapters.UseCases.Tasks;
                     request.DueDate,
                     request.CustomFieldOptionIds,
                     request.CustomFieldTextValues,
-                    request.EstimatedHours
+                    request.EstimatedHours,
+                    request.ParentId
                 );
                 var opWorkPackage = await createWorkPackageCommand.Execute(createRequest);
                 workPackageId = opWorkPackage.Id;

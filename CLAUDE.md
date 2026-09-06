@@ -67,6 +67,7 @@ Web/Controllers → Application/Ports/UseCases → Infrastructure/Adapters/UseCa
 | `IListsWorkPackagesCommand` | `ListsWorkPackagesCommandImpl` | Consulta work packages desde OpenProject |
 | `ICreateWorkPackageCommand` | `CreateWorkPackageCommandImpl` | Crea un work package en OpenProject |
 | `IUpdateWorkPackageCommand` | `UpdateWorkPackageCommandImpl` | Actualiza un work package existente |
+| `IGetWorkPackageChildrenQuery` | `GetWorkPackageChildrenQueryImpl` | Hijos directos de una tarea, para la vista Árbol. **Sin filtro de asignado**: muestra los hijos de cualquier persona (dentro de los permisos del usuario en OpenProject) |
 
 ### Servicios actuales
 

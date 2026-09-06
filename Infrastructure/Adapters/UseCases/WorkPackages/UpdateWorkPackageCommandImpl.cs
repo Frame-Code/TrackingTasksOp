@@ -80,7 +80,7 @@ public class UpdateWorkPackageCommandImpl(
             if (statusId.HasValue && IsStatusConstraintViolation(jsonResponse))
             {
                 var allowedStatuses = await GetAllowedStatusNames(workPackageId, lockVersion);
-                throw new InvalidStatusTransitionException(ExtractMessage(jsonResponse), allowedStatuses);
+                throw new InvalidStatusTransitionException(OpenProjectError.ExtractMessage(jsonResponse), allowedStatuses);
             }
 
             throw new Exception($"Error HTTP {(int)response.StatusCode}: {jsonResponse}");
@@ -100,19 +100,6 @@ public class UpdateWorkPackageCommandImpl(
         catch (JsonException)
         {
             return false;
-        }
-    }
-
-    private static string ExtractMessage(string json)
-    {
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            return doc.RootElement.TryGetProperty("message", out var message) ? message.GetString() ?? json : json;
-        }
-        catch (JsonException)
-        {
-            return json;
         }
     }
 

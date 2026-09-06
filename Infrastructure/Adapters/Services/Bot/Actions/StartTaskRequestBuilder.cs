@@ -44,6 +44,44 @@ internal static class StartTaskRequestBuilder
             projId = pendingDraft.ProjectId;
         }
 
+        // ── Padre (subtarea) ──────────────────────────────────────────────────────────
+        // "parentId" es la excepción legítima a la regla "nunca un ID": la gente sí dice
+        // "creá una subtarea dentro de la #412". Si en cambio la nombró por asunto, se
+        // resuelve buscando, y si hay varias candidatas se pregunta en vez de adivinar.
+        int? parentId = GroqActionParams.GetNullableInt(p, "parentId", "parentWorkPackageId");
+        string parentName = GroqActionParams.GetStr(p, "parentName", "parent");
+
+        if (!parentId.HasValue && !string.IsNullOrEmpty(parentName))
+        {
+            var candidates = await entityResolver.FindWorkPackagesBySubject(parentName);
+
+            if (candidates.Count == 0)
+                throw new Exception($"No encontré ninguna tarea llamada '{parentName}' para colgarle la subtarea. " +
+                                    "Verificá el nombre o pasame su número (ej. \"dentro de la #412\").");
+
+            if (candidates.Count > 1)
+            {
+                var options = string.Join("\n", candidates.Select(c => $"- **#{c.Id}** {c.Subject}"));
+                return new BuildResult(null,
+                    $"🤔 Hay varias tareas que coinciden con «{parentName}». ¿De cuál cuelga la subtarea?\n\n{options}\n\nDecime el número y la creo.",
+                    wpId);
+            }
+
+            parentId = candidates[0].Id;
+        }
+
+        if (!parentId.HasValue && pendingDraft != null) parentId = pendingDraft.ParentId;
+
+        // El proyecto sale del padre: una subtarea vive donde vive su padre. Por eso
+        // "creá una subtarea dentro de la #412 llamada Acta de firma" alcanza, sin repreguntar.
+        if (!projId.HasValue && parentId is > 0)
+        {
+            projId = await entityResolver.GetProjectIdOfWorkPackage(parentId.Value);
+            if (!projId.HasValue)
+                throw new Exception($"No pude leer la tarea #{parentId} en OpenProject, así que no sé en qué proyecto crear la subtarea. " +
+                                    "Verificá el número o indicame el proyecto.");
+        }
+
         // El borrador solo aplica si es de la MISMA tarea/proyecto que se está resolviendo ahora;
         // si el usuario cambió de proyecto, se descarta (mismo criterio que PendingCustomFields).
         var draft = pendingDraft != null && projId == pendingDraft.ProjectId ? pendingDraft : null;
@@ -111,7 +149,8 @@ internal static class StartTaskRequestBuilder
             ResponsibleId = responsibleId,
             StartDate = startDate,
             DueDate = dueDate,
-            EstimatedHours = estimatedHours
+            EstimatedHours = estimatedHours,
+            ParentId = parentId
         };
 
         // El tipo de work package (DESARROLLO, ERROR, SOPORTE TECNICO...) determina qué campos
@@ -247,6 +286,7 @@ internal static class StartTaskRequestBuilder
             ProjectId = projId.Value,
             StatusId = statId.Value,
             TypeId = typeId,
+            ParentId = parentId,
             Name = taskName,
             WorkPackageId = wpId,
             Description = description,

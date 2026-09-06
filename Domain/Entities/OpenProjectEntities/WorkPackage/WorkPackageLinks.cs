@@ -23,4 +23,22 @@ public class WorkPackageLinks
     
     [JsonPropertyName("project")]
     public LinkObject Project { get; set; } = new LinkObject();
+
+    /// <summary>Padre directo. Href vacío = la tarea es raíz.</summary>
+    [JsonPropertyName("parent")]
+    public LinkObject Parent { get; set; } = new LinkObject();
+
+    /// <summary>
+    /// Hijos directos, cuando OpenProject los incluye. El árbol no los usa para pintar
+    /// (los pide por su endpoint al expandir), solo para saber si el nodo tiene algo debajo.
+    /// </summary>
+    [JsonPropertyName("children")]
+    public List<LinkObject> Children { get; set; } = [];
+
+    /// <summary>
+    /// Cadena de ancestros, de la raíz al padre. Cada link ya trae el título, así que la
+    /// miga de pan de la tarjeta no cuesta ninguna llamada extra.
+    /// </summary>
+    [JsonPropertyName("ancestors")]
+    public List<LinkObject> Ancestors { get; set; } = [];
 }

@@ -725,6 +725,17 @@
         // ── Init ─────────────────────────────────────────────────────────────
         showWelcome();
         loadChats();
+
+        // Entrada desde la vista Árbol ("+ subtarea"): llega el mensaje escrito hasta donde
+        // el árbol sabe, y el usuario le pone el nombre. No se envía solo: falta la mitad.
+        const ask = new URLSearchParams(location.search).get('ask');
+        if (ask) {
+            history.replaceState(null, '', location.pathname);
+            userInput.value = ask;
+            autoResize();
+            userInput.focus();
+            userInput.setSelectionRange(ask.length, ask.length);
+        }
     </script>
 </body>
 </html>

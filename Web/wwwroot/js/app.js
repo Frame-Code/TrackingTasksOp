@@ -12,6 +12,7 @@ import { fetchProjects, fetchWorkPackages, fetchActivities, fetchTask,
 import { updateNavbar, renderProjectSelect, renderCards, renderStatusFilters,
          renderHistoryLoading, renderHistoryContent, renderHistoryError,
          renderActivitiesSelect, renderReportPreview } from './render.js';
+import { buildTreeFromPage, renderTree, toggleNode, focusNode } from './tree.js';
 import { startTimer, stopTimer, startPendingReminder } from './timer.js';
 import { renderSidebarAvatar } from './avatar.js';
 import { bindPendingSessionsModal, openPendingSessionsModal, refreshPendingBadge } from './pending-sessions.js';
@@ -88,6 +89,9 @@ async function reloadPage(force = false) {
         store.total        = data?.total ?? 0;
 
         renderStatusFilters();
+        // El árbol se arma con lo que la página ya trajo (mis tareas + sus ancestros): no
+        // cuesta ninguna llamada. Va antes de pintar porque renderCards() repinta el árbol.
+        buildTreeFromPage();
         renderCards();
     } catch (e) {
         showError(`No se pudieron cargar las tareas: ${e.message}`);
@@ -692,6 +696,57 @@ function bindPaginationEvents() {
     });
 }
 
+// ── Vista Grilla / Árbol ──────────────────────────────────────────────────────
+
+function setViewMode(mode) {
+    store.viewMode = mode;
+    const isTree = mode === 'tree';
+
+    document.getElementById('wpGrid').classList.toggle('d-none', isTree);
+    document.getElementById('wpTree').classList.toggle('d-none', !isTree);
+    // La paginación es de "mis tareas": en el árbol no aplica, se navega expandiendo.
+    document.getElementById('pagination').classList.toggle('d-none', isTree);
+
+    for (const [id, active] of [['viewGridBtn', !isTree], ['viewTreeBtn', isTree]]) {
+        const btn = document.getElementById(id);
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', String(active));
+    }
+
+    if (isTree) renderTree();
+    else renderCards();
+}
+
+function bindViewToggle() {
+    document.getElementById('viewGridBtn').addEventListener('click', () => setViewMode('grid'));
+    document.getElementById('viewTreeBtn').addEventListener('click', () => setViewMode('tree'));
+}
+
+function bindTreeEvents() {
+    document.getElementById('wpTree').addEventListener('click', async (e) => {
+        const toggle = e.target.closest('.tree-toggle');
+        if (toggle?.dataset.id) {
+            await toggleNode(parseInt(toggle.dataset.id));
+            return;
+        }
+
+        const startBtn = e.target.closest('.tree-start');
+        if (startBtn) {
+            await handleStartSession(parseInt(startBtn.dataset.id));
+            return;
+        }
+
+        // Crear la subtarea la hace el asistente, que ya sabe resolver proyecto, tipo y
+        // campos obligatorios. Acá solo se le deja el mensaje escrito: duplicar ese flujo
+        // en un formulario sería una segunda implementación de lo mismo.
+        const subtaskBtn = e.target.closest('.tree-subtask');
+        if (subtaskBtn) {
+            const ask = `Crea una subtarea dentro de la #${subtaskBtn.dataset.id} llamada `;
+            window.location.href = `/bot.html?ask=${encodeURIComponent(ask)}`;
+        }
+    });
+}
+
 function bindGridEvents() {
     const grid = document.getElementById('wpGrid');
 
@@ -714,6 +769,12 @@ function bindGridEvents() {
 
         const logTimeBtn = e.target.closest('.btn-log-time');
         if (logTimeBtn) await openLogTimeModal(parseInt(logTimeBtn.dataset.id));
+
+        const viewTreeBtn = e.target.closest('.btn-view-tree');
+        if (viewTreeBtn) {
+            setViewMode('tree');
+            focusNode(parseInt(viewTreeBtn.dataset.id));
+        }
 
         const datesBtn = e.target.closest('.btn-dates');
         if (datesBtn)     openDatesModal(parseInt(datesBtn.dataset.id), datesBtn.dataset.start, datesBtn.dataset.due);
@@ -969,6 +1030,8 @@ function bindStorageSync() {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 bindGridEvents();
+bindViewToggle();
+bindTreeEvents();
 bindLoadButton();
 bindConfirmEndButton();
 bindConfirmDatesButton();

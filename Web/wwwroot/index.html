@@ -107,6 +107,17 @@
                         </button>
                     </div>
                     <div class="col-auto d-flex align-items-center gap-2">
+                        <!-- Grilla y Árbol responden preguntas distintas: "¿qué hago ahora?"
+                             (mis tareas, accionables) y "¿cómo va esto?" (la jerarquía, sea
+                             de quien sea). Por eso son dos vistas y no una card expandible. -->
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Vista de tareas">
+                            <button id="viewGridBtn" type="button" class="btn btn-outline-secondary active" aria-pressed="true">
+                                <i class="bi bi-grid-3x3-gap me-1"></i>Grilla
+                            </button>
+                            <button id="viewTreeBtn" type="button" class="btn btn-outline-secondary" aria-pressed="false">
+                                <i class="bi bi-diagram-3 me-1"></i>Árbol
+                            </button>
+                        </div>
                         <div id="loadingSpinner" class="d-none text-muted small">
                             <div class="spinner-border spinner-border-sm text-primary me-1" role="status"></div>
                             Cargando...
@@ -142,6 +153,9 @@
 
         <!-- Work packages grid -->
         <div id="wpGrid" class="row g-3"></div>
+
+        <!-- Vista Árbol (jerarquía completa, carga perezosa por nivel) -->
+        <div id="wpTree" class="d-none"></div>
 
         <!-- Paginación -->
         <div id="pagination" class="d-flex justify-content-center mt-4 d-none"></div>

@@ -69,6 +69,14 @@ public class CreateWorkPackageCommandImpl(
             links["responsible"] = new JsonObject { ["href"] = $"/api/v3/users/{request.ResponsibleId}" };
         }
 
+        // Subtarea: OpenProject rechaza con 422 las combinaciones padre/hijo que su
+        // configuración no permite (tipos, jerarquías entre proyectos). Ese motivo se propaga
+        // tal cual más abajo en vez de tragarse.
+        if (request.ParentId is > 0)
+        {
+            links["parent"] = new JsonObject { ["href"] = $"/api/v3/work_packages/{request.ParentId}" };
+        }
+
         if (request.CustomFieldOptionIds != null)
         {
             foreach (var (key, optionId) in request.CustomFieldOptionIds)
@@ -93,7 +101,7 @@ public class CreateWorkPackageCommandImpl(
         if (!response.IsSuccessStatusCode)
         {
             logger.LogError("Error creating work package: {Response}", jsonResponse);
-            throw new Exception($"Error HTTP {(int)response.StatusCode}: {jsonResponse}");
+            throw new Exception(OpenProjectError.ExtractMessage(jsonResponse));
         }
 
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };

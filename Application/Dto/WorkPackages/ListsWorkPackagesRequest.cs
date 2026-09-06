@@ -17,7 +17,11 @@ namespace Application.Dto.ListWorkPackages
         /// <summary>Varios estados a la vez (las pildoras de la UI). Tiene prioridad sobre StatusId.</summary>
         IReadOnlyCollection<int>? StatusIds = null,
         /// <summary>Texto libre; OpenProject lo busca dentro del asunto de la tarea.</summary>
-        string? Search = null
+        string? Search = null,
+        /// <summary>Solo las tareas asignadas a quien consulta. Es el default de siempre;
+        /// se apaga para buscar una tarea que puede ser de otra persona (ej. el padre de
+        /// una subtarea). OpenProject sigue devolviendo solo lo que el usuario puede ver.</summary>
+        bool OnlyMine = true
     ){}
 
     /// <summary>Una pagina de resultados junto al total, para paginar sin traerlo todo.</summary>
