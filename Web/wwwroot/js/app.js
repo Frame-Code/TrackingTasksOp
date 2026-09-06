@@ -12,7 +12,7 @@ import { fetchProjects, fetchWorkPackages, fetchActivities, fetchTask,
 import { updateNavbar, renderProjectSelect, renderCards, renderStatusFilters,
          renderHistoryLoading, renderHistoryContent, renderHistoryError,
          renderActivitiesSelect, renderReportPreview } from './render.js';
-import { buildTreeFromPage, renderTree, toggleNode, focusNode } from './tree.js';
+import { buildTreeFromPage, renderTree, toggleNode, retryNode, focusNode } from './tree.js';
 import { startTimer, stopTimer, startPendingReminder } from './timer.js';
 import { renderSidebarAvatar } from './avatar.js';
 import { bindPendingSessionsModal, openPendingSessionsModal, refreshPendingBadge } from './pending-sessions.js';
@@ -145,7 +145,7 @@ async function handleStartSession(wpId) {
     await requestNotifPermission();
 
     // Feedback visual inmediato en el botón
-    const btn = document.querySelector(`.btn-start[data-id="${wpId}"]`);
+    const btn = document.querySelector(`.btn-start[data-id="${wpId}"], .tree-start[data-id="${wpId}"]`);
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
@@ -727,6 +727,12 @@ function bindTreeEvents() {
         const toggle = e.target.closest('.tree-toggle');
         if (toggle?.dataset.id) {
             await toggleNode(parseInt(toggle.dataset.id));
+            return;
+        }
+
+        const retryBtn = e.target.closest('.tree-retry');
+        if (retryBtn) {
+            await retryNode(parseInt(retryBtn.dataset.id));
             return;
         }
 
