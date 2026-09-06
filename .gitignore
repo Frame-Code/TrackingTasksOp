@@ -9,7 +9,6 @@
 http-client.private.env.json
 .claude/
 graphify-out/
-Docs/superpowers/
 
 ##Config files
 Web/appsettings.Development.json
