@@ -50,6 +50,7 @@ function renderPendingRows(rows) {
     }
 
     body.innerHTML = `
+        <div class="table-responsive">
         <table class="table table-sm align-middle">
             <thead><tr><th>ID</th><th>Tarea</th><th>Cliente</th><th class="text-end">Horas</th><th></th></tr></thead>
             <tbody>
@@ -66,7 +67,8 @@ function renderPendingRows(rows) {
                         </td>
                     </tr>`).join('')}
             </tbody>
-        </table>`;
+        </table>
+        </div>`;
 }
 
 /** Abre el modal y carga la lista. Solo tiene sentido en index.html (tiene Bootstrap JS). */
