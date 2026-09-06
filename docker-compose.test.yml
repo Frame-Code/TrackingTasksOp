@@ -50,11 +50,20 @@ services:
     # Con menos de ~2g la imagen all-in-one se queda sin memoria a mitad de seed.
     mem_limit: 3g
 
-  # La app le habla por la red interna del proyecto Compose, asi que la URL de la instancia
-  # que se registra en la app es http://openproject (sin puerto: adentro escucha en el 80).
   app:
     depends_on:
       - openproject
+    # La app NO puede usar el nombre interno "openproject": su filtro anti-SSRF
+    # (SsrfSafeHttpHandler) bloquea 172.16/12, que es donde vive la red de Compose, y el
+    # registro falla con "No se pudo conectar a OpenProject". Fuera de Development ese filtro
+    # es justo lo que se quiere, asi que en vez de desactivarlo la app entra por la MISMA URL
+    # publica que el navegador: TLS real, IP del tailnet (100.64/10, que el filtro no bloquea)
+    # y el host que OpenProject espera. De paso el test se parece mas a produccion.
+    #
+    # El mapeo es a mano porque el contenedor no resuelve MagicDNS. Los dos valores salen del
+    # .env; el default apunta a loopback y nunca se usa, es solo para que Compose no falle.
+    extra_hosts:
+      - "${OP_PUBLIC_HOST:-openproject.invalid}:${OP_PUBLIC_IP:-127.0.0.1}"
 
 volumes:
   opdata:

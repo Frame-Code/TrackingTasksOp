@@ -106,15 +106,22 @@ Túnel a la app y registrarse en ella:
 ssh -L 5001:localhost:5001 <usuario>@<server>
 ```
 
-En `http://localhost:5001`, al registrar el usuario, la **URL de la instancia de OpenProject es
-`http://openproject`** — el nombre del servicio dentro de la red de Compose, sin puerto (adentro
-escucha en el 80). No `localhost:8081`: eso es la vista desde el host, el contenedor de la app no
-llega ahí. Pegar la API key del paso 4.
+Al registrar el usuario, la **URL de la instancia de OpenProject es la misma URL pública que usa
+el navegador** (`https://<host-del-tailnet>:8082`), no el nombre interno `openproject`. Pegar
+también la API key del paso 4.
 
-> Desde OpenProject 14.3 se valida el header `Host`: todo lo que no coincida con
-> `OPENPROJECT_HOST__NAME` recibe un **400**. Como la app le habla como `openproject` y el
-> navegador con el host público, el compose declara `OPENPROJECT_ADDITIONAL__HOST__NAMES` para
-> aceptar los dos. Si el registro falla con *"No se pudo conectar a OpenProject"*, es eso.
+> Cuesta creerlo estando los dos contenedores en la misma red, pero el nombre interno **no
+> sirve**: el filtro anti-SSRF de la propia app (`SsrfSafeHttpHandler`) bloquea `172.16/12`,
+> que es donde vive la red de Compose, y el registro falla con *"No se pudo conectar a
+> OpenProject"*. Fuera de `Development` ese filtro es deliberado — la URL de instancia la
+> declara el usuario — así que el ambiente de test entra por la URL pública: TLS real, IP del
+> tailnet (`100.64/10`, que el filtro sí permite) y el host que OpenProject espera. Por eso el
+> compose declara `extra_hosts` en el servicio `app`: el contenedor no resuelve MagicDNS.
+
+> Dos cosas más que hacen fallar el registro, ambas ya cubiertas en el compose y el `.env`:
+> desde OpenProject 14.3 se valida el header `Host` y se responde **400** a todo lo que no
+> coincida (de ahí `OPENPROJECT_ADDITIONAL__HOST__NAMES`), y con `OP_HTTPS=true` OpenProject
+> redirige `http`→`https` sobre el mismo host, lo que deja colgada cualquier llamada interna.
 
 > La cookie de sesión es `Secure` (`CookieSettings__UseSecurePolicy: true`), así que por
 > `http://localhost:5001` el navegador **sí** la manda: `localhost` cuenta como origen seguro.
