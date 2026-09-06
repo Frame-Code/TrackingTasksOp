@@ -1,0 +1,23 @@
+name: Deploy a testing
+
+# Corre solo despues de que un PR ya fue aprobado y mergeado a main, nunca sobre codigo de un
+# PR abierto.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-test:
+    runs-on: [self-hosted, deploy]
+    steps:
+      - name: Actualizar clon y redeployar el stack de test
+        run: |
+          set -e
+          cd ~/publicaciones/TrackingTaskOp/test
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+          docker compose up -d --build

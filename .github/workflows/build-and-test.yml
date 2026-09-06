@@ -1,0 +1,24 @@
+name: Build & test
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: [self-hosted, pr-build]
+    container: mcr.microsoft.com/dotnet/sdk:8.0
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: dotnet restore TrackingTasksOp.sln
+
+      - run: dotnet build TrackingTasksOp.sln --no-restore --configuration Release
+
+      # Excluye Tests/Integration/*: necesitan una instancia real de OpenProject en
+      # localhost:8081 que no existe en este contenedor. DateTimeKindPersistenceTests se
+      # salta sola si falta TEST_POSTGRES_CONNECTION_STRING (no se define aca a proposito).
+      - run: dotnet test TrackingTasksOp.sln --no-build --configuration Release --filter "Category!=Integration"
