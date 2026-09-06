@@ -66,7 +66,16 @@ public static class InitializeExtensions
                 await response.WriteAsJsonAsync(problem);
             }));
         app.UseDefaultFiles();
-        app.UseStaticFiles();
+        // "no-cache" no es "no cachear": es "revalidá antes de usar". El navegador conserva la
+        // copia y pregunta con el ETag, así que sigue costando un 304 vacío — pero un deploy
+        // deja de servir el CSS o el JS viejo. Sin esto ASP.NET no manda Cache-Control y el
+        // navegador inventa su propia frescura: eso hacía que una vista nueva se viera rota,
+        // con el HTML nuevo y la hoja de estilos anterior.
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            OnPrepareResponse = ctx =>
+                ctx.Context.Response.Headers.CacheControl = "no-cache, must-revalidate"
+        });
         app.UseHttpsRedirection();
         app.UseAuthentication();
         // Antes de Authorization: si no, un request sin sesión a un endpoint protegido recibe
