@@ -239,15 +239,27 @@ function buildBreadcrumb(wp) {
 
     if (!chain.length) return '';
 
-    const crumbs = chain
-        .map(a => `<span title="${escHtml(a.title)}">#${extractId(a.href)}</span>`)
-        .join('<span class="wp-crumb-sep" aria-hidden="true">›</span>');
+    // El padre DIRECTO con su nombre, no una hilera de números: "#38" solo obligaba a ir a
+    // buscar qué era #38. El resto de la cadena queda en el tooltip, que es donde importa
+    // menos: lo que se necesita de un vistazo es de qué depende esta tarea.
+    const direct = chain[chain.length - 1];
+    const parentId = extractId(direct.href);
+    const parentName = direct.title || `Tarea #${parentId}`;
+
+    const fullChain = chain.map(a => `#${extractId(a.href)} ${a.title || ''}`.trim()).join('  ›  ');
+    const chainNote = chain.length > 1 ? `\nJerarquía completa: ${fullChain}` : '';
 
     return `
-        <div class="wp-crumbs" title="${escHtml(chain.map(a => a.title).join(' › '))}">
-            ${crumbs}
+        <div class="wp-crumbs">
+            <i class="bi bi-diagram-2" aria-hidden="true"></i>
+            <span class="wp-crumbs-label">Depende de</span>
+            <span class="wp-crumb-parent text-truncate"
+                  title="Esta tarea es una subtarea de #${parentId} ${escHtml(parentName)}${escHtml(chainNote)}">
+                #${parentId} ${escHtml(parentName)}
+            </span>
             <button class="btn btn-link btn-sm p-0 wp-crumb-link btn-view-tree" data-id="${wp.id}"
-                    title="Ver en el árbol" aria-label="Ver la tarea ${wp.id} en el árbol">
+                    title="Ver esta tarea dentro del árbol, con todo lo que depende de ella"
+                    aria-label="Ver la tarea ${wp.id} en el árbol">
                 <i class="bi bi-diagram-3" aria-hidden="true"></i>
             </button>
         </div>`;
