@@ -25,10 +25,10 @@ internal static class GroqTools
                 type = "object",
                 properties = new Dictionary<string, object>
                 {
-                    ["projectName"] = new { type = "string", description = "Nombre del proyecto en OpenProject (nunca un ID). Obligatorio SALVO que mandes 'parentId' o 'parentName': una subtarea hereda el proyecto de su padre." },
+                    ["projectName"] = new { type = "string", description = "Nombre del proyecto en OpenProject (nunca un ID). Obligatorio SALVO que envíes 'parentId' o 'parentName': una subtarea hereda el proyecto de su padre." },
                     ["statusName"] = new { type = "string", description = "Nombre del estado inicial (nunca un ID)" },
-                    ["parentId"] = new { type = "integer", description = "Número del work package padre cuando el usuario pide una SUBTAREA ('una subtarea dentro de la #412', 'una tarea hija de la 412'). Es la única excepción a la regla de no usar IDs: el usuario sí nombra al padre por su número. Si el padre es una tarea que se listó o creó antes en esta misma conversación, usá el ID que ya apareció ahí." },
-                    ["parentName"] = new { type = "string", description = "Asunto del padre cuando el usuario lo nombró en vez de darte su número ('una subtarea de Levantamiento de datos'). No lo uses si ya tenés 'parentId'." },
+                    ["parentId"] = new { type = "integer", description = "Número del work package padre cuando el usuario pide una SUBTAREA ('una subtarea dentro de la #412', 'una tarea hija de la 412'). Es la única excepción a la regla de no usar IDs: el usuario sí nombra al padre por su número. Si la tarea padre se listó o se creó antes en esta misma conversación, usa el ID que ya apareció ahí." },
+                    ["parentName"] = new { type = "string", description = "Asunto de la tarea padre cuando el usuario la nombró en vez de darte su número ('una subtarea de Levantamiento de datos'). No lo uses si ya tienes 'parentId'." },
                     ["typeName"] = new { type = "string", description = "Tipo de paquete de trabajo tal como lo nombró el usuario (ej. 'error', 'soporte técnico', 'garantía'). NO lo inventes ni asumas 'desarrollo': si el usuario no lo dijo, omití este parámetro y el sistema le mostrará los tipos disponibles del proyecto." },
                     ["name"] = new { type = "string", description = "Nombre/asunto de la tarea" },
                     ["description"] = new { type = "string" },

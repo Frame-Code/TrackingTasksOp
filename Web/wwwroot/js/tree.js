@@ -151,9 +151,9 @@ export function renderTree(highlightId = null) {
         container.innerHTML = `
             <div class="tree-empty">
                 <i class="bi bi-diagram-3" aria-hidden="true"></i>
-                <p class="mb-1">Todavía no hay nada que mostrar acá.</p>
-                <p class="mb-0 small">Elegí un proyecto y tocá <strong>Cargar tareas</strong>: el árbol se arma
-                   con tus tareas y las que están por encima de ellas.</p>
+                <p class="mb-1">Todavía no hay nada que mostrar aquí.</p>
+                <p class="mb-0 small">Selecciona un proyecto y haz clic en <strong>Cargar tareas</strong>:
+                   el árbol se arma con tus tareas y las tareas superiores de las que dependen.</p>
             </div>`;
         return;
     }
@@ -189,19 +189,22 @@ function renderNode(id, depth, session, highlightId) {
     const known = n.childCount;
     const isLeaf = known === 0 && n.childIds.length === 0;
 
+    const hasChildren = known > 0 || n.childIds.length > 0;
+    const toggleVerb = isOpen ? 'Ocultar' : 'Mostrar';
+
     const branch = `
         <span class="tree-branch" style="--tree-depth:${depth}">
             ${isLeaf
-                ? '<span class="tree-toggle tree-toggle--leaf" aria-hidden="true"></span>'
+                ? '<span class="tree-toggle tree-toggle--leaf" aria-hidden="true" title="Esta tarea no tiene subtareas"></span>'
                 : `<button class="tree-toggle" data-id="${id}" aria-expanded="${isOpen}"
-                           title="${isOpen ? 'Colapsar' : 'Expandir'} las subtareas de la ${id}"
-                           aria-label="${isOpen ? 'Colapsar' : 'Expandir'} las subtareas de la tarea ${id}">
+                           title="${toggleVerb} las subtareas de la tarea #${id}"
+                           aria-label="${toggleVerb} las subtareas de la tarea ${id}">
                        <i class="bi bi-${isLoading ? 'arrow-repeat tree-spin' : isOpen ? 'chevron-down' : 'chevron-right'}"></i>
                    </button>`}
         </span>`;
 
     const count = known > 0
-        ? `<span class="tree-count" title="${known} subtarea${known !== 1 ? 's' : ''}">${known}</span>`
+        ? `<span class="tree-count" title="Tiene ${known} subtarea${known !== 1 ? 's' : ''} directa${known !== 1 ? 's' : ''}">${known}</span>`
         : '';
 
     const statusTitle = wp?._links?.status?.title || '';
@@ -209,49 +212,60 @@ function renderNode(id, depth, session, highlightId) {
     const pct = wp?.percentageDone ?? null;
     const isActive = session?.workPackageId === id;
 
-    // "Vos" en la columna de asignado dice lo mismo que decía la leyenda de íconos, pero en
-    // el lugar donde se lee el dato. Por eso la leyenda desapareció.
-    const assigneeCell = n.mine
-        ? '<span class="tree-you">Vos</span>'
-        : assignee
-            ? `<span class="text-truncate" title="${escHtml(assignee)}">${escHtml(assignee)}</span>`
-            : '<span class="tree-dash" title="Sin datos: se cargan al expandir el nodo padre">—</span>';
+    // El nombre real de la persona, tal como está en OpenProject, y "(Tú)" solo como sufijo:
+    // la columna dice de quién es la tarea, no si es tuya. Una etiqueta genérica obligaba a
+    // abrir OpenProject para saber quién era.
+    const youSuffix = n.mine ? ' <span class="tree-you">(Tú)</span>' : '';
+    const assigneeCell = assignee
+        ? `<span class="text-truncate" title="Asignada a ${escHtml(assignee)}${n.mine ? ' — eres tú' : ''}">${escHtml(assignee)}${youSuffix}</span>`
+        : n.mine
+            ? '<span class="text-truncate" title="Asignada a ti">Tú</span>'
+            : `<span class="tree-dash" title="Todavía no se sabe: los datos de esta tarea se cargan al mostrar las subtareas de la tarea de la que depende">—</span>`;
 
     const progressCell = pct === null
-        ? '<span class="tree-dash">—</span>'
-        : `<span class="tree-bar" role="img" aria-label="Avance ${pct} por ciento">
+        ? '<span class="tree-dash" title="Todavía no se sabe: los datos de esta tarea se cargan al mostrar las subtareas de la tarea de la que depende">—</span>'
+        : `<span class="tree-bar" role="img" aria-label="Avance ${pct} por ciento" title="Avance: ${pct}%">
                <span class="tree-bar-fill" style="width:${pct}%"></span>
            </span>
-           <span class="tree-pct">${pct}%</span>`;
+           <span class="tree-pct" title="Avance: ${pct}%">${pct}%</span>`;
 
     // Mismo verbo y mismo color que en la grilla: "Iniciar" es un botón con texto, no un
     // triángulo que hay que adivinar.
     const startBtn = isActive
-        ? '<span class="badge text-bg-primary tree-running"><i class="bi bi-record-fill" aria-hidden="true"></i> En curso</span>'
+        ? `<span class="badge text-bg-primary tree-running" title="El cronómetro está corriendo en esta tarea">
+               <i class="bi bi-record-fill" aria-hidden="true"></i> En curso
+           </span>`
         : n.mine
-            ? `<button class="btn btn-success btn-sm tree-start" data-id="${id}">
+            ? `<button class="btn btn-success btn-sm tree-start" data-id="${id}"
+                       title="Iniciar el cronómetro en la tarea #${id}">
                    <i class="bi bi-play-fill" aria-hidden="true"></i> Iniciar
                </button>`
             : '';
 
+    const subjectTitle = wp
+        ? `${n.subject} (tarea #${id})`
+        : `${n.subject} (tarea #${id}) — tarea superior: sus datos se cargan al mostrar sus subtareas`;
+
     const row = `
-        <div class="tree-node${n.mine ? ' tree-node--mine' : ''}${highlightId === id ? ' tree-node--focus' : ''}"
+        <div class="tree-node${n.mine ? ' tree-node--mine' : ''}${hasChildren ? ' tree-node--branch' : ''}${highlightId === id ? ' tree-node--focus' : ''}"
              role="treeitem" aria-level="${depth + 1}" ${isLeaf ? '' : `aria-expanded="${isOpen}"`}
              data-id="${id}">
             <span class="tree-main">
                 ${branch}
-                <span class="tree-id">#${id}</span>
-                <span class="tree-subject" title="${escHtml(n.subject)}">${escHtml(n.subject)}</span>
+                <span class="tree-id" title="Número de la tarea en OpenProject">#${id}</span>
+                <span class="tree-subject" title="${escHtml(subjectTitle)}">${escHtml(n.subject)}</span>
                 ${count}
             </span>
             <span class="tree-col tree-status-col">
-                ${statusTitle ? `<span class="badge ${statusClass(statusTitle)}">${escHtml(statusTitle)}</span>` : '<span class="tree-dash">—</span>'}
+                ${statusTitle
+                    ? `<span class="badge ${statusClass(statusTitle)}" title="Estado: ${escHtml(statusTitle)}">${escHtml(statusTitle)}</span>`
+                    : '<span class="tree-dash" title="Todavía no se sabe: los datos de esta tarea se cargan al mostrar las subtareas de la tarea de la que depende">—</span>'}
             </span>
             <span class="tree-col tree-assignee-col">${assigneeCell}</span>
             <span class="tree-col tree-progress-col">${progressCell}</span>
             <span class="tree-col tree-actions">
                 <button class="btn btn-sm tree-subtask" data-id="${id}"
-                        title="Crear una subtarea dentro de la ${id}"
+                        title="Crear una subtarea dentro de la tarea #${id} (se la pides al asistente)"
                         aria-label="Crear una subtarea dentro de la tarea ${id}">
                     <i class="bi bi-plus-lg" aria-hidden="true"></i>
                 </button>
@@ -264,8 +278,9 @@ function renderNode(id, depth, session, highlightId) {
     if (n.error)
         return row + note(depth + 1, `
             <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
-            No se pudieron traer las subtareas: ${escHtml(n.error)}
-            <button class="btn btn-link btn-sm tree-retry" data-id="${id}">Reintentar</button>`, 'tree-note--error');
+            No se pudieron cargar las subtareas: ${escHtml(n.error)}
+            <button class="btn btn-link btn-sm tree-retry" data-id="${id}"
+                    title="Volver a pedir las subtareas de la tarea #${id}">Reintentar</button>`, 'tree-note--error');
 
     if (isLoading && !n.childIds.length)
         return row + note(depth + 1, '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Cargando subtareas…');

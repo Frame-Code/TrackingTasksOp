@@ -46,7 +46,7 @@ internal static class StartTaskRequestBuilder
 
         // ── Padre (subtarea) ──────────────────────────────────────────────────────────
         // "parentId" es la excepción legítima a la regla "nunca un ID": la gente sí dice
-        // "creá una subtarea dentro de la #412". Si en cambio la nombró por asunto, se
+        // "crea una subtarea dentro de la #412". Si en cambio la nombró por asunto, se
         // resuelve buscando, y si hay varias candidatas se pregunta en vez de adivinar.
         int? parentId = GroqActionParams.GetNullableInt(p, "parentId", "parentWorkPackageId");
         string parentName = GroqActionParams.GetStr(p, "parentName", "parent");
@@ -56,14 +56,14 @@ internal static class StartTaskRequestBuilder
             var candidates = await entityResolver.FindWorkPackagesBySubject(parentName);
 
             if (candidates.Count == 0)
-                throw new Exception($"No encontré ninguna tarea llamada '{parentName}' para colgarle la subtarea. " +
-                                    "Verificá el nombre o pasame su número (ej. \"dentro de la #412\").");
+                throw new Exception($"No encontré ninguna tarea llamada '{parentName}' para usarla como tarea padre. " +
+                                    "Verifica el nombre o indícame su número (ej. \"dentro de la #412\").");
 
             if (candidates.Count > 1)
             {
                 var options = string.Join("\n", candidates.Select(c => $"- **#{c.Id}** {c.Subject}"));
                 return new BuildResult(null,
-                    $"🤔 Hay varias tareas que coinciden con «{parentName}». ¿De cuál cuelga la subtarea?\n\n{options}\n\nDecime el número y la creo.",
+                    $"🤔 Hay varias tareas que coinciden con «{parentName}». ¿De cuál debe depender la subtarea?\n\n{options}\n\nIndícame el número y la creo.",
                     wpId);
             }
 
@@ -73,13 +73,13 @@ internal static class StartTaskRequestBuilder
         if (!parentId.HasValue && pendingDraft != null) parentId = pendingDraft.ParentId;
 
         // El proyecto sale del padre: una subtarea vive donde vive su padre. Por eso
-        // "creá una subtarea dentro de la #412 llamada Acta de firma" alcanza, sin repreguntar.
+        // "crea una subtarea dentro de la #412 llamada Acta de firma" alcanza, sin volver a preguntar.
         if (!projId.HasValue && parentId is > 0)
         {
             projId = await entityResolver.GetProjectIdOfWorkPackage(parentId.Value);
             if (!projId.HasValue)
                 throw new Exception($"No pude leer la tarea #{parentId} en OpenProject, así que no sé en qué proyecto crear la subtarea. " +
-                                    "Verificá el número o indicame el proyecto.");
+                                    "Verifica el número o indícame el proyecto.");
         }
 
         // El borrador solo aplica si es de la MISMA tarea/proyecto que se está resolviendo ahora;

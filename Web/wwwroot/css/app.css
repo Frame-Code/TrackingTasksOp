@@ -501,14 +501,22 @@
 .wp-crumbs {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.3rem;
     font-size: 0.75rem;
     color: var(--bs-secondary-color);
-    font-variant-numeric: tabular-nums;
+    min-width: 0;
     margin-bottom: 0.25rem;
 }
 
-.wp-crumb-sep { opacity: 0.4; }
+.wp-crumbs-label { flex-shrink: 0; opacity: 0.8; }
+
+/* El nombre de la tarea de la que depende pesa más que la etiqueta: es el dato. */
+.wp-crumb-parent {
+    min-width: 0;
+    font-weight: 600;
+    color: var(--bs-body-color);
+    font-variant-numeric: tabular-nums;
+}
 
 .wp-crumb-link {
     color: var(--bs-secondary-color);
@@ -531,10 +539,14 @@
     overflow: hidden;
 }
 
+/* Anchos FIJOS en las cuatro columnas de la derecha, encabezado incluido. Con la última en
+   `auto` cada fila la medía según su propio botón ("Iniciar" y "En curso" no miden igual), y
+   como el sobrante lo absorbe la columna 1fr, cada fila empezaba sus columnas en una x
+   distinta: por eso se veía todo desalineado contra el encabezado. */
 .tree-head,
 .tree-node {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 8.5rem 8rem 6.5rem auto;
+    grid-template-columns: minmax(0, 1fr) 8.5rem 10rem 6.5rem 6.5rem;
     align-items: center;
     gap: 0.75rem;
     padding: 0.35rem 0.75rem;
@@ -551,6 +563,11 @@
     border-bottom: 1px solid var(--bs-border-color);
     padding-top: 0.45rem;
     padding-bottom: 0.45rem;
+    /* Con el árbol desplegado la primera fila se va de pantalla y las columnas vuelven a ser
+       datos sin nombre. Pegado arriba, el encabezado sigue explicándolas. */
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 
 .tree-node {
@@ -566,6 +583,19 @@
    mirada caiga primero en las propias, que son las únicas con botón de Iniciar. */
 .tree-node:not(.tree-node--mine) .tree-subject,
 .tree-node:not(.tree-node--mine) .tree-id { color: var(--bs-secondary-color); }
+
+/* Tres pesos, no uno: una tarea CON subtareas es un contenedor y se lee como encabezado de
+   su grupo; una hoja es una tarea concreta; una ajena es contexto. Sin esa diferencia, diez
+   filas iguales obligan a leerlas todas para entender la estructura. */
+.tree-node--branch .tree-subject {
+    font-weight: 600;
+    color: var(--bs-body-color);
+}
+
+.tree-node--branch:not(.tree-node--mine) .tree-subject {
+    color: var(--bs-emphasis-color, var(--bs-body-color));
+    opacity: 0.85;
+}
 
 .tree-node--focus {
     background: color-mix(in srgb, var(--bs-primary) 14%, transparent);
@@ -664,13 +694,12 @@
 
 .tree-status-col .badge { font-size: 0.7rem; }
 
+/* Sufijo, no reemplazo: el nombre de la persona manda, "(Tú)" solo lo marca. */
 .tree-you {
     font-size: 0.7rem;
     font-weight: 600;
     color: var(--bs-primary);
-    border: 1px solid color-mix(in srgb, var(--bs-primary) 45%, transparent);
-    border-radius: 999px;
-    padding: 0.05rem 0.45rem;
+    white-space: nowrap;
 }
 
 /* Un dato que todavía no tenemos no es lo mismo que un cero. */
@@ -715,16 +744,24 @@
     background: color-mix(in srgb, var(--bs-body-color) 10%, transparent);
 }
 
-.tree-start {
-    padding: 0.15rem 0.55rem;
-    font-size: 0.78rem;
+/* Mismo ancho para "Iniciar" y "En curso": si cada fila mide distinto, la columna tiembla
+   al recorrerla con la vista. */
+.tree-start,
+.tree-running {
+    min-width: 4.9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
     white-space: nowrap;
 }
 
-.tree-running {
-    font-size: 0.7rem;
-    white-space: nowrap;
+.tree-start {
+    padding: 0.15rem 0.5rem;
+    font-size: 0.78rem;
 }
+
+.tree-running { font-size: 0.7rem; }
 
 .tree-running i { font-size: 0.55rem; vertical-align: middle; }
 
